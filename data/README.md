@@ -2,7 +2,7 @@
 
 Raw data files backing the Multi-News dataset loader ([multi_news.py](../multi_news.py)). This
 document describes what's actually in these files, based on direct inspection — see the
-[dataset card](../README.md) for the citation, license, and HF-facing documentation, and
+[README.md](../README.md) for the citation and license summary, and
 [Multi-News_paper.md](../Multi-News_paper.md) (Fabbri et al., 2019, arXiv:1906.01749) for the
 original paper that introduced this dataset. This repo hosts only the dataset itself (these files
 plus the loader script) — not the Hi-MAP summarization model or training code the paper also
@@ -21,7 +21,7 @@ describes.
   train/validation/test (44,972 / 5,622 / 5,622) — matching the split sizes in this repo exactly.
 - The paper's published per-split source-count distribution (its Table 2, which sums to exactly
   44,972 — i.e. it describes the **train** split) is close to, but not bit-identical to, what's
-  measured directly from `train.src.cleaned` below (e.g. paper reports 23,894 examples with 2
+  measured directly from `text/train.src.cleaned` below (e.g. paper reports 23,894 examples with 2
   sources vs. 23,741 found here; paper reports no 0- or 1-source examples at all, since it filtered
   to 2–10). The data in this repo therefore isn't a frozen snapshot of the paper's exact reported
   numbers — it includes a small number of 0- and 1-source examples that fall outside the paper's
@@ -40,24 +40,39 @@ describes.
 
 ## Files
 
-Six files: one `.src.cleaned` (source articles) and one `.tgt` (summary) file per split, plus
-train/val/test.
+`data/` is organized into two subfolders holding the same 56,216 examples in different formats:
 
-| file                   |  lines | size (bytes) | size    |
-|------------------------|-------:|-------------:|---------|
-| `train.src.cleaned`    | 44,972 |   547,512,283 | ~522 MB |
-| `train.tgt`            | 44,972 |    58,793,912 | ~56 MB  |
-| `val.src.cleaned`      |  5,622 |    66,875,522 | ~64 MB  |
-| `val.tgt`              |  5,622 |     7,295,302 | ~7.0 MB |
-| `test.src.cleaned`     |  5,622 |    68,999,509 | ~66 MB  |
-| `test.tgt`             |  5,622 |     7,309,099 | ~7.0 MB |
+- `data/text/` — the original six-file format: one `.src.cleaned` (source articles) and one `.tgt`
+  (summary) file per split. This is the canonical/authoritative copy.
+- `data/tab/` — one Orange Data Mining `.tab` file per split (`train.tab`, `val.tab`, `test.tab`),
+  generated from `data/text/` by [scripts/convert_to_tab.py](../scripts/convert_to_tab.py). See
+  "`data/tab/*.tab` format" below.
+
+### `data/text/`
+
+| file                        |  lines | size (bytes) | size    |
+|-----------------------------|-------:|-------------:|---------|
+| `text/train.src.cleaned`    | 44,972 |   547,512,283 | ~522 MB |
+| `text/train.tgt`            | 44,972 |    58,793,912 | ~56 MB  |
+| `text/val.src.cleaned`      |  5,622 |    66,875,522 | ~64 MB  |
+| `text/val.tgt`              |  5,622 |     7,295,302 | ~7.0 MB |
+| `text/test.src.cleaned`     |  5,622 |    68,999,509 | ~66 MB  |
+| `text/test.tgt`             |  5,622 |     7,309,099 | ~7.0 MB |
 
 All files are UTF-8 text with Unix (`\n`) line endings, no BOM. Within a split, `.src.cleaned` and
 `.tgt` are line-aligned 1:1 — line *i* of the source file pairs with line *i* of the target file to
 form one example (this is exactly what `_generate_examples` in `multi_news.py` relies on: it
 `zip()`s the two files line-by-line).
 
-## `*.src.cleaned` format
+### `data/tab/`
+
+| file             |  rows  | size (bytes) | size    |
+|------------------|-------:|-------------:|---------|
+| `tab/train.tab`  | 44,972 |   559,677,315 | ~534 MB |
+| `tab/val.tab`    |  5,622 |    68,430,683 | ~65 MB  |
+| `tab/test.tab`   |  5,622 |    70,192,756 | ~67 MB  |
+
+## `data/text/*.src.cleaned` format
 
 Each line is one example's full source input: one or more news articles about the same event,
 concatenated with the separator token `` ||||| `` (five pipes, space-padded). The separator is
@@ -103,7 +118,7 @@ sentences per document cluster), but a long tail of examples run to tens or hund
 of words (the single largest, train line 22256, is a concatenation of conference-abstract listings
 totaling ~460k words). Don't assume a bounded input size when writing tooling against this field.
 
-## `*.tgt` format
+## `data/text/*.tgt` format
 
 Each line is the single human-written multi-document summary for the corresponding source line —
 plain text, no `NEWLINE_CHAR` tokens (summaries are single-paragraph). Every summary in every
@@ -117,13 +132,41 @@ average is notably longer than comparable single-document summarization datasets
 averages ~56 words), making fluent, coherent generation over a longer output a specific challenge
 of this dataset.
 
+## `data/tab/*.tab` format
+
+Orange Data Mining's native tab-delimited format — one file per split (`train.tab`, `val.tab`,
+`test.tab`), generated from the corresponding `data/text/` pair by
+[scripts/convert_to_tab.py](../scripts/convert_to_tab.py). Each row is one example: the same
+`document`/`summary` content as `data/text/`, with `NEWLINE_CHAR` already restored to real `\n` and
+the `` ||||| `` article separator still present in `document`.
+
+Orange `.tab` files use a 3-line header (attribute names, types, flags) followed by data rows. Both
+columns are declared `string` type with the `meta` flag (descriptive text fields, not a class
+target — this is a summarization dataset, not a classification one):
+
+```
+document	summary
+string	string
+meta	meta
+some doc text...	some summary text...
+```
+
+Rows are written with Python's `csv` module (tab-delimited, quoted), so `document` values containing
+embedded newlines or literal tab characters round-trip correctly — this is required reading, since
+`Orange.data.Table` parses `.tab` files the same way (via `csv.reader`), not by naive line-splitting.
+
+These files are **derived, not hand-maintained**: if `data/text/` ever changes, regenerate
+`data/tab/` by rerunning `python scripts/convert_to_tab.py` from the repo root rather than editing
+the `.tab` files directly.
+
 ## Practical notes
 
-- The files are large (train source alone is ~522 MB); per the top-level `CLAUDE.md`, prefer
-  streaming/line-by-line reads or sampling rather than loading a whole file into memory.
+- The files are large (`data/text/train.src.cleaned` alone is ~522 MB, `data/tab/train.tab` ~534 MB);
+  per the top-level `CLAUDE.md`, prefer streaming/line-by-line reads or sampling rather than loading
+  a whole file into memory.
 - Because `.src.cleaned` and `.tgt` are matched purely by line position, any tooling that filters,
   sorts, or dedupes one file must apply the identical operation to its pair, or the alignment
   breaks silently.
-- When computing statistics or samples over these files, expect and handle: empty source lines,
-  the `` ||||| `` separator appearing inside `document`, and the `NEWLINE_CHAR` token if reading
-  the raw file directly instead of through `multi_news.py`.
+- When computing statistics or samples over `data/text/` files, expect and handle: empty source
+  lines, the `` ||||| `` separator appearing inside `document`, and the `NEWLINE_CHAR` token if
+  reading the raw file directly instead of through `multi_news.py`.

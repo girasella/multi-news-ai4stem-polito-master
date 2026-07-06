@@ -11,12 +11,17 @@ root.
 
 ```
 multi_news.py         # HF `datasets` GeneratorBasedBuilder loader script
-README.md              # Dataset card (YAML frontmatter + docs), consumed by huggingface.co
+README.md              # Dataset summary + license; YAML frontmatter intentionally removed — this repo no longer targets HF Hub dataset-card compatibility
 Multi-News_paper.md    # Original paper (Fabbri et al., 2019) — background/context only, not consumed by any tooling
+scripts/
+  convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange Data Mining format)
 data/
   README.md            # Detailed description of data/ file formats and content
-  {train,val,test}.src.cleaned   # source documents, one example per line
-  {train,val,test}.tgt           # target summaries, one example per line
+  text/                # Canonical format — consumed by multi_news.py
+    {train,val,test}.src.cleaned   # source documents, one example per line
+    {train,val,test}.tgt           # target summaries, one example per line
+  tab/                 # Derived Orange `.tab` copy, regenerate via scripts/convert_to_tab.py
+    {train,val,test}.tab
 ```
 
 ## Architecture
@@ -35,9 +40,9 @@ data/
   `|||||`; each `.tgt` line is the corresponding human-written multi-document summary.
 - `data/` files are line-aligned 1:1 across the src/tgt pair for a split — do not reorder or
   filter one file without the other.
-- `README.md`'s YAML frontmatter (`dataset_info`, `train-eval-index`, split sizes/byte counts) is
-  read by the Hugging Face Hub and must stay consistent with the actual files in `data/` if either
-  changes (row counts, byte sizes, column mapping).
+- `README.md` no longer carries HF Hub dataset-card YAML frontmatter (`dataset_info`,
+  `train-eval-index`, etc.) — it was intentionally stripped since this repo doesn't need to
+  maintain Hugging Face Hub compatibility. Don't reintroduce it or treat its absence as a bug.
 
 ## Working with the data files
 
