@@ -11,7 +11,7 @@ There are two features:
 
 ## Dataset Structure
 
-For more info, check out the dedicated [README.MD](data/README.MD)
+For more info, check out the dedicated [README.MD](data/README.md)
 ### Data Instances
 
 #### default
