@@ -1,7 +1,7 @@
 # Multi-News — text mining & summarization
 
 **Final project work — 2nd-level specializing master "Artificial Intelligence for STEM",
-Politecnico di Torino** · Antonio Girasella
+Politecnico di Torino** 
 
 This repository hosts the project work built on the **Multi-News** multi-document summarization
 dataset (Fabbri et al., 2019). It started as a copy of the original dataset repository,
