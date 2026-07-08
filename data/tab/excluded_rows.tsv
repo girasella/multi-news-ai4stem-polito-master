@@ -1,0 +1,116 @@
+split	line	reason
+train	425	source<50w (43 words)
+train	453	source<50w (0 words)
+train	683	source<50w (39 words)
+train	2053	source<50w (31 words)
+train	2850	source<50w (39 words)
+train	3325	source<50w (40 words)
+train	3386	source<50w (31 words)
+train	3728	source<50w (21 words)
+train	3764	source<50w (39 words)
+train	4169	source<50w (37 words)
+train	4229	source>100000w (122557 words)
+train	6244	duplicate source
+train	7623	source<50w (20 words)
+train	8411	duplicate source
+train	8431	source<50w (49 words)
+train	8604	duplicate source
+train	9857	duplicate source
+train	10808	duplicate source
+train	11414	source<50w (23 words)
+train	11573	source<50w (46 words)
+train	11598	source<50w (35 words)
+train	11783	duplicate source
+train	12003	source<50w (31 words)
+train	13574	source<50w (43 words)
+train	14226	source<50w (31 words)
+train	14411	duplicate source
+train	14868	source<50w (42 words)
+train	14885	source<50w (33 words)
+train	15291	source<50w (25 words)
+train	15459	source<50w (33 words)
+train	16290	source<50w (0 words)
+train	16451	duplicate source
+train	16489	source<50w (0 words)
+train	16664	duplicate source
+train	17776	source<50w (40 words)
+train	18658	source<50w (31 words)
+train	18746	duplicate source
+train	18812	source<50w (0 words)
+train	18833	duplicate source
+train	19279	source<50w (0 words)
+train	19475	duplicate source
+train	19563	source<50w (39 words)
+train	19841	duplicate source
+train	19959	duplicate source
+train	20088	duplicate source
+train	21620	source<50w (0 words)
+train	21825	duplicate source
+train	22183	duplicate source
+train	22256	source>100000w (449620 words)
+train	22681	source<50w (31 words)
+train	23120	duplicate source
+train	23651	source<50w (37 words)
+train	23898	source<50w (38 words)
+train	24114	source<50w (39 words)
+train	25413	source<50w (48 words)
+train	25720	duplicate source
+train	26524	source>100000w (104541 words)
+train	26685	source<50w (39 words)
+train	26686	source>100000w (168796 words)
+train	27340	duplicate source
+train	30395	duplicate source
+train	30735	source<50w (0 words)
+train	31659	source<50w (31 words)
+train	32152	source<50w (31 words)
+train	32510	source<50w (36 words)
+train	33346	duplicate source
+train	33978	duplicate source
+train	34660	source<50w (39 words)
+train	35654	duplicate source
+train	35735	duplicate source
+train	37881	duplicate source
+train	38138	duplicate source
+train	38182	duplicate source
+train	38353	duplicate source
+train	39466	duplicate source
+train	39779	source<50w (39 words)
+train	40280	source<50w (31 words)
+train	40815	source<50w (20 words)
+train	41260	duplicate source
+train	41385	duplicate source
+train	41885	duplicate source
+train	41983	duplicate source
+train	41993	source<50w (0 words)
+train	42769	source<50w (20 words)
+train	43089	duplicate source
+train	43384	source<50w (38 words)
+train	43478	source<50w (43 words)
+train	43579	duplicate source
+train	44177	source<50w (31 words)
+train	44414	duplicate source
+train	44853	duplicate source
+train	44947	duplicate source
+val	1110	source<50w (31 words)
+val	1565	duplicate source
+val	2134	duplicate source
+val	2284	source>100000w (123117 words)
+val	2831	duplicate source
+val	2949	duplicate source
+val	4121	duplicate source
+val	4274	duplicate source
+val	4850	source<50w (0 words)
+val	5387	duplicate source
+val	5598	source<50w (36 words)
+test	1245	duplicate source
+test	3758	source<50w (47 words)
+test	4149	source<50w (33 words)
+test	4241	source>100000w (106783 words)
+test	4402	source>100000w (108766 words)
+test	4403	source>100000w (145130 words)
+test	4442	duplicate source
+test	4736	source<50w (0 words)
+test	4882	duplicate source
+test	5091	duplicate source
+test	5119	duplicate source
+test	5478	duplicate source
