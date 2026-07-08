@@ -214,7 +214,8 @@ embedded newlines or literal tab characters round-trip correctly — this is req
 
 These files are **derived, not hand-maintained**: if `data/text/` ever changes, regenerate
 `data/tab/` by rerunning `python scripts/convert_to_tab.py` from the repo root rather than editing
-the `.tab` files directly.
+the `.tab` files directly. The script itself is documented in
+[scripts/README.md](../scripts/README.md).
 
 ## Corpus-wide statistics (EDA)
 
