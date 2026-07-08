@@ -1,92 +1,111 @@
-### Dataset Summary
+# Multi-News — text mining & summarization
 
-Multi-News, consists of news articles and human-written summaries
-of these articles from the site newser.com.
-Each summary is professionally written by editors and
-includes links to the original articles cited.
+**Final project work — 2nd-level specializing master "Artificial Intelligence for STEM",
+Politecnico di Torino** · Antonio Girasella
 
-There are two features:
-  - document: text of news articles seperated by special token "|||||".
-  - summary: news summary.
+This repository hosts the project work built on the **Multi-News** multi-document summarization
+dataset (Fabbri et al., 2019). It started as a copy of the original dataset repository,
+[`alexfabbri/multi_news`](https://huggingface.co/datasets/alexfabbri/multi_news) on the Hugging
+Face Hub, and extends it with dataset curation, exploratory analysis, and (in progress)
+summarization experiments. All credit for the dataset itself goes to the original authors — see
+[Attribution, license & citation](#attribution-license--citation).
 
-## Dataset Structure
+## Project overview
 
-For more info, check out the dedicated [README.MD](data/README.md)
-### Data Instances
+The project explores Multi-News as a text-mining and summarization corpus:
 
-#### default
+- **Exploratory data analysis** — a corpus-wide quality and structure audit of all 56,216
+  examples, published as a self-contained dashboard
+  ([multi_news_dashboard.html](multi_news_dashboard.html)) and folded into the documentation.
+- **Dataset curation** — conversion of the raw text files into Orange Data Mining's `.tab`
+  format, including a cleaning step that removes rows with known source-quality problems
+  (failed scrapes, exact duplicates, source/summary mismatches) identified by the EDA.
+- **Summarization experiments** — text-mining and summarization work on the curated corpus
+  (in progress).
 
-- **Size of downloaded dataset files:** 256.96 MB
-- **Size of the generated dataset:** 700.18 MB
-- **Total amount of disk used:** 957.14 MB
+## Repository contents
 
-An example of 'validation' looks as follows.
-```
-{
-    "document": "some line val \n another line",
-    "summary": "target val line"
-}
-```
+| path | description |
+|------|-------------|
+| [multi_news.py](multi_news.py) | Original Hugging Face `datasets` loader script (unchanged) |
+| [data/text/](data/) | Canonical dataset files, as released upstream — one `.src.cleaned`/`.tgt` pair per split |
+| [data/tab/](data/) | **Cleaned** Orange `.tab` copies: one per split plus `complete.tab` (all splits joined, with a `split` column) and `excluded_rows.tsv` (manifest of the 115 dropped rows) |
+| [scripts/convert_to_tab.py](scripts/convert_to_tab.py) | Regenerates `data/tab/` from `data/text/`, applying the cleaning criteria — documented in [scripts/README.md](scripts/README.md) |
+| [multi_news_dashboard.html](multi_news_dashboard.html) | Self-contained EDA dashboard — open directly in a browser (report text in Italian) |
+| [Multi-News_paper.md](Multi-News_paper.md) | The original paper (Fabbri et al., 2019), for reference |
+| [data/README.md](data/README.md) | Detailed documentation of file formats, statistics, and cleaning criteria |
 
-### Data Fields
+## The dataset
 
-The data fields are the same among all splits.
+Multi-News consists of news articles and professionally written summaries of these articles from
+[newser.com](https://www.newser.com). Each summary is written by editors and cites the original
+articles. Each example has two features:
 
-#### default
-- `document`: a `string` feature.
-- `summary`: a `string` feature.
+- `document`: the text of the source news articles, concatenated with the special separator
+  token `|||||`;
+- `summary`: the human-written multi-document summary (starts with `– `, the newser.com house
+  style).
 
-### Data Splits
+| split | examples (canonical `data/text/`) | examples (cleaned `data/tab/`) |
+|-------|----------------------------------:|-------------------------------:|
+| train      | 44,972 | 44,880 |
+| validation |  5,622 |  5,611 |
+| test       |  5,622 |  5,610 |
+| **total**  | **56,216** | **56,101** |
 
-| name  |train|validation|test|
-|-------|----:|---------:|---:|
-|default|44972|      5622|5622|
+### EDA highlights
 
-### Exploratory Data Analysis
-
-[multi_news_dashboard.html](multi_news_dashboard.html) is a self-contained EDA dashboard (open it
-directly in a browser; report text in Italian) covering all 56,216 examples aggregated across the
-three splits. Highlights:
+From the [dashboard](multi_news_dashboard.html) (computed over all splits aggregated; details and
+methodology in [data/README.md](data/README.md)):
 
 - 154,530 source articles in total — mean ≈ 2.75 per example, median 2; 82% of examples have ≤3
   sources.
 - Input length is heavily right-skewed (median 1,319 words, mean ≈ 1,789, max 449,620), while
   summaries are uniform (median 220 words, range 34–973). Median compression ratio ≈ 6.3×.
-- Summary length correlates with the *number* of sources (mean grows from ~176 to ~372 words going
-  from 1 to 9+ sources) far more than with raw input size.
+- Summary length correlates with the *number* of sources (mean grows from ~176 to ~372 words
+  going from 1 to 9+ sources) far more than with raw input size.
 - Known data-quality issues: 10 empty source lines, 637 examples with ≤1 source article, 77
-  exact-duplicate source rows; the most extreme length outliers are source/summary mismatches from
-  upstream scraping errors. The derived Orange copy in `data/tab/` already excludes these dirty
-  rows (115 dropped, see `data/tab/excluded_rows.tsv`); the canonical `data/text/` files retain
-  them. See [data/README.md](data/README.md) for details.
+  exact-duplicate source rows; the most extreme length outliers are source/summary mismatches
+  from upstream scraping errors. The derived Orange copy in `data/tab/` already excludes these
+  dirty rows (115 dropped, itemized in `data/tab/excluded_rows.tsv`); the canonical `data/text/`
+  files retain them.
 
+## Using the data
 
-### Licensing Information
+**In Orange Data Mining** — load any `data/tab/*.tab` file with the *File* widget (the
+[Orange3-Text](https://orangedatamining.com/widget-catalog/#text-mining) add-on's *Corpus* widget
+enables the text-mining tools). Both columns are string meta attributes; `complete.tab` adds a
+discrete `split` column (`train`/`val`/`test`) so the whole corpus can be analyzed at once and
+filtered or grouped by split.
 
-```
-This Dataset Usage Agreement ("Agreement") is a legal agreement with LILY LAB for the Dataset made available to the individual or entity ("Researcher") exercising rights under this Agreement. "Dataset" includes all text, data, information, source code, and any related materials, documentation, files, media, updates or revisions.
+**With Hugging Face `datasets`** — the original loader script still works against the canonical
+files:
 
-The Dataset is intended for non-commercial research and educational purposes only, and is made available free of charge without extending any license or other intellectual property rights. By downloading or using the Dataset, the Researcher acknowledges that they agree to the terms in this Agreement, and represent and warrant that they have authority to do so on behalf of any entity exercising rights under this Agreement. The Researcher accepts and agrees to be bound by the terms and conditions of this Agreement. If the Researcher does not agree to this Agreement, they may not download or use the Dataset.
-
-By sharing content with m, such as by submitting content to this site or by corresponding with LILY LAB contributors, the Researcher grants LILY LAB the right to use, reproduce, display, perform, adapt, modify, distribute, have distributed, and promote the content in any form, anywhere and for any purpose, such as for evaluating and comparing summarization systems. Nothing in this Agreement shall obligate LILY LAB to provide any support for the Dataset. Any feedback, suggestions, ideas, comments, improvements given by the Researcher related to the Dataset is voluntarily given, and may be used by LILY LAB without obligation or restriction of any kind.
-
-The Researcher accepts full responsibility for their use of the Dataset and shall defend indemnify, and hold harmless m, including their employees, trustees, officers, and agents, against any and all claims arising from the Researcher's use of the Dataset. The Researcher agrees to comply with all laws and regulations as they relate to access to and use of the Dataset and Service including U.S. export jurisdiction and other U.S. and international regulations.
-
-THE DATASET IS PROVIDED "AS IS." LILY LAB DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WITHOUT LIMITATION OF THE ABOVE, LILY LAB DISCLAIMS ANY WARRANTY THAT DATASET IS BUG OR ERROR-FREE, AND GRANTS NO WARRANTY REGARDING ITS USE OR THE RESULTS THEREFROM INCLUDING, WITHOUT LIMITATION, ITS CORRECTNESS, ACCURACY, OR RELIABILITY. THE DATASET IS NOT WARRANTIED TO FULFILL ANY PARTICULAR PURPOSES OR NEEDS.
-
-TO THE EXTENT NOT PROHIBITED BY LAW, IN NO EVENT SHALL LILY LAB BE LIABLE FOR ANY LOSS, DAMAGE OR INJURY, DIRECT AND INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES, HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER FOR BREACH OF CONTRACT, TORT (INCLUDING NEGLIGENCE) OR OTHERWISE, ARISING OUT OF THIS AGREEMENT, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-
-This Agreement is effective until terminated. LILY LAB reserves the right to terminate the Researcher's access to the Dataset at any time. If the Researcher breaches this Agreement, the Researcher's rights to use the Dataset shall terminate automatically. The Researcher will immediately cease all use and distribution of the Dataset and destroy any copies or portions of the Dataset in their possession.
-
-This Agreement is governed by the laws of the SOME_PLACE, without regard to conflict of law principles. All terms and provisions of this Agreement shall, if possible, be construed in a manner which makes them valid, but in the event any term or provision of this Agreement is found by a court of competent jurisdiction to be illegal or unenforceable, the validity or enforceability of the remainder of this Agreement shall not be affected.
-
-This Agreement is the complete and exclusive agreement between the parties with respect to its subject matter and supersedes all prior or contemporaneous oral or written agreements or understandings relating to the subject matter.
+```python
+from datasets import load_dataset
+dataset = load_dataset("path/to/multi_news.py")
 ```
 
-### Citation Information
+**EDA dashboard** — open [multi_news_dashboard.html](multi_news_dashboard.html) in any browser;
+it is fully self-contained (no server or network needed).
 
-```
+Note: the data files are large (~1.3 GB total for the sources); prefer streaming/line-by-line
+reads when writing tooling against them.
 
+## Attribution, license & citation
+
+This project builds on the **Multi-News** dataset by Alexander R. Fabbri, Irene Li, Tianwei She,
+Suyi Li and Dragomir R. Radev ([paper](https://arxiv.org/abs/1906.01749), LILY Lab, Yale
+University). The starting point of this repository was the Hugging Face dataset repo
+[`alexfabbri/multi_news`](https://huggingface.co/datasets/alexfabbri/multi_news); thanks to
+[@patrickvonplaten](https://github.com/patrickvonplaten), [@lewtun](https://github.com/lewtun)
+and [@thomwolf](https://github.com/thomwolf) for originally adding the dataset to the Hub.
+
+The dataset is released by LILY Lab for **non-commercial research and educational purposes
+only**, "as is", without warranties — this repository uses it strictly within that scope, as
+educational project work. The full Dataset Usage Agreement is in [LICENSE](LICENSE).
+
+```bibtex
 @misc{alex2019multinews,
     title={Multi-News: a Large-Scale Multi-Document Summarization Dataset and Abstractive Hierarchical Model},
     author={Alexander R. Fabbri and Irene Li and Tianwei She and Suyi Li and Dragomir R. Radev},
@@ -95,10 +114,4 @@ This Agreement is the complete and exclusive agreement between the parties with 
     archivePrefix={arXiv},
     primaryClass={cs.CL}
 }
-
 ```
-
-
-### Contributions
-
-Thanks to [@patrickvonplaten](https://github.com/patrickvonplaten), [@lewtun](https://github.com/lewtun), [@thomwolf](https://github.com/thomwolf) for adding this dataset.

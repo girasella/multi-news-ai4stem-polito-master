@@ -4,17 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository layout
 
-This repository (`multi_news/`) is its own git repo (remote:
-`https://huggingface.co/datasets/alexfabbri/multi_news`) — a Hugging Face `datasets`-library
-dataset loader for the Multi-News summarization dataset. All source and data live at the repo
-root.
+This repository is the final project work for the master "Artificial Intelligence for STEM"
+(Politecnico di Torino), built on top of the Multi-News summarization dataset. It started as a
+copy of the Hugging Face dataset repo (`https://huggingface.co/datasets/alexfabbri/multi_news`,
+whose `datasets`-library loader it retains) and adds dataset curation, EDA, and summarization
+experiment work. All source and data live at the repo root.
 
 ```
-multi_news.py         # HF `datasets` GeneratorBasedBuilder loader script
-README.md              # Dataset summary + license; YAML frontmatter intentionally removed — this repo no longer targets HF Hub dataset-card compatibility
+multi_news.py         # HF `datasets` GeneratorBasedBuilder loader script (unchanged from upstream)
+README.md              # Project README (AI4STEM final project) + dataset summary and condensed licensing; YAML frontmatter intentionally removed — this repo no longer targets HF Hub dataset-card compatibility
+LICENSE                # Full upstream Dataset Usage Agreement (moved out of README.md)
 Multi-News_paper.md    # Original paper (Fabbri et al., 2019) — background/context only, not consumed by any tooling
 multi_news_dashboard.html  # Self-contained EDA dashboard (Italian) — see "EDA dashboard" section below
 scripts/
+  README.md            # Documentation for the scripts (usage, inputs/outputs, cleaning criteria)
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
 data/
   README.md            # Detailed description of data/ file formats and content
@@ -82,6 +85,6 @@ sampling a subset of lines when inspecting content.
 
 ## Licensing
 
-The dataset is released for **non-commercial research and educational purposes only** (see the
-Licensing Information section of `README.md`); keep this in mind before proposing any
-commercial use of the data.
+The dataset is released for **non-commercial research and educational purposes only** (full
+Dataset Usage Agreement in `LICENSE`, condensed in `README.md`); keep this in mind before
+proposing any commercial use of the data.
