@@ -42,6 +42,24 @@ The data fields are the same among all splits.
 |-------|----:|---------:|---:|
 |default|44972|      5622|5622|
 
+### Exploratory Data Analysis
+
+[multi_news_dashboard.html](multi_news_dashboard.html) is a self-contained EDA dashboard (open it
+directly in a browser; report text in Italian) covering all 56,216 examples aggregated across the
+three splits. Highlights:
+
+- 154,530 source articles in total — mean ≈ 2.75 per example, median 2; 82% of examples have ≤3
+  sources.
+- Input length is heavily right-skewed (median 1,319 words, mean ≈ 1,789, max 449,620), while
+  summaries are uniform (median 220 words, range 34–973). Median compression ratio ≈ 6.3×.
+- Summary length correlates with the *number* of sources (mean grows from ~176 to ~372 words going
+  from 1 to 9+ sources) far more than with raw input size.
+- Known data-quality issues: 10 empty source lines, 637 examples with ≤1 source article, 77
+  exact-duplicate source rows; the most extreme length outliers are source/summary mismatches from
+  upstream scraping errors. The derived Orange copy in `data/tab/` already excludes these dirty
+  rows (115 dropped, see `data/tab/excluded_rows.tsv`); the canonical `data/text/` files retain
+  them. See [data/README.md](data/README.md) for details.
+
 
 ### Licensing Information
 

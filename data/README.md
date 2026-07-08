@@ -6,7 +6,9 @@ document describes what's actually in these files, based on direct inspection �
 [Multi-News_paper.md](../Multi-News_paper.md) (Fabbri et al., 2019, arXiv:1906.01749) for the
 original paper that introduced this dataset. This repo hosts only the dataset itself (these files
 plus the loader script) — not the Hi-MAP summarization model or training code the paper also
-describes.
+describes. For corpus-wide statistics with charts, see the self-contained EDA dashboard
+[multi_news_dashboard.html](../multi_news_dashboard.html) (report text in Italian); its key
+findings are folded into the sections below.
 
 ## Provenance (from the paper)
 
@@ -40,12 +42,16 @@ describes.
 
 ## Files
 
-`data/` is organized into two subfolders holding the same 56,216 examples in different formats:
+`data/` is organized into two subfolders:
 
 - `data/text/` — the original six-file format: one `.src.cleaned` (source articles) and one `.tgt`
-  (summary) file per split. This is the canonical/authoritative copy.
-- `data/tab/` — one Orange Data Mining `.tab` file per split (`train.tab`, `val.tab`, `test.tab`),
-  generated from `data/text/` by [scripts/convert_to_tab.py](../scripts/convert_to_tab.py). See
+  (summary) file per split, all 56,216 examples. This is the canonical/authoritative copy, kept
+  as-released (including its known dirty rows).
+- `data/tab/` — Orange Data Mining `.tab` files generated from `data/text/` by
+  [scripts/convert_to_tab.py](../scripts/convert_to_tab.py): one per split (`train.tab`,
+  `val.tab`, `test.tab`) plus `complete.tab`, all three splits joined with a `split` origin
+  column. This copy is **cleaned**: 115 rows with known source-quality problems are excluded
+  (56,101 examples total), so it is *not* line-aligned with `data/text/`. See
   "`data/tab/*.tab` format" below.
 
 ### `data/text/`
@@ -66,11 +72,18 @@ form one example (this is exactly what `_generate_examples` in `multi_news.py` r
 
 ### `data/tab/`
 
-| file             |  rows  | size (bytes) | size    |
-|------------------|-------:|-------------:|---------|
-| `tab/train.tab`  | 44,972 |   559,677,315 | ~534 MB |
-| `tab/val.tab`    |  5,622 |    68,430,683 | ~65 MB  |
-| `tab/test.tab`   |  5,622 |    70,192,756 | ~67 MB  |
+| file                    |  rows  | size (bytes) | size    |
+|-------------------------|-------:|-------------:|---------|
+| `tab/train.tab`         | 44,880 |  554,038,300 | ~528 MB |
+| `tab/val.tab`           |  5,611 |   67,629,026 | ~64 MB  |
+| `tab/test.tab`          |  5,610 |   67,824,837 | ~65 MB  |
+| `tab/complete.tab`      | 56,101 |  689,811,869 | ~658 MB |
+| `tab/excluded_rows.tsv` |    115 |        3,761 | ~4 KB   |
+
+Row counts are data rows (excluding the 3-line Orange header). `complete.tab` is the three splits
+joined into one file, with an extra `split` column recording each row's origin (see below). The
+115 rows dropped relative to `data/text/` (92 train, 11 val, 12 test) are itemized with reasons in
+`tab/excluded_rows.tsv` — see "Cleaning" under "`data/tab/*.tab` format" below.
 
 ## `data/text/*.src.cleaned` format
 
@@ -112,11 +125,23 @@ filter — this release also contains rows with 1 or 0 articles:
 Consumers that assume a non-empty `document`, or that every example has ≥2 source articles per the
 paper's methodology, should account for these edge cases.
 
-**Source length** is highly skewed: median is ~1,350–1,400 words per example (mean ~1,850–1,900 by
-simple whitespace splitting; the paper reports a tokenizer-normalized mean of 2,103 words / 82.7
-sentences per document cluster), but a long tail of examples run to tens or hundreds of thousands
-of words (the single largest, train line 22256, is a concatenation of conference-abstract listings
-totaling ~460k words). Don't assume a bounded input size when writing tooling against this field.
+**Source length** is highly skewed: aggregated over all splits, the median is 1,319 words per
+example (mean ≈ 1,789, p95 ≈ 4,599 by simple whitespace splitting; the paper reports a
+tokenizer-normalized mean of 2,103 words / 82.7 sentences per document cluster), but a long tail
+of examples run to tens or hundreds of thousands of words. Don't assume a bounded input size when
+writing tooling against this field.
+
+The extreme length outliers are not merely "long news clusters" — manual inspection shows they are
+**source/summary mismatches**. The single largest (train line 22256, 449,620 words) is the full
+program of an academic conference (Society of Biblical Literature Annual Meeting, Atlanta 2015 —
+hundreds of concatenated paper abstracts), while its paired summary is a normal 319-word digest
+about an entirely unrelated story (a New Testament papyrus fragment sold on eBay): no semantic
+relation between the two columns for that row. The likely cause is an upstream scraping/link error
+(e.g. a Wayback link resolving to the wrong page); the other top outliers (all >100k words, e.g.
+`train:26686` at 168,796 and `test:4403` at 145,130) are plausibly analogous cases. Anyone
+training on this data should consider *filtering* such anomalous-source examples, not just capping
+input length — a truncated slice of an irrelevant document still carries no signal for the target
+summary.
 
 ## `data/text/*.tgt` format
 
@@ -135,10 +160,42 @@ of this dataset.
 ## `data/tab/*.tab` format
 
 Orange Data Mining's native tab-delimited format — one file per split (`train.tab`, `val.tab`,
-`test.tab`), generated from the corresponding `data/text/` pair by
+`test.tab`) plus the joined `complete.tab`, generated from the `data/text/` pairs by
 [scripts/convert_to_tab.py](../scripts/convert_to_tab.py). Each row is one example: the same
 `document`/`summary` content as `data/text/`, with `NEWLINE_CHAR` already restored to real `\n` and
 the `` ||||| `` article separator still present in `document`.
+
+**`complete.tab`** holds the whole (cleaned) dataset — the three splits concatenated in
+train → val → test order, same rows as the per-split files — with a third column `split`
+(declared `discrete`, values `train`/`val`/`test`) recording which split each row came from, so
+the origin isn't lost after joining and can be used for filtering/grouping in Orange:
+
+```
+document	summary	split
+string	string	discrete
+meta	meta	meta
+some doc text...	some summary text...	train
+```
+
+**Cleaning.** The converter drops rows whose *source* text matches the quality problems identified
+by the EDA dashboard (see "Corpus-wide statistics" above), so the `.tab` files hold 56,101 of the
+56,216 examples and are **not line-aligned** with `data/text/`. A row is excluded when its source
+(word counts via `str.split()`, `NEWLINE_CHAR`/`` ||||| `` excluded) is:
+
+1. **shorter than 50 words** (55 rows, including the 10 fully empty sources) — likely failed
+   scrapes;
+2. **longer than 100,000 words** (8 rows) — the extreme outliers whose source is semantically
+   unrelated to the summary (see the mismatch note above);
+3. **an exact duplicate** (whitespace-normalized SHA-1) of an earlier source, scanning
+   train → val → test — only the first occurrence is kept, which also removes the train/eval
+   leakage from duplicate groups spanning splits (52 rows carry this label; the other 25
+   duplicate-redundant rows were already excluded by rule 1, since empty/stub sources duplicate
+   each other).
+
+Every excluded row is listed in `tab/excluded_rows.tsv` (columns: `split`, `line` — 0-based index
+into the `data/text/` files — and `reason`). Summaries are never a drop criterion: the 12
+longer-than-600-word summaries and the 637 single-source examples flagged by the dashboard are
+retained, as they are legitimate content.
 
 Orange `.tab` files use a 3-line header (attribute names, types, flags) followed by data rows. Both
 columns are declared `string` type with the `meta` flag (descriptive text fields, not a class
@@ -159,9 +216,62 @@ These files are **derived, not hand-maintained**: if `data/text/` ever changes, 
 `data/tab/` by rerunning `python scripts/convert_to_tab.py` from the repo root rather than editing
 the `.tab` files directly.
 
+## Corpus-wide statistics (EDA)
+
+Numbers below come from the EDA dashboard
+([multi_news_dashboard.html](../multi_news_dashboard.html)), computed in streaming over all three
+splits aggregated: 56,216 examples, 154,530 source articles. Methodology: word counts are
+tokenizer-free (`str.split()`, with `NEWLINE_CHAR` restored and `` ||||| `` excluded before
+counting); sentence counts are heuristic (split on `[.!?]+`, so abbreviations slightly inflate
+them); duplicates detected via SHA-1 on normalized text, near-duplicates via a fingerprint of the
+first 15 words; row references use 0-based `split:line` indices. Note: the dashboard's footer
+mentions a `scripts/analyze_dataset.py` for regeneration, but that script is not currently in the
+repo — the dashboard's embedded JSON (`const D` in its inline script) is the source of truth for
+these figures.
+
+| metric              |   mean | median |  min |     max |    p05 |   p95 |
+|---------------------|-------:|-------:|-----:|--------:|-------:|------:|
+| words / input       | 1,788.8 | 1,319 |    0 | 449,620 |   356 | 4,599 |
+| sentences / input   |  102.2 |     73 |    0 |  21,417 |    20 |   263 |
+| words / summary     |  218.0 |    220 |   34 |     973 |   109 |   318 |
+| sentences / summary |   11.1 |     11 |    1 |      55 |     5 |    18 |
+| compression (in÷out)|  8.19× |  6.33× |   0× | 1,409×  | 2.00× | 19.4× |
+
+Estimated vocabulary (unique whitespace tokens): 494,577 (paper's tokenizer-normalized figure:
+666,515). Abstractiveness/extractiveness metrics (novel n-grams, fragment coverage/density) and
+language detection were *not* recomputed — the paper's values are quoted where relevant. Language:
+both sources and summaries are overwhelmingly (if not exclusively) **English** (newser.com is an
+English-language editorial aggregator).
+
+**Integrity and redundancy** (percentages over the 56,216-example corpus):
+
+- Empty source lines: 10 (0.018%); empty summaries: 0.
+- Exact-duplicate summaries: 0 — all 56,216 summaries are unique. Near-duplicate summaries
+  (first-15-words fingerprint): 3 redundant rows across 3 groups.
+- Exact-duplicate **sources**: 77 redundant rows across 20 groups (0.137%) — only 56,139 of the
+  source texts are unique. If you ever re-split or resample this data, de-duplicate sources first
+  to avoid train/eval leakage.
+- Examples with ≤1 source article: 637 (1.13%) — not multi-document despite the dataset's premise.
+- Against simple sanity thresholds: 0 summaries under 20 words, 12 over 600 words; 55 source lines
+  under 50 words (likely failed scrapes).
+
+**Correlations** (over all examples; compression pairs only where the summary is non-empty):
+
+| variable pair                  | Pearson r | Spearman ρ |
+|--------------------------------|----------:|-----------:|
+| n. sources vs summary words    |     0.428 |      0.360 |
+| n. sources vs compression      |     0.190 |      0.316 |
+| input words vs summary words   |     0.209 |      0.404 |
+
+The clearest relationship is that summaries grow with the *number* of sources (mean summary length
+rises roughly monotonically from ~176 words at 1 source to ~372 at 9 sources), and compression
+grows with it too (from ~3× to ~20×). By contrast, summary length is largely independent of raw
+input *size*: the Pearson r is depressed by huge outlier sources paired with summaries that stay
+in the ~150–300-word band.
+
 ## Practical notes
 
-- The files are large (`data/text/train.src.cleaned` alone is ~522 MB, `data/tab/train.tab` ~534 MB);
+- The files are large (`data/text/train.src.cleaned` alone is ~522 MB, `data/tab/train.tab` ~528 MB);
   per the top-level `CLAUDE.md`, prefer streaming/line-by-line reads or sampling rather than loading
   a whole file into memory.
 - Because `.src.cleaned` and `.tgt` are matched purely by line position, any tooling that filters,

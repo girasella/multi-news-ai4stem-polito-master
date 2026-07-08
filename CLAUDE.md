@@ -13,15 +13,19 @@ root.
 multi_news.py         # HF `datasets` GeneratorBasedBuilder loader script
 README.md              # Dataset summary + license; YAML frontmatter intentionally removed — this repo no longer targets HF Hub dataset-card compatibility
 Multi-News_paper.md    # Original paper (Fabbri et al., 2019) — background/context only, not consumed by any tooling
+multi_news_dashboard.html  # Self-contained EDA dashboard (Italian) — see "EDA dashboard" section below
 scripts/
-  convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange Data Mining format)
+  convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
 data/
   README.md            # Detailed description of data/ file formats and content
-  text/                # Canonical format — consumed by multi_news.py
+  text/                # Canonical format — consumed by multi_news.py; kept as-released (dirty rows included)
     {train,val,test}.src.cleaned   # source documents, one example per line
     {train,val,test}.tgt           # target summaries, one example per line
-  tab/                 # Derived Orange `.tab` copy, regenerate via scripts/convert_to_tab.py
+  tab/                 # Derived, CLEANED Orange `.tab` copy — 115 dirty rows dropped, so NOT
+                       # line-aligned with data/text/; regenerate via scripts/convert_to_tab.py
     {train,val,test}.tab
+    complete.tab       # All three splits joined (56,101 rows) + a `split` origin column
+    excluded_rows.tsv  # Manifest of the dropped rows (split, 0-based line in data/text/, reason)
 ```
 
 ## Architecture
@@ -38,11 +42,37 @@ data/
     line while document text still contains newlines separating individual news articles).
 - Each `.src.cleaned` line is itself multiple news articles concatenated with the separator token
   `|||||`; each `.tgt` line is the corresponding human-written multi-document summary.
-- `data/` files are line-aligned 1:1 across the src/tgt pair for a split — do not reorder or
-  filter one file without the other.
+- `data/text/` files are line-aligned 1:1 across the src/tgt pair for a split — do not reorder or
+  filter one file without the other. `data/tab/` files are NOT line-aligned with `data/text/`:
+  the converter drops rows with dirty sources (<50 words, >100k words, or exact duplicates —
+  criteria documented in `scripts/convert_to_tab.py` and `data/README.md`), listing them in
+  `data/tab/excluded_rows.tsv`.
 - `README.md` no longer carries HF Hub dataset-card YAML frontmatter (`dataset_info`,
   `train-eval-index`, etc.) — it was intentionally stripped since this repo doesn't need to
   maintain Hugging Face Hub compatibility. Don't reintroduce it or treat its absence as a bug.
+
+## EDA dashboard (`multi_news_dashboard.html`)
+
+A self-contained static HTML report (UI text in Italian, no external dependencies) with
+corpus-wide exploratory statistics, computed in streaming over all three splits aggregated
+(56,216 examples, 154,530 source articles). All numbers are embedded as a single JSON literal
+(`const D = {...}` in the inline `<script>`) — read/edit that object, not the rendering code, to
+get or change the stats. Key facts it establishes (details in `data/README.md`):
+
+- Word counts are tokenizer-free (`str.split()`, with `NEWLINE_CHAR` and `|||||` excluded);
+  sentence counts are heuristic (`[.!?]+` split). Paper values (Fabbri et al., Table 3) are shown
+  as a reference column, not recomputed — expect systematic offsets (e.g. vocab 494,577 here vs
+  666,515 in the paper).
+- Data-quality caveats to respect in any tooling: 10 empty source lines, 637 examples with ≤1
+  source article, 77 source rows that are exact duplicates of another row (20 groups — dedup
+  before any re-splitting to avoid train/eval leakage), 0 duplicate summaries. These apply to
+  `data/text/`; the derived `data/tab/` copy already excludes the dirty rows.
+- Extreme source-length outliers (top one: `train:22256`, 449,620 words) are source/summary
+  **mismatches** from upstream scraping errors, not just long text — the summary is unrelated to
+  the source. Filtering/truncating by length alone doesn't fix them.
+- Its footer says it's regenerable via `python scripts/analyze_dataset.py`, but that script is
+  **not present in the repo** — only `scripts/convert_to_tab.py` exists. Treat the dashboard's
+  embedded JSON as the current source of truth for these stats.
 
 ## Working with the data files
 
