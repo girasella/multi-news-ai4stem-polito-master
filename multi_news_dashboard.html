@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-News — EDA aggregata</title>
+</head>
+<body>
+<style>
+  .viz-root {
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:           #e1e0d9;
+    --axis:           #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1:       #2a78d6; /* blu — serie unica aggregata */
+    --series-2:       #1baf7a; /* aqua — riferimento / secondaria */
+    --good:           #006300;
+    --warn:           #b06a00;
+    --heat-empty:     #f0efec;
+  }
+  @media (prefers-color-scheme: dark) {
+    .viz-root {
+      --surface-1:  #1a1a19; --page: #0d0d0d; --text-primary: #ffffff;
+      --text-secondary: #c3c2b7; --text-muted: #898781; --grid: #2c2c2a;
+      --axis: #383835; --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5; --series-2: #199e70;
+      --good: #0ca30c; --warn: #fab219; --heat-empty: #262624;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    --surface-1:  #1a1a19; --page: #0d0d0d; --text-primary: #ffffff;
+    --text-secondary: #c3c2b7; --text-muted: #898781; --grid: #2c2c2a;
+    --axis: #383835; --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --series-2: #199e70;
+    --good: #0ca30c; --warn: #fab219; --heat-empty: #262624;
+  }
+  :root[data-theme="light"] .viz-root {
+    --surface-1:  #fcfcfb; --page: #f9f9f7; --text-primary: #0b0b0b;
+    --text-secondary: #52514e; --text-muted: #898781; --grid: #e1e0d9;
+    --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6; --series-2: #1baf7a;
+    --good: #006300; --warn: #b06a00; --heat-empty: #f0efec;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .viz-root {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page); color: var(--text-primary);
+    padding: 32px 24px 72px; line-height: 1.5;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .subtitle { color: var(--text-secondary); font-size: 14px; margin: 0 0 8px; }
+  .section-label {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-muted); font-weight: 600; margin: 36px 0 14px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--grid);
+  }
+
+  .stat-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin: 20px 0 4px;
+  }
+  .stat-tile {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .stat-tile .label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-tile .value { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+  .stat-tile .sub { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 20px 10px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 2px; }
+  .card .desc { font-size: 12.5px; color: var(--text-secondary); margin: 0 0 14px; }
+  .card .desc b { color: var(--text-primary); font-weight: 600; }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .chart-scroll { overflow-x: auto; }
+  svg { display: block; overflow: visible; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .axis-line { stroke: var(--axis); stroke-width: 1; }
+  .axis-label { fill: var(--text-muted); font-size: 11px; }
+  .bar { transition: opacity 0.1s; }
+  .bar:hover { opacity: 0.72; cursor: pointer; }
+
+  .tooltip {
+    position: fixed; pointer-events: none; background: var(--text-primary); color: var(--page);
+    font-size: 12px; padding: 6px 9px; border-radius: 6px; line-height: 1.4; opacity: 0;
+    transform: translate(-50%, calc(-100% - 10px)); white-space: nowrap; z-index: 10;
+    transition: opacity 0.08s;
+  }
+  .tooltip.show { opacity: 1; }
+
+  table { border-collapse: collapse; font-size: 13px; width: 100%; }
+  th, td { text-align: right; padding: 7px 12px; border-bottom: 1px solid var(--grid); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.02em; }
+  td { font-variant-numeric: tabular-nums; }
+  td.mono { font-variant-numeric: tabular-nums; }
+  td.ref { color: var(--text-muted); }
+
+  .status { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+  .status.ok { color: var(--good); }
+  .status.warn { color: var(--warn); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot.ok { background: var(--good); } .dot.warn { background: var(--warn); }
+
+  .callout {
+    border: 1px solid var(--border); border-left: 3px solid var(--series-1);
+    border-radius: 8px; padding: 14px 16px; background: var(--surface-1); margin-top: 4px;
+  }
+  .callout.warn { border-left-color: var(--warn); }
+  .callout h3 { margin: 0 0 6px; font-size: 14px; }
+  .callout p { margin: 0 0 8px; font-size: 13px; color: var(--text-secondary); }
+  code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px;
+    background: var(--grid); padding: 1px 5px; border-radius: 4px; }
+  .pill { display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px;
+    background: var(--grid); color: var(--text-secondary); margin-left:8px; vertical-align:middle; }
+  footer { font-size: 12px; color: var(--text-muted); margin-top: 24px; }
+</style>
+
+<div class="viz-root">
+<div class="wrap">
+  <h1>Multi-News — EDA aggregata</h1>
+  <p class="subtitle" id="subtitle"></p>
+
+  <div class="callout" style="margin-bottom:20px">
+    <h3>Nota sulla lingua</h3>
+    <p style="margin-bottom:0">Fonti e summary provengono da <b>newser.com</b>, un aggregatore editoriale in lingua inglese: gli articoli sorgente sono nella grandissima maggioranza — se non esclusivamente — in <b>inglese</b>.</p>
+  </div>
+
+  <div class="stat-row" id="stat-row"></div>
+
+  <!-- ============ 1. STRUTTURA ============ -->
+  <div class="section-label">1 · Struttura del dataset</div>
+  <div class="card">
+    <h2>Integrità &amp; ridondanza</h2>
+    <p class="desc">Controlli di base su tutti gli esempi aggregati. Le percentuali sono sul totale del corpus.</p>
+    <div class="chart-scroll"><table id="struct-table"></table></div>
+  </div>
+
+  <!-- ============ 2. FONTI PER ESEMPIO ============ -->
+  <div class="section-label">2 · Documenti sorgente per esempio</div>
+  <div class="grid2">
+    <div class="card">
+      <h2>Distribuzione del numero di fonti</h2>
+      <p class="desc">Articoli per esempio (split su <code>|||||</code>), 0–10, aggregati su train+val+test.
+      <b>Attenzione al confronto con il paper</b>: la Table&nbsp;2 di Fabbri et&nbsp;al. (2019) — moda a <b>2</b> (23.894), poi <b>3</b> (12.707) — descrive <b>solo il train split</b> (somma 44.972), non i tre split aggregati come qui. Il confronto corretto è train-vs-train: ricalcolando dai soli file <code>train.src.cleaned</code> si ottengono <b>23.741</b> (2 fonti) e <b>12.577</b> (3 fonti) — molto vicini ai valori del paper (Δ ≈ 0,6–1%). Quel piccolo residuo, e i 637 esempi con 0–1 fonti presenti qui ma esclusi dal filtro 2–10 dichiarato dal paper, sono attribuiti in <code>data/README.md</code> a possibile reprocessing/link-rot tra la pubblicazione del paper e questo rilascio — un'ipotesi documentata dai maintainer del repo, non verificata direttamente in questa analisi.</p>
+      <div class="legend" id="lg-art"></div>
+      <div class="chart-scroll"><svg id="ch-art" width="520" height="260"></svg></div>
+    </div>
+    <div class="card">
+      <h2>Sintesi fonti</h2>
+      <p class="desc">Media, mediana e sbilanciamento verso cluster piccoli.</p>
+      <div class="stat-row" id="src-tiles" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))"></div>
+    </div>
+  </div>
+
+  <!-- ============ 3. LUNGHEZZE ============ -->
+  <div class="section-label">3 · Lunghezza dei testi</div>
+  <div class="card">
+    <h2>Statistiche di lunghezza</h2>
+    <p class="desc">Conteggi tokenizer-free (<code>str.split()</code>) su testo pulito (token <code>NEWLINE_CHAR</code> e separatore <code>|||||</code> esclusi). La colonna <b>rif. paper</b> riporta i valori normalizzati di Fabbri et&nbsp;al. (2019) — non identici perché il paper usa un tokenizer diverso.</p>
+    <div class="chart-scroll"><table id="len-table"></table></div>
+    <div class="callout" style="margin-top:14px">
+      <h3>Come sono calcolate</h3>
+      <p style="margin-bottom:6px"><b>Parole</b> — split sugli spazi bianchi (<code>str.split()</code>): nessuna tokenizzazione linguistica, la punteggiatura resta attaccata alla parola. Sul source i token <code>NEWLINE_CHAR</code> (newline interni agli articoli) e il separatore <code>|||||</code> sono ripristinati/rimossi prima del conteggio, così non vengono contati come parole.</p>
+      <p style="margin-bottom:6px"><b>Frasi</b> — conteggio <i>euristico</i>: il testo è diviso su uno o più caratteri di fine frase <code>.!?</code> (regex <code>[.!?]+</code>) e si contano i segmenti non vuoti. È un'approssimazione — abbreviazioni (“Dr.”, “U.S.”), numeri decimali ed ellissi possono gonfiare leggermente il conteggio; per questo la media frasi/input qui (~102) supera quella normalizzata del paper (82,7).</p>
+      <p style="margin-bottom:0"><b>Compression ratio</b> — per ciascun esempio, <code>parole_input ÷ parole_summary</code>, calcolato solo quando il summary ha almeno una parola. Media e mediana sono aggregate sugli esempi validi. Valori alti = il summary condensa molto (la mediana ~6,3× significa che l'input è in media ~6 volte più lungo del suo summary); la coda oltre 30× viene dai cluster-fonte enormi.</p>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2>Parole per input concatenato</h2>
+      <p class="desc">Distribuzione della lunghezza sorgente per esempio; coda destra molto pesante.</p>
+      <div class="legend" id="lg-sw"></div>
+      <div class="chart-scroll"><svg id="ch-sw" width="520" height="260"></svg></div>
+    </div>
+    <div class="card">
+      <h2>Parole per summary</h2>
+      <p class="desc">Molto più uniforme dell'input — mediana attorno alle ~220 parole.</p>
+      <div class="legend" id="lg-tw"></div>
+      <div class="chart-scroll"><svg id="ch-tw" width="520" height="260"></svg></div>
+    </div>
+    <div class="card">
+      <h2>Frasi per input</h2>
+      <p class="desc">Conteggio euristico (split su <code>.!?</code>).</p>
+      <div class="legend" id="lg-ss"></div>
+      <div class="chart-scroll"><svg id="ch-ss" width="520" height="260"></svg></div>
+    </div>
+    <div class="card">
+      <h2>Frasi per summary</h2>
+      <p class="desc">Compatto: quasi tutti gli esempi tra 4 e 14 frasi.</p>
+      <div class="legend" id="lg-ts"></div>
+      <div class="chart-scroll"><svg id="ch-ts" width="520" height="260"></svg></div>
+    </div>
+    <div class="card">
+      <h2>Compression ratio (input ÷ summary)</h2>
+      <p class="desc">Quanto il summary condensa le fonti. Coda lunga da cluster molto grandi.</p>
+      <div class="legend" id="lg-cp"></div>
+      <div class="chart-scroll"><svg id="ch-cp" width="520" height="260"></svg></div>
+    </div>
+  </div>
+
+  <!-- ============ 4. CORRELAZIONI ============ -->
+  <div class="section-label">4 · Correlazioni tra variabili</div>
+  <div class="card">
+    <h2>Coefficienti di correlazione</h2>
+    <p class="desc">
+      Per ogni esempio si estraggono le variabili (n. fonti, parole input, parole summary, compression ratio); i coefficienti sono calcolati su tutti i <b>56.216</b> esempi (le coppie con la compression solo dove il summary ha ≥1 parola).
+      <b>Pearson r</b> misura la relazione <i>lineare</i> sui valori grezzi ed è sensibile agli outlier estremi (le sorgenti da centinaia di migliaia di parole); <b>Spearman ρ</b> lavora sui <i>ranghi</i> ed è quindi robusto a code e outlier, catturando la relazione monotòna anche se non lineare. Range di entrambi: −1 … +1.
+    </p>
+    <div class="chart-scroll"><table id="corr-table"></table></div>
+    <div class="callout" style="margin-top:14px">
+      <h3>Lettura dei risultati</h3>
+      <p style="margin-bottom:6px"><b>N. fonti ↔ parole summary</b> — correlazione positiva moderata: più articoli da sintetizzare → digest più lungo. È la relazione più netta, ben visibile nel grafico qui sotto (media da ~175 a ~370 parole passando da 1 a 9+ fonti).</p>
+      <p style="margin-bottom:6px"><b>N. fonti ↔ compression ratio</b> — positiva ma più debole in Pearson che in Spearman: aggiungere fonti gonfia l'input più del summary, quindi la compression cresce in modo <i>monotòno</i> (da ~3× a ~20×), ma non perfettamente lineare — da cui il ρ più alto del r.</p>
+      <p style="margin-bottom:0"><b>Parole input ↔ parole summary</b> — Pearson basso ma Spearman più alto: la lunghezza del summary cresce con l'input <i>in ordine di rango</i>, ma il legame lineare è schiacciato dalle sorgenti-outlier lunghissime a fronte di summary che restano nella banda ~150–300 parole. In pratica la lunghezza del summary è in gran parte <b>indipendente</b> dalla dimensione grezza dell'input.</p>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2>Parole summary medie per n. fonti</h2>
+      <p class="desc">I summary crescono col numero di fonti: più sorgenti → digest più lungo.</p>
+      <div class="legend" id="lg-tba"></div>
+      <div class="chart-scroll"><svg id="ch-tba" width="520" height="260"></svg></div>
+    </div>
+    <div class="card">
+      <h2>Compression ratio media per n. fonti</h2>
+      <p class="desc">Più fonti comprimono di più: l'input cresce più del summary.</p>
+      <div class="legend" id="lg-cba"></div>
+      <div class="chart-scroll"><svg id="ch-cba" width="520" height="260"></svg></div>
+    </div>
+  </div>
+
+  <!-- ============ 5. QUALITÀ & ANOMALIE ============ -->
+  <div class="section-label">5 · Qualità e anomalie</div>
+  <div class="card">
+    <h2>Esempi fuori range</h2>
+    <p class="desc" id="anom-desc"></p>
+    <div class="chart-scroll"><table id="anom-table"></table></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2>Outlier — sorgenti più lunghe / corte</h2>
+      <p class="desc">Indici <code>split:riga</code> (0-based). Non assumere input limitato.</p>
+      <div class="chart-scroll"><table id="outlier-src"></table></div>
+    </div>
+    <div class="card">
+      <h2>Outlier — summary più lunghi / corti</h2>
+      <p class="desc">Per conteggio parole, con indice riga.</p>
+      <div class="chart-scroll"><table id="outlier-tgt"></table></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="callout warn">
+      <h3>⚠ Gli outlier estremi di lunghezza sono mismatch source/summary, non solo "testo lungo"</h3>
+      <p style="margin-bottom:6px">Ispezione manuale di <code>train:22256</code> (l'outlier di sorgente più estremo, <b>449.620 parole</b>): il testo sorgente non è un articolo di cronaca ma il <b>programma completo di un convegno accademico</b> (Society of Biblical Literature, Annual Meeting Atlanta 2015) — centinaia di abstract di paper concatenati uno via l'altro. Il <code>summary</code> corrispondente invece è normale (319 parole) e parla di tutt'altro (un frammento di papiro del Nuovo Testamento venduto su eBay): <b>nessuna relazione semantica</b> tra le due colonne per questa riga.</p>
+      <p style="margin-bottom:0">Causa probabile: un errore di scraping/link a monte (es. un link Wayback risolto verso la pagina sbagliata), non un problema introdotto da questa pipeline di analisi. Gli altri outlier nella top della tabella sopra (tutti oltre le ~100k parole) sono verosimilmente casi analoghi. Chi allena un modello su questi dati dovrebbe considerare di <b>troncare o filtrare</b> gli esempi con sorgente anomala, non solo limitarsi a un cap di lunghezza — un input troncato da un documento non pertinente resta comunque privo di segnale utile per il summary target.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Duplicati &amp; ridondanza</h2>
+    <div id="dedup-body"></div>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const D = {"meta": {"n_examples": 56216, "total_articles": 154530, "generated_note": "Aggregated over train+val+test. Heavy metrics (novel n-grams, fragment coverage/density, language detection) intentionally omitted."}, "structure": {"n_examples": 56216, "empty_src_count": 10, "empty_src_pct": 0.0178, "empty_tgt_count": 0, "empty_tgt_pct": 0.0, "tgt_exact_dup": {"groups": 0, "examples": 0, "redundant": 0}, "tgt_exact_dup_pct": 0.0, "tgt_near_dup": {"groups": 3, "examples": 6, "redundant": 3}, "tgt_near_dup_pct": 0.0053, "src_exact_dup": {"groups": 20, "examples": 97, "redundant": 77}, "src_exact_dup_pct": 0.137, "le1_article_count": 637, "le1_article_pct": 1.1331, "unique_summaries": 56216, "unique_sources": 56139}, "sources": {"distribution": {"0": 10, "1": 627, "2": 29829, "3": 15672, "4": 6140, "5": 2260, "6": 881, "7": 449, "8": 222, "9": 96, "10": 30}, "mean": 2.749, "median": 2.0, "cum_le3_pct": 82.07, "paper": {"mode2": 23894, "count3": 12707}}, "lengths": {"src_words": {"n": 56216, "total": 100557523.0, "mean": 1788.771, "median": 1319.0, "std": 3003.676, "min": 0.0, "max": 449620.0, "p05": 356.0, "p25": 802.0, "p75": 2104.25, "p95": 4599.25}, "src_sents": {"n": 56216, "total": 5744151.0, "mean": 102.18, "median": 73.0, "std": 180.621, "min": 0.0, "max": 21417.0, "p05": 20.0, "p25": 45.0, "p75": 118.0, "p95": 263.0}, "tgt_words": {"n": 56216, "total": 12253779.0, "mean": 217.977, "median": 220.0, "std": 67.925, "min": 34.0, "max": 973.0, "p05": 109.0, "p25": 169.0, "p75": 262.0, "p95": 318.0}, "tgt_sents": {"n": 56216, "total": 624841.0, "mean": 11.115, "median": 11.0, "std": 4.044, "min": 1.0, "max": 55.0, "p05": 5.0, "p25": 8.0, "p75": 13.0, "p95": 18.0}, "compression": {"n": 56216, "total": 460121.263, "mean": 8.185, "median": 6.328, "std": 11.104, "min": 0.0, "max": 1409.467, "p05": 1.995, "p25": 4.048, "p75": 9.758, "p95": 19.383}, "vocab_size": 494577, "paper": {"src_words": 2103, "src_sents": 82.7, "tgt_words": 263.7, "tgt_sents": 9.97, "vocab_size": 666515}}, "hist": {"src_words": {"counts": [5820, 13905, 12426, 8648, 5251, 3000, 3309, 2352, 1505], "labels": ["0-500", "500-1k", "1k-1.5k", "1.5k-2k", "2k-2.5k", "2.5k-3k", "3k-4k", "4k-6k", "6k+"]}, "src_sents": {"counts": [2590, 8807, 10316, 8957, 6902, 5749, 3705, 4057, 3023, 2110], "labels": ["0-20", "20-40", "40-60", "60-80", "80-100", "100-125", "125-150", "150-200", "200-300", "300+"]}, "tgt_words": {"counts": [1792, 7496, 12731, 15824, 13635, 3240, 1188, 310], "labels": ["0-100", "100-150", "150-200", "200-250", "250-300", "300-350", "350-450", "450+"]}, "tgt_sents": {"counts": [289, 2817, 7035, 10565, 11793, 10287, 6533, 5131, 1361, 405], "labels": ["0-4", "4-6", "6-8", "8-10", "10-12", "12-14", "14-16", "16-20", "20-25", "25+"]}, "compression": {"counts": [7490, 12688, 11413, 8242, 5381, 3431, 3005, 1960, 1692, 914], "labels": ["0-3", "3-5", "5-7", "7-9", "9-11", "11-13", "13-16", "16-20", "20-30", "30+"]}, "articles": {"counts": [10, 627, 29829, 15672, 6140, 2260, 881, 449, 222, 96, 30], "labels": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]}}, "paper_reference": {"novel_ngrams": {"unigram": 17.76, "bigram": 57.1, "trigram": 75.71, "fourgram": 82.3}, "note": "Abstractiveness (novel n-grams) and extractiveness (fragment coverage/density) are quoted from Fabbri et al. (2019) and NOT recomputed from this repo's data. The paper places Multi-News near CNN/DailyMail on the coverage/density plane."}, "correlations": {"coefficients": {"art_vs_tgt": {"pearson": 0.4282, "spearman": 0.3598}, "art_vs_comp": {"pearson": 0.1899, "spearman": 0.3159}, "src_vs_tgt": {"pearson": 0.2091, "spearman": 0.4044}}, "by_articles": {"0": {"count": 10, "tgt_words_mean": 135.1, "comp_mean": 0.0}, "1": {"count": 627, "tgt_words_mean": 175.7, "comp_mean": 3.3}, "2": {"count": 29829, "tgt_words_mean": 197.0, "comp_mean": 6.73}, "3": {"count": 15672, "tgt_words_mean": 227.7, "comp_mean": 8.65}, "4": {"count": 6140, "tgt_words_mean": 249.6, "comp_mean": 11.34}, "5": {"count": 2260, "tgt_words_mean": 277.2, "comp_mean": 12.02}, "6": {"count": 881, "tgt_words_mean": 302.5, "comp_mean": 13.35}, "7": {"count": 449, "tgt_words_mean": 327.3, "comp_mean": 15.57}, "8": {"count": 222, "tgt_words_mean": 347.6, "comp_mean": 17.51}, "9": {"count": 96, "tgt_words_mean": 372.5, "comp_mean": 17.91}, "10": {"count": 30, "tgt_words_mean": 339.7, "comp_mean": 20.12}}}, "quality": {"tgt_out_low_count": 0, "tgt_out_low_pct": 0.0, "tgt_out_high_count": 12, "tgt_out_high_pct": 0.021, "src_short_count": 55, "src_short_pct": 0.098, "thresholds": {"tgt_min": 20, "tgt_max": 600, "src_min": 50}, "outliers": {"longest_src": [{"words": 449620, "ref": "train:22256"}, {"words": 168796, "ref": "train:26686"}, {"words": 145130, "ref": "test:4403"}, {"words": 123117, "ref": "val:2284"}, {"words": 122557, "ref": "train:4229"}, {"words": 108766, "ref": "test:4402"}, {"words": 106783, "ref": "test:4241"}, {"words": 104541, "ref": "train:26524"}], "shortest_src": [{"words": 0, "ref": "test:4736"}, {"words": 0, "ref": "train:16290"}, {"words": 0, "ref": "train:16489"}, {"words": 0, "ref": "train:18812"}, {"words": 0, "ref": "train:19279"}, {"words": 0, "ref": "train:21620"}, {"words": 0, "ref": "train:30735"}, {"words": 0, "ref": "train:41993"}], "longest_tgt": [{"words": 973, "ref": "train:30501"}, {"words": 900, "ref": "train:29043"}, {"words": 764, "ref": "train:44649"}, {"words": 681, "ref": "train:21180"}, {"words": 658, "ref": "train:6917"}, {"words": 640, "ref": "train:20958"}, {"words": 632, "ref": "train:8675"}, {"words": 625, "ref": "train:20261"}], "shortest_tgt": [{"words": 34, "ref": "train:4325"}, {"words": 39, "ref": "train:32644"}, {"words": 42, "ref": "train:22079"}, {"words": 44, "ref": "train:25668"}, {"words": 46, "ref": "val:5302"}, {"words": 47, "ref": "train:12467"}, {"words": 48, "ref": "train:178"}, {"words": 48, "ref": "train:36539"}]}}};
+
+const COLOR = "var(--series-1)";
+const COLOR2 = "var(--series-2)";
+function fmt(n) { return Number(n).toLocaleString("it-IT"); }
+function pct(n) { return Number(n).toLocaleString("it-IT", { maximumFractionDigits: 3 }) + "%"; }
+
+// ---------- Tooltip ----------
+const tooltip = document.getElementById("tooltip");
+function showTip(evt, html) {
+  tooltip.innerHTML = html;
+  tooltip.style.left = evt.clientX + "px";
+  tooltip.style.top = evt.clientY + "px";
+  tooltip.classList.add("show");
+}
+function hideTip() { tooltip.classList.remove("show"); }
+
+// ---------- Single-series bars ----------
+function buildBars(svgId, legendId, categories, values, opts) {
+  opts = opts || {};
+  const svg = document.getElementById(svgId);
+  const W = +svg.getAttribute("width"), H = +svg.getAttribute("height");
+  const mL = 46, mB = 46, mT = 8, mR = 8;
+  const plotW = W - mL - mR, plotH = H - mT - mB;
+  const maxVal = Math.max(...values, 1);
+  const yMax = opts.yMax || maxVal * 1.08;
+  const gW = plotW / categories.length;
+  const barPad = 0.28;
+  const barW = gW * (1 - barPad);
+  const color = opts.color || COLOR;
+  let out = "";
+  const nGrid = 4;
+  for (let i = 0; i <= nGrid; i++) {
+    const y = mT + plotH - (plotH * i / nGrid);
+    out += `<line class="gridline" x1="${mL}" y1="${y}" x2="${mL + plotW}" y2="${y}"/>`;
+    out += `<text class="axis-label" x="${mL - 7}" y="${y + 3}" text-anchor="end">${opts.yFmt ? opts.yFmt(yMax * i / nGrid) : Math.round(yMax * i / nGrid)}</text>`;
+  }
+  out += `<line class="axis-line" x1="${mL}" y1="${mT + plotH}" x2="${mL + plotW}" y2="${mT + plotH}"/>`;
+  categories.forEach((cat, ci) => {
+    const val = values[ci];
+    const bh = (val / yMax) * plotH;
+    const x = mL + ci * gW + (gW * barPad) / 2;
+    const y = mT + plotH - bh;
+    out += `<rect class="bar" data-c="${cat}" data-v="${val}" data-fmt="${opts.tipUnit||''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(barW,0.5).toFixed(1)}" height="${Math.max(bh,0).toFixed(1)}" rx="2" fill="${color}"/>`;
+    const lx = mL + ci * gW + gW / 2;
+    const ly = mT + plotH + 16;
+    const anchor = opts.rotate ? "end" : "middle";
+    const tf = opts.rotate ? ` transform="rotate(-30 ${lx} ${ly})"` : "";
+    out += `<text class="axis-label" x="${lx}" y="${ly}" text-anchor="${anchor}"${tf}>${cat}</text>`;
+  });
+  svg.innerHTML = out;
+  svg.querySelectorAll(".bar").forEach(bar => {
+    bar.addEventListener("mousemove", e => {
+      const v = Number(bar.dataset.v);
+      const u = bar.dataset.fmt || "";
+      showTip(e, `<b>${bar.dataset.c}</b><br>${opts.tipFmt ? opts.tipFmt(v) : fmt(v)}${u}`);
+    });
+    bar.addEventListener("mouseleave", hideTip);
+  });
+  if (legendId) {
+    document.getElementById(legendId).innerHTML =
+      `<span class="legend-item"><span class="swatch" style="background:${color}"></span>${opts.seriesName || "esempi"}</span>`;
+  }
+}
+
+// ---------- Subtitle ----------
+const m = D.meta;
+document.getElementById("subtitle").innerHTML =
+  `Distribuzioni strutturali &amp; audit di qualità · calcolato in streaming su tutti i <b>${fmt(m.n_examples)}</b> esempi (train+val+test aggregati, ${fmt(m.total_articles)} articoli sorgente) · nessuna distinzione di split.`;
+
+// ---------- Stat tiles ----------
+const st = D.structure, ln = D.lengths, so = D.sources;
+document.getElementById("stat-row").innerHTML = [
+  { label: "Esempi totali", value: fmt(m.n_examples), sub: "train + val + test" },
+  { label: "Articoli sorgente", value: fmt(m.total_articles), sub: `media ≈ ${so.mean} per esempio` },
+  { label: "Lunghezza input (mediana)", value: fmt(ln.src_words.median) + " parole", sub: `media ${fmt(ln.src_words.mean)}` },
+  { label: "Vocabolario stimato", value: fmt(ln.vocab_size), sub: `rif. paper ${fmt(ln.paper.vocab_size)}` },
+  { label: "Compression (mediana)", value: ln.compression.median + "×", sub: `media ${ln.compression.mean}×` },
+  { label: "Summary duplicati", value: fmt(st.tgt_exact_dup.redundant), sub: st.tgt_exact_dup.redundant === 0 ? "tutti unici ✓" : `${pct(st.tgt_exact_dup_pct)} esatti` },
+].map(x => `<div class="stat-tile"><div class="label">${x.label}</div><div class="value">${x.value}</div><div class="sub">${x.sub}</div></div>`).join("");
+
+// ---------- 1. Struttura ----------
+function statusCell(ok, txt) {
+  return `<td><span class="status ${ok ? 'ok' : 'warn'}"><span class="dot ${ok ? 'ok' : 'warn'}"></span>${txt}</span></td>`;
+}
+let strt = `<tr><th>Controllo</th><th>Conteggio</th><th>% corpus</th><th>Stato</th></tr>`;
+strt += `<tr><td>Document vuoti / mancanti</td><td>${fmt(st.empty_src_count)}</td><td>${pct(st.empty_src_pct)}</td>${statusCell(st.empty_src_count===0, st.empty_src_count===0?"ok":"da gestire")}</tr>`;
+strt += `<tr><td>Summary vuoti / mancanti</td><td>${fmt(st.empty_tgt_count)}</td><td>${pct(st.empty_tgt_pct)}</td>${statusCell(st.empty_tgt_count===0, st.empty_tgt_count===0?"ok":"da gestire")}</tr>`;
+strt += `<tr><td>Summary duplicati esatti</td><td>${fmt(st.tgt_exact_dup.redundant)}</td><td>${pct(st.tgt_exact_dup_pct)}</td>${statusCell(st.tgt_exact_dup.redundant===0, st.tgt_exact_dup.redundant===0?"tutti unici":"duplicati")}</tr>`;
+strt += `<tr><td>Summary quasi-duplicati <span class="pill">fingerprint</span></td><td>${fmt(st.tgt_near_dup.redundant)}</td><td>${pct(st.tgt_near_dup_pct)}</td>${statusCell(st.tgt_near_dup.redundant===0, st.tgt_near_dup.redundant===0?"nessuno":"verificare")}</tr>`;
+strt += `<tr><td>Source duplicati esatti</td><td>${fmt(st.src_exact_dup.redundant)}</td><td>${pct(st.src_exact_dup_pct)}</td>${statusCell(st.src_exact_dup.redundant===0, st.src_exact_dup.redundant===0?"tutti unici":"duplicati")}</tr>`;
+strt += `<tr><td>Esempi con ≤1 documento</td><td>${fmt(st.le1_article_count)}</td><td>${pct(st.le1_article_pct)}</td>${statusCell(false, "non multi-doc")}</tr>`;
+document.getElementById("struct-table").innerHTML = strt;
+
+// ---------- 2. Fonti ----------
+buildBars("ch-art", "lg-art", D.hist.articles.labels, D.hist.articles.counts, { tipUnit: " esempi", yFmt: v => fmt(Math.round(v)) });
+document.getElementById("src-tiles").innerHTML = [
+  { label: "Media fonti", value: so.mean },
+  { label: "Mediana fonti", value: so.median },
+  { label: "Esempi con ≤3 fonti", value: so.cum_le3_pct + "%" },
+].map(x => `<div class="stat-tile"><div class="label">${x.label}</div><div class="value">${x.value}</div></div>`).join("");
+
+// ---------- 3. Lunghezze ----------
+const lenRows = [
+  ["Parole / input", ln.src_words, ln.paper.src_words, true],
+  ["Frasi / input", ln.src_sents, ln.paper.src_sents, true],
+  ["Parole / summary", ln.tgt_words, ln.paper.tgt_words, true],
+  ["Frasi / summary", ln.tgt_sents, ln.paper.tgt_sents, true],
+  ["Compression ratio", ln.compression, null, false],
+];
+let lent = `<tr><th>Metrica</th><th>Totale</th><th>Media</th><th>Mediana</th><th>Dev.std</th><th>Min</th><th>Max</th><th>p05</th><th>p95</th><th>Rif. paper</th></tr>`;
+lenRows.forEach(([name, s, ref, showTot]) => {
+  const tot = showTot ? fmt(Math.round(s.total)) : "—";
+  lent += `<tr><td>${name}</td><td>${tot}</td><td>${fmt(s.mean)}</td><td>${fmt(s.median)}</td><td>${fmt(s.std)}</td><td>${fmt(s.min)}</td><td>${fmt(s.max)}</td><td>${fmt(s.p05)}</td><td>${fmt(s.p95)}</td><td class="ref">${ref !== null ? fmt(ref) : "—"}</td></tr>`;
+});
+lent += `<tr><td>Vocabolario (token unici)</td><td>—</td><td colspan="7">${fmt(ln.vocab_size)}</td><td class="ref">${fmt(ln.paper.vocab_size)}</td></tr>`;
+document.getElementById("len-table").innerHTML = lent;
+
+buildBars("ch-sw", "lg-sw", D.hist.src_words.labels, D.hist.src_words.counts, { rotate: true, tipUnit: " esempi", yFmt: v => fmt(Math.round(v)) });
+buildBars("ch-tw", "lg-tw", D.hist.tgt_words.labels, D.hist.tgt_words.counts, { rotate: true, tipUnit: " esempi", yFmt: v => fmt(Math.round(v)) });
+buildBars("ch-ss", "lg-ss", D.hist.src_sents.labels, D.hist.src_sents.counts, { rotate: true, tipUnit: " esempi", yFmt: v => fmt(Math.round(v)) });
+buildBars("ch-ts", "lg-ts", D.hist.tgt_sents.labels, D.hist.tgt_sents.counts, { rotate: true, tipUnit: " esempi", yFmt: v => fmt(Math.round(v)) });
+buildBars("ch-cp", "lg-cp", D.hist.compression.labels, D.hist.compression.counts, { rotate: true, tipUnit: " esempi", yFmt: v => fmt(Math.round(v)) });
+
+// ---------- 4. Correlazioni ----------
+const cc = D.correlations.coefficients;
+const corrRows = [
+  ["N. fonti  vs  parole summary", cc.art_vs_tgt],
+  ["N. fonti  vs  compression ratio", cc.art_vs_comp],
+  ["Parole input  vs  parole summary", cc.src_vs_tgt],
+];
+let cort = `<tr><th>Coppia di variabili</th><th>Pearson r</th><th>Spearman ρ</th></tr>`;
+corrRows.forEach(([name, c]) => {
+  cort += `<tr><td>${name}</td><td>${c.pearson}</td><td>${c.spearman}</td></tr>`;
+});
+document.getElementById("corr-table").innerHTML = cort;
+
+const artKeys = Object.keys(D.correlations.by_articles).filter(k => +k >= 1).sort((a,b)=>a-b);
+buildBars("ch-tba", "lg-tba", artKeys, artKeys.map(k => D.correlations.by_articles[k].tgt_words_mean),
+  { seriesName: "media parole", tipUnit: " parole", tipFmt: v => v.toFixed(0), yFmt: v => Math.round(v) });
+buildBars("ch-cba", "lg-cba", artKeys, artKeys.map(k => D.correlations.by_articles[k].comp_mean || 0),
+  { seriesName: "media compression", tipUnit: "×", tipFmt: v => v.toFixed(1), yFmt: v => Math.round(v) });
+
+// ---------- 7. Qualità / anomalie ----------
+const q = D.quality, th = q.thresholds;
+document.getElementById("anom-desc").innerHTML =
+  `Soglie: summary <b>&lt;${th.tgt_min}</b> o <b>&gt;${th.tgt_max}</b> parole; document <b>&lt;${th.src_min}</b> parole (possibile pagina non scaricata).`;
+let anomt = `<tr><th>Anomalia</th><th>Conteggio</th><th>% corpus</th><th>Stato</th></tr>`;
+anomt += `<tr><td>Summary troppo corti (&lt;${th.tgt_min} parole)</td><td>${fmt(q.tgt_out_low_count)}</td><td>${pct(q.tgt_out_low_pct)}</td>${statusCell(q.tgt_out_low_count===0, q.tgt_out_low_count===0?"ok":"verificare")}</tr>`;
+anomt += `<tr><td>Summary troppo lunghi (&gt;${th.tgt_max} parole)</td><td>${fmt(q.tgt_out_high_count)}</td><td>${pct(q.tgt_out_high_pct)}</td>${statusCell(q.tgt_out_high_count===0, q.tgt_out_high_count===0?"ok":"verificare")}</tr>`;
+anomt += `<tr><td>Document anomali (&lt;${th.src_min} parole)</td><td>${fmt(q.src_short_count)}</td><td>${pct(q.src_short_pct)}</td>${statusCell(false, "possibile scraping fallito")}</tr>`;
+document.getElementById("anom-table").innerHTML = anomt;
+
+let os = `<tr><th>Estremo</th><th>split:riga</th><th>Parole</th></tr>`;
+q.outliers.longest_src.slice(0, 4).forEach((o, i) => {
+  os += `<tr><td>${i === 0 ? "più lunga" : "↑"}</td><td class="mono">${o.ref}</td><td class="mono">${fmt(o.words)}</td></tr>`;
+});
+q.outliers.shortest_src.slice(0, 3).forEach((o, i) => {
+  os += `<tr><td>${i === 0 ? "più corta" : "↓"}</td><td class="mono">${o.ref}</td><td class="mono">${fmt(o.words)}</td></tr>`;
+});
+document.getElementById("outlier-src").innerHTML = os;
+
+let ot = `<tr><th>Estremo</th><th>split:riga</th><th>Parole</th></tr>`;
+q.outliers.longest_tgt.slice(0, 4).forEach((o, i) => {
+  ot += `<tr><td>${i === 0 ? "più lungo" : "↑"}</td><td class="mono">${o.ref}</td><td class="mono">${fmt(o.words)}</td></tr>`;
+});
+q.outliers.shortest_tgt.slice(0, 3).forEach((o, i) => {
+  ot += `<tr><td>${i === 0 ? "più corto" : "↓"}</td><td class="mono">${o.ref}</td><td class="mono">${fmt(o.words)}</td></tr>`;
+});
+document.getElementById("outlier-tgt").innerHTML = ot;
+
+// ---------- Dedup callout ----------
+const anyDup = st.tgt_exact_dup.redundant > 0 || st.tgt_near_dup.redundant > 0 || st.src_exact_dup.redundant > 0;
+document.getElementById("dedup-body").innerHTML = `
+  <div class="callout ${anyDup ? 'warn' : ''}">
+    <h3>${anyDup ? '⚠ Ridondanza rilevata' : '✓ Nessuna ridondanza significativa'}</h3>
+    <p><b>${st.tgt_exact_dup.redundant === 0 ? "Tutti" : (m.n_examples - st.tgt_exact_dup.redundant)}</b> i ${fmt(m.n_examples)} summary sono unici (${st.tgt_exact_dup.redundant} duplicati esatti, ${st.tgt_near_dup.redundant} quasi-duplicati via fingerprint sulle prime parole).
+    Sul lato <b>source</b>: ${fmt(st.src_exact_dup.redundant)} righe hanno un testo sorgente identico a un'altra (${st.src_exact_dup.groups} gruppi di duplicati), ${pct(st.src_exact_dup_pct)} del corpus.</p>
+    <p style="margin-bottom:0">${st.src_exact_dup.redundant > 0 ? "Mitigazione: de-duplicare le sorgenti prima di eventuali split per evitare leakage tra train ed eval." : "Nessun intervento necessario."}</p>
+  </div>`;
+
+document.getElementById("footer").innerHTML =
+  `Conteggi parole via <code>str.split()</code> (tokenizer-free), token <code>NEWLINE_CHAR</code> e separatore <code>|||||</code> esclusi. Frasi euristiche (split su <code>.!?</code>). Compression ratio = parole_input ÷ parole_summary per esempio. Correlazioni: Pearson (lineare) e Spearman (rango) su tutti gli esempi. Duplicati: hash SHA-1 su testo normalizzato; quasi-duplicati: fingerprint sulle prime 15 parole. Indici <code>split:riga</code> 0-based. Rigenerabile con <code>python scripts/analyze_dataset.py</code>.`;
+</script>
+
+</body>
+</html>
