@@ -19,6 +19,15 @@ multi_news_dashboard.html  # Self-contained EDA dashboard (Italian) — see "EDA
 scripts/
   README.md            # Documentation for the scripts (usage, inputs/outputs, cleaning criteria)
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
+requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer etc.)
+notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
+  README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
+  summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
+  0X_*.ipynb           # 00 sample prep, 01-04 one method each, 05 comparison
+results/
+  sample/              # Shared evaluation sample TSV (committed)
+  summaries/           # Generated summaries per method; *_full.tsv gitignored (large, regenerable)
+  metrics/             # Per-example CSVs + aggregate JSONs (committed)
 data/
   README.md            # Detailed description of data/ file formats and content
   text/                # Canonical format — consumed by multi_news.py; kept as-released (dirty rows included)
@@ -76,6 +85,29 @@ get or change the stats. Key facts it establishes (details in `data/README.md`):
 - Its footer says it's regenerable via `python scripts/analyze_dataset.py`, but that script is
   **not present in the repo** — only `scripts/convert_to_tab.py` exists. Treat the dashboard's
   embedded JSON as the current source of truth for these stats.
+
+## Summarization benchmark (`notebooks/` + `results/`)
+
+Four methods (TextRank, LexRank extractive; BART `facebook/bart-large-cnn`, PEGASUS
+`google/pegasus-multi_news` abstractive) run via pyAutoSummarizer and scored with its
+ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
+
+- **All notebook documentation, comments and printed labels are in Italian** (consistent with the
+  EDA dashboard). `README.md`, `CLAUDE.md`, `data/README.md` etc. stay in English.
+- All method notebooks evaluate the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
+  default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept).
+  Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
+- Generation is expensive and **resumable**: summaries append to
+  `results/summaries/{method}_{scope}.tsv` one flushed row at a time, and re-runs skip row_ids
+  already present. Metrics sections read ONLY saved files — never make evaluation depend on
+  re-generating summaries.
+- Known caveats (documented in the notebooks/README): `pegasus-multi_news` was trained on this
+  dataset's train split → leakage on train-split sample rows (aggregates include per-split means;
+  clean comparison = test split only); pyAutoSummarizer's ROUGE uses unique-n-gram sets, not
+  clipped counts, so values aren't comparable to the literature; BART/PEGASUS truncate input to
+  1024 tokens; the library reloads HF models per call and ignores CUDA, so notebooks 03/04 load
+  the model once themselves and notebook 01 injects a shared SentenceTransformer into
+  `loaded_models`.
 
 ## Working with the data files
 

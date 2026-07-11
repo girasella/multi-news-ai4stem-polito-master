@@ -1,0 +1,48 @@
+{
+  "metodo": "pegasus",
+  "scope": "sample",
+  "config": {
+    "checkpoint": "google/pegasus-multi_news",
+    "min_len": 32,
+    "max_len": 256,
+    "num_beams": 4,
+    "length_penalty": 2.0,
+    "max_input_tokens": 1024,
+    "device": "cpu",
+    "note": "niente prefisso summarize:, checkpoint multi_news (leakage su split train)",
+    "libreria": "transformers (parametri di pyAutoSummarizer.summ_abst_pegasus)"
+  },
+  "timestamp": "2026-07-11T19:15:58+00:00",
+  "n_esempi": 3,
+  "overall": {
+    "rouge1_f1": 0.43386216117939774,
+    "rouge1_p": 0.5062981867544932,
+    "rouge1_r": 0.38648663122962185,
+    "rouge2_f1": 0.1992815589703292,
+    "rouge2_p": 0.22942303695492042,
+    "rouge2_r": 0.17886364613466488,
+    "rougeL_f1": 0.2510956951950741,
+    "rougeL_p": 0.2813055144337528,
+    "rougeL_r": 0.23060113751748523,
+    "bleu": 0.13927298275863645,
+    "meteor": 0.4536875563215688,
+    "parole_generate": 171.0
+  },
+  "per_split": {
+    "train": {
+      "n_esempi": 3,
+      "rouge1_f1": 0.43386216117939774,
+      "rouge1_p": 0.5062981867544932,
+      "rouge1_r": 0.38648663122962185,
+      "rouge2_f1": 0.1992815589703292,
+      "rouge2_p": 0.22942303695492042,
+      "rouge2_r": 0.17886364613466488,
+      "rougeL_f1": 0.2510956951950741,
+      "rougeL_p": 0.2813055144337528,
+      "rougeL_r": 0.23060113751748523,
+      "bleu": 0.13927298275863645,
+      "meteor": 0.4536875563215688,
+      "parole_generate": 171.0
+    }
+  }
+}

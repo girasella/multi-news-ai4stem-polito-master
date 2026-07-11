@@ -1,0 +1,7 @@
+# Full-dataset generated summaries (tens of MB, regenerable via notebooks 01/02 with SCOPE='full';
+# the corresponding metrics files in results/metrics/ ARE committed)
+results/summaries/*_full.tsv
+
+# Python / Jupyter
+__pycache__/
+.ipynb_checkpoints/

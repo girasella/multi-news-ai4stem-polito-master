@@ -1,0 +1,8 @@
+# Dependencies for the summarization benchmark notebooks (notebooks/).
+# Install with:  pip install -r requirements-notebooks.txt
+# torch is pulled in transitively; on the NVIDIA GPU machine install the CUDA build first:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu126
+pyAutoSummarizer
+sentencepiece   # required by the PEGASUS tokenizer (google/pegasus-multi_news)
+pandas
+matplotlib

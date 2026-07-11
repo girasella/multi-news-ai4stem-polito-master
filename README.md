@@ -20,8 +20,12 @@ The project explores Multi-News as a text-mining and summarization corpus:
 - **Dataset curation** — conversion of the raw text files into Orange Data Mining's `.tab`
   format, including a cleaning step that removes rows with known source-quality problems
   (failed scrapes, exact duplicates, source/summary mismatches) identified by the EDA.
-- **Summarization experiments** — text-mining and summarization work on the curated corpus
-  (in progress).
+- **Summarization experiments** — a benchmark of four summarization methods (TextRank, LexRank,
+  BART, PEGASUS) on the curated corpus, via the
+  [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) library: one notebook per
+  method in [notebooks/](notebooks/) (documented in Italian), with generated summaries and
+  ROUGE/BLEU/METEOR metrics persisted under [results/](results/) so evaluation can be re-run
+  without re-generating.
 
 ## Repository contents
 
@@ -32,6 +36,9 @@ The project explores Multi-News as a text-mining and summarization corpus:
 | [data/tab/](data/) | **Cleaned** Orange `.tab` copies: one per split plus `complete.tab` (all splits joined, with a `split` column) and `excluded_rows.tsv` (manifest of the 115 dropped rows) |
 | [scripts/convert_to_tab.py](scripts/convert_to_tab.py) | Regenerates `data/tab/` from `data/text/`, applying the cleaning criteria — documented in [scripts/README.md](scripts/README.md) |
 | [multi_news_dashboard.html](multi_news_dashboard.html) | Self-contained EDA dashboard — open directly in a browser (report text in Italian) |
+| [notebooks/](notebooks/) | Summarization benchmark notebooks (TextRank, LexRank, BART, PEGASUS + comparison), in Italian — see [notebooks/README.md](notebooks/README.md) |
+| [results/](results/) | Benchmark outputs: shared evaluation sample, generated summaries, per-example and aggregate metrics |
+| [requirements-notebooks.txt](requirements-notebooks.txt) | Python dependencies for the benchmark notebooks |
 | [Multi-News_paper.md](Multi-News_paper.md) | The original paper (Fabbri et al., 2019), for reference |
 | [data/README.md](data/README.md) | Detailed documentation of file formats, statistics, and cleaning criteria |
 
