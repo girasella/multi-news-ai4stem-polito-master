@@ -1,3 +1,4 @@
 *.cleaned filter=lfs diff=lfs merge=lfs -text
 *.tgt filter=lfs diff=lfs merge=lfs -text
 *.tab filter=lfs diff=lfs merge=lfs -text
+results/summaries/*_full.tsv filter=lfs diff=lfs merge=lfs -text
