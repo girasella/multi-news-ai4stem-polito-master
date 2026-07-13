@@ -1,7 +1,12 @@
 # Dependencies for the summarization benchmark notebooks (notebooks/).
 # Install with:  pip install -r requirements-notebooks.txt
-# torch is pulled in transitively; on the NVIDIA GPU machine install the CUDA build first:
-#   pip install torch --index-url https://download.pytorch.org/whl/cu126
+# torch is pulled in transitively; on the NVIDIA GPU machine install the CUDA build first,
+# picking the index that matches the GPU. Blackwell cards (RTX 50-series / RTX PRO, sm_120)
+# need cu128 or newer for kernel support (cu126 lacks sm_120 kernels and fails at runtime
+# with "no kernel image is available for execution on the device"):
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+# Older/non-Blackwell GPUs can still use cu126:
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 pyAutoSummarizer
 sentencepiece   # required by the PEGASUS tokenizer (google/pegasus-multi_news)
 pandas
