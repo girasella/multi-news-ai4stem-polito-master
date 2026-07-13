@@ -1,0 +1,45 @@
+{
+  "metodo": "bart",
+  "scope": "sample",
+  "config": {
+    "checkpoint": "facebook/bart-large-cnn",
+    "max_len": 300,
+    "num_beams": 4,
+    "max_input_tokens": 1024,
+    "device": "cpu",
+    "libreria": "transformers (parametri di pyAutoSummarizer.summ_ext_bart)"
+  },
+  "timestamp": "2026-07-11T18:48:13+00:00",
+  "n_esempi": 3,
+  "overall": {
+    "rouge1_f1": 0.269652546460374,
+    "rouge1_p": 0.6057539682539682,
+    "rouge1_r": 0.17766313385472263,
+    "rouge2_f1": 0.05965785894611517,
+    "rouge2_p": 0.1537037037037037,
+    "rouge2_r": 0.03788206536092225,
+    "rougeL_f1": 0.1407816595061879,
+    "rougeL_p": 0.3474173186344239,
+    "rougeL_r": 0.0911528784683514,
+    "bleu": 0.009694363195618665,
+    "meteor": 0.1799626612773502,
+    "parole_generate": 51.0
+  },
+  "per_split": {
+    "train": {
+      "n_esempi": 3,
+      "rouge1_f1": 0.269652546460374,
+      "rouge1_p": 0.6057539682539682,
+      "rouge1_r": 0.17766313385472263,
+      "rouge2_f1": 0.05965785894611517,
+      "rouge2_p": 0.1537037037037037,
+      "rouge2_r": 0.03788206536092225,
+      "rougeL_f1": 0.1407816595061879,
+      "rougeL_p": 0.3474173186344239,
+      "rougeL_r": 0.0911528784683514,
+      "bleu": 0.009694363195618665,
+      "meteor": 0.1799626612773502,
+      "parole_generate": 51.0
+    }
+  }
+}
