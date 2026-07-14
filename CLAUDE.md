@@ -23,7 +23,7 @@ requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSu
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
-  0X_*.ipynb           # 00 sample prep, 01-04 one method each, 05 comparison
+  0X_*.ipynb           # 00 sample prep, 01-04 and 06 one method each, 05 comparison
 results/
   sample/              # Shared evaluation sample TSV (committed)
   summaries/           # Generated summaries per method; *_full.tsv gitignored (large, regenerable)
@@ -88,9 +88,10 @@ get or change the stats. Key facts it establishes (details in `data/README.md`):
 
 ## Summarization benchmark (`notebooks/` + `results/`)
 
-Four methods (TextRank, LexRank extractive; BART `facebook/bart-large-cnn`, PEGASUS
-`google/pegasus-multi_news` abstractive) run via pyAutoSummarizer and scored with its
-ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
+Five methods (TextRank, LexRank extractive; BART `facebook/bart-large-cnn`, PEGASUS
+`google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` abstractive) — the first four
+run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06) — all scored with
+pyAutoSummarizer's ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
   EDA dashboard). `README.md`, `CLAUDE.md`, `data/README.md` etc. stay in English.
@@ -101,13 +102,17 @@ ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
   `results/summaries/{method}_{scope}.tsv` one flushed row at a time, and re-runs skip row_ids
   already present. Metrics sections read ONLY saved files — never make evaluation depend on
   re-generating summaries.
-- Known caveats (documented in the notebooks/README): `pegasus-multi_news` was trained on this
-  dataset's train split → leakage on train-split sample rows (aggregates include per-split means;
-  clean comparison = test split only); pyAutoSummarizer's ROUGE uses unique-n-gram sets, not
-  clipped counts, so values aren't comparable to the literature; BART/PEGASUS truncate input to
-  1024 tokens; the library reloads HF models per call and ignores CUDA, so notebooks 03/04 load
-  the model once themselves and notebook 01 injects a shared SentenceTransformer into
-  `loaded_models`.
+- Known caveats (documented in the notebooks/README): `pegasus-multi_news` and
+  `PRIMERA-multinews` were trained on this dataset's train split → leakage on train-split sample
+  rows (aggregates include per-split means; clean comparison = test split only);
+  pyAutoSummarizer's ROUGE uses unique-n-gram sets, not clipped counts, so values aren't
+  comparable to the literature; BART/PEGASUS truncate input to 1024 tokens, while PRIMERA
+  (notebook 06) takes 4096 with an equal per-article token budget and `<doc-sep>` separators
+  (global attention on `<s>` and `<doc-sep>`), so it must see the raw `|||||` separator — it
+  passes `prepara=str.strip` to `ciclo_summarization` instead of the default
+  `prepara_documento`; the library reloads HF models per call and ignores CUDA, so notebooks
+  03/04/06 load the model once themselves and notebook 01 injects a shared SentenceTransformer
+  into `loaded_models`.
 
 ## Working with the data files
 

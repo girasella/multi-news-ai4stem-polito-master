@@ -1,0 +1,76 @@
+{
+  "metodo": "primera",
+  "scope": "sample",
+  "config": {
+    "checkpoint": "allenai/PRIMERA-multinews",
+    "max_len": 1024,
+    "num_beams": 5,
+    "max_input_tokens": 4096,
+    "device": "cuda",
+    "note": "articoli uniti da <doc-sep> (global attention), budget di token uguale per articolo; checkpoint multi_news (leakage su split train)",
+    "libreria": "transformers (parametri di generazione del repo allenai/PRIMER)"
+  },
+  "timestamp": "2026-07-14T20:35:20+00:00",
+  "n_esempi": 100,
+  "overall": {
+    "rouge1_f1": 0.4763809512839683,
+    "rouge1_p": 0.4939050308340693,
+    "rouge1_r": 0.4711228421359972,
+    "rouge2_f1": 0.2296417177378229,
+    "rouge2_p": 0.23882588782855307,
+    "rouge2_r": 0.22834564309562316,
+    "rougeL_f1": 0.26909819478364083,
+    "rougeL_p": 0.28000654932595553,
+    "rougeL_r": 0.26843234744268335,
+    "bleu": 0.17955279534486673,
+    "meteor": 0.5053769658778984,
+    "parole_generate": 225.16
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 8,
+      "rouge1_f1": 0.4411044332679809,
+      "rouge1_p": 0.44412900263628385,
+      "rouge1_r": 0.4449477770048713,
+      "rouge2_f1": 0.19971268024635372,
+      "rouge2_p": 0.19829469831964774,
+      "rouge2_r": 0.20452860918341761,
+      "rougeL_f1": 0.2555646447354451,
+      "rougeL_p": 0.2561897198039468,
+      "rougeL_r": 0.2592740681821937,
+      "bleu": 0.1613981597876484,
+      "meteor": 0.48268899295836687,
+      "parole_generate": 247.25
+    },
+    "train": {
+      "n_esempi": 81,
+      "rouge1_f1": 0.4831774223137477,
+      "rouge1_p": 0.5047515408867982,
+      "rouge1_r": 0.474086439841262,
+      "rouge2_f1": 0.2373736039802591,
+      "rouge2_p": 0.24875583184242503,
+      "rouge2_r": 0.23428997636364482,
+      "rougeL_f1": 0.2763457566744981,
+      "rougeL_p": 0.2902211551285311,
+      "rougeL_r": 0.2734358663968961,
+      "bleu": 0.1834971533155941,
+      "meteor": 0.5104021442539245,
+      "parole_generate": 223.60493827160494
+    },
+    "val": {
+      "n_esempi": 11,
+      "rouge1_f1": 0.4519898595308559,
+      "rouge1_p": 0.45023602277145475,
+      "rouge1_r": 0.4683363973107755,
+      "rouge2_f1": 0.19447349176458834,
+      "rouge2_p": 0.19518261973288178,
+      "rouge2_r": 0.2018952136945221,
+      "rougeL_f1": 0.22557236634965275,
+      "rougeL_p": 0.22211123715936035,
+      "rougeL_r": 0.23824882006019985,
+      "bleu": 0.1637113488747607,
+      "meteor": 0.48487372359591063,
+      "parole_generate": 220.54545454545453
+    }
+  }
+}

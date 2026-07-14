@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Funzioni condivise dai notebook di benchmark della summarization (01-05).
+"""Funzioni condivise dai notebook di benchmark della summarization (01-06).
 
-Tutti i notebook dei metodi (TextRank, LexRank, BART, PEGASUS) usano le stesse
-routine per: caricare il campione, preparare i testi, scrivere i riassunti
+Tutti i notebook dei metodi (TextRank, LexRank, BART, PEGASUS, PRIMERA) usano
+le stesse routine per: caricare il campione, preparare i testi, scrivere i riassunti
 generati in modo incrementale (con ripresa dopo interruzione) e calcolare le
 metriche a partire dai file salvati — cosi' la valutazione e' identica e
 ri-eseguibile senza rigenerare i riassunti.
@@ -161,12 +161,16 @@ class ScrittoreRiassunti:
         self._f.close()
 
 
-def ciclo_summarization(esempi, scrittore, genera, limit=None, etichetta=''):
+def ciclo_summarization(esempi, scrittore, genera, limit=None, etichetta='',
+                        prepara=prepara_documento):
     """Applica `genera(documento) -> riassunto` a ogni esempio, con ripresa e progresso.
 
     - `esempi`: iterabile di dict con chiavi row_id/document (campione o streaming full)
     - `scrittore`: ScrittoreRiassunti gia' aperto
     - `limit`: se impostato, si ferma dopo aver PROCESSATO limit esempi nuovi (smoke test)
+    - `prepara`: pre-processing del documento prima di `genera`. Default:
+      `prepara_documento` (separatore `|||||` -> newline). Il notebook 06 (PRIMERA)
+      passa `str.strip` perche' deve vedere il separatore originale tra articoli.
 
     Gli errori su un singolo esempio vengono registrati e non fermano il ciclo.
     """
@@ -179,7 +183,7 @@ def ciclo_summarization(esempi, scrittore, genera, limit=None, etichetta=''):
         if limit is not None and processati >= limit:
             break
         try:
-            riassunto = genera(prepara_documento(es['document']))
+            riassunto = genera(prepara(es['document']))
             scrittore.scrivi(es['row_id'], riassunto)
         except Exception as exc:  # difensivo: un esempio rotto non ferma la corsa
             errori.append((es['row_id'], repr(exc)))

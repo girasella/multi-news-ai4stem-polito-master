@@ -1,9 +1,11 @@
 # Notebook di benchmark della summarization
 
-Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano quattro
-metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](../data/tab/complete.tab)),
-usando la libreria [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer):
-due estrattivi (TextRank, LexRank) e due abstractive (BART, PEGASUS).
+Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano cinque
+metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](../data/tab/complete.tab)):
+due estrattivi (TextRank, LexRank) e tre abstractive (BART, PEGASUS, PRIMERA), usando la libreria
+[pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA, non supportato dalla
+libreria, usa direttamente `transformers`; le metriche sono comunque quelle di pyAutoSummarizer
+per tutti i metodi).
 
 ## Installazione
 
@@ -25,8 +27,9 @@ automaticamente e la usano se disponibile.
 | 03 | [03_bart.ipynb](03_bart.ipynb) | BART (`facebook/bart-large-cnn`, abstractive). Solo `sample`. |
 | 04 | [04_pegasus.ipynb](04_pegasus.ipynb) | PEGASUS (`google/pegasus-multi_news`, abstractive). Solo `sample`. |
 | 05 | [05_confronto.ipynb](05_confronto.ipynb) | Confronto: tabelle e grafici dalle metriche salvate. Eseguibile su qualunque sottoinsieme di risultati. |
+| 06 | [06_primera.ipynb](06_primera.ipynb) | PRIMERA (`allenai/PRIMERA-multinews`, abstractive multi-documento, input 4096 token). Solo `sample`. |
 
-I notebook 01–04 sono indipendenti tra loro e condividono le routine di
+I notebook dei metodi (01–04 e 06) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
 
 ## Parametri principali (cella di configurazione di ogni notebook)
@@ -63,11 +66,12 @@ metriche sono versionati.
 | LexRank, campione 100 | ~1 min | ~1 min |
 | TextRank, campione 100 | ~5 min | ~2 min |
 | BART / PEGASUS, campione 100 | ~1–2,5 h ciascuno (~30–90 s/esempio) | ~5–10 min |
+| PRIMERA, campione 100 | sconsigliata (minuti per esempio: input 4096, 5 beam) | ~30–60 min |
 | LexRank, `full` (56.101) | ore | ore (non serve la GPU) |
 | TextRank, `full` (56.101) | ~6–12 h | ~1 h — **consigliata la GPU** |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
-PEGASUS ~2,3 GB).
+PEGASUS ~2,3 GB; PRIMERA ~1,8 GB).
 
 ## Esecuzione su Google Colab
 
@@ -81,15 +85,19 @@ PEGASUS ~2,3 GB).
 
 ## Avvertenze metodologiche
 
-- **Leakage PEGASUS**: il campione proviene da tutte e tre le split e
-  `google/pegasus-multi_news` è stato addestrato sulla split train di questo dataset → i suoi
-  punteggi su righe train sono ottimistici. Gli aggregati riportano anche le medie per split; il
-  confronto pulito è sulla sola split `test` (vista dedicata nel notebook 05).
+- **Leakage PEGASUS e PRIMERA**: il campione proviene da tutte e tre le split e sia
+  `google/pegasus-multi_news` sia `allenai/PRIMERA-multinews` sono stati addestrati sulla split
+  train di questo dataset → i loro punteggi su righe train sono ottimistici. Gli aggregati
+  riportano anche le medie per split; il confronto pulito è sulla sola split `test` (vista
+  dedicata nel notebook 05).
 - **ROUGE della libreria**: pyAutoSummarizer calcola ROUGE-N su insiemi di n-grammi *unici*
   (non i conteggi "clipped" dello standard): i valori sono coerenti tra i metodi di questo
   benchmark ma non confrontabili in assoluto con la letteratura.
 - **Troncamento a 1024 token**: BART e PEGASUS vedono solo l'inizio di ogni cluster di articoli
-  (limite dei checkpoint); vale per entrambi, quindi il confronto resta equo.
+  (limite dei checkpoint); vale per entrambi, quindi il confronto tra i due resta equo. PRIMERA
+  (notebook 06) arriva invece a 4096 token, con budget uguale per articolo e separatore
+  `<doc-sep>`: il divario con BART/PEGASUS riflette quindi anche la diversa copertura
+  dell'input, non solo il modello.
 - **Righe saltate dagli estrattivi**: su rari testi (~1% del campione) il costruttore di
   `psr.summarization` solleva un `IndexError` (bug della libreria: dopo la pulizia le liste di
   frasi possono disallinearsi). Il ciclo registra l'errore e prosegue: la riga manca dal file dei
