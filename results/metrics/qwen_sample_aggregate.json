@@ -1,0 +1,76 @@
+{
+  "metodo": "qwen",
+  "scope": "sample",
+  "config": {
+    "modello": "qwen2.5:7b-instruct",
+    "backend": "ollama (endpoint OpenAI-compatibile)",
+    "max_tokens": 200,
+    "temperature": 0.3,
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "/no_think\n\nSummarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese; max_tokens=200 come la corsa originale (unico modello con limite 200 invece di 300)"
+  },
+  "timestamp": "2026-07-16T19:06:08+00:00",
+  "n_esempi": 100,
+  "overall": {
+    "rouge1_f1": 0.34466406372295516,
+    "rouge1_p": 0.4083070595183305,
+    "rouge1_r": 0.3079489725224917,
+    "rouge2_f1": 0.09813008742492112,
+    "rouge2_p": 0.12364488095650582,
+    "rouge2_r": 0.08533858211490579,
+    "rougeL_f1": 0.17301789351818372,
+    "rougeL_p": 0.22191811171248463,
+    "rougeL_r": 0.1482971598150461,
+    "bleu": 0.056458790407167704,
+    "meteor": 0.3172267653767472,
+    "parole_generate": 143.77
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 8,
+      "rouge1_f1": 0.3242538358025667,
+      "rouge1_p": 0.41820766625356387,
+      "rouge1_r": 0.2765338320947429,
+      "rouge2_f1": 0.09821393874642353,
+      "rouge2_p": 0.12956461957380924,
+      "rouge2_r": 0.08465096704813899,
+      "rougeL_f1": 0.1699177146169601,
+      "rougeL_p": 0.24127561631928615,
+      "rougeL_r": 0.14086513746749568,
+      "bleu": 0.06037210918333252,
+      "meteor": 0.2807092403615582,
+      "parole_generate": 132.0
+    },
+    "train": {
+      "n_esempi": 81,
+      "rouge1_f1": 0.34172270647901004,
+      "rouge1_p": 0.4034011916112916,
+      "rouge1_r": 0.30437897459809743,
+      "rouge2_f1": 0.09447086053011677,
+      "rouge2_p": 0.11933861724075495,
+      "rouge2_r": 0.08115149367186132,
+      "rougeL_f1": 0.17214651533568187,
+      "rougeL_p": 0.21972633549013756,
+      "rougeL_r": 0.14678539757420694,
+      "bleu": 0.05298835398511235,
+      "meteor": 0.31740303895929145,
+      "parole_generate": 145.44444444444446
+    },
+    "val": {
+      "n_esempi": 11,
+      "rouge1_f1": 0.3811669510068336,
+      "rouge1_p": 0.4372316455718113,
+      "rouge1_r": 0.357084513913212,
+      "rouge2_f1": 0.1250143208710241,
+      "rouge2_p": 0.15104937659626894,
+      "rouge2_r": 0.11667086251679089,
+      "rougeL_f1": 0.18168908115385965,
+      "rougeL_p": 0.22397936963573029,
+      "rougeL_r": 0.16483433438671657,
+      "bleu": 0.07916777222327367,
+      "meteor": 0.34248695082542274,
+      "parole_generate": 140.0
+    }
+  }
+}

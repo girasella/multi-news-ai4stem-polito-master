@@ -1,5 +1,47 @@
 # `scripts/` contents
 
+## `import_llm_results.py`
+
+One-off importer of Federica's local-LLM benchmark results (LM Studio runs, archived in
+[`notebooks/llm/`](../notebooks/llm/README.md)) into the shared `results/` layout.
+
+> **Historical note:** the committed `results/` files for `qwen`/`gemma`/`mistral` were later
+> regenerated from scratch via local ollama runs of notebooks 07–09 (2026-07-16) and no longer
+> match this import. The script is kept to document/reproduce the original LM Studio import;
+> its overwrite guard (below) prevents it from clobbering the ollama results.
+
+### Usage
+
+```
+python scripts/import_llm_results.py
+```
+
+Run from anywhere — paths are resolved relative to the script's own location. Requires the
+notebook dependencies (`pip install -r requirements-notebooks.txt`), since it reuses
+`notebooks/summ_utils.py` for writing and scoring.
+
+### What it does
+
+For each of `qwen`, `gemma`, `mistral`:
+
+1. reads `notebooks/llm/{name}_summary_evaluation_results.csv` and **verifies** it is aligned
+   1:1, in order, with `results/sample/sample_100_seed42.tsv` (every `reference_summary` must
+   match the sample's `summary`);
+2. writes `results/summaries/{name}_sample.tsv` in the repo format (`row_id`,
+   `generated_summary`), skipping rows whose generation failed (empty/`Error:` content —
+   gemma has 81 such rows, leaving 19);
+3. recomputes ROUGE/BLEU/METEOR with the shared benchmark normalization
+   (`summ_utils.valuta_e_salva`) into `results/metrics/{name}_sample_per_example.csv` +
+   `..._aggregate.json`, whose `config` records the original run's provenance (LM Studio,
+   checkpoint, prompt, parameters). The metric values inside the source CSVs use different
+   normalization settings and are NOT carried over; neither is their BERTScore column.
+
+### Safety
+
+The script **refuses to run** if a target `results/summaries/{name}_sample.tsv` already
+exists: that file may since contain rows regenerated via ollama (notebooks 07–09), and
+re-importing would silently mix backends. Delete the file first to re-import.
+
 ## `convert_to_tab.py`
 
 Converts the canonical dataset files in [`data/text/`](../data/README.md) into cleaned
