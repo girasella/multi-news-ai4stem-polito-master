@@ -12,3 +12,4 @@ sentencepiece   # required by the PEGASUS tokenizer (google/pegasus-multi_news)
 protobuf        # required alongside sentencepiece to convert the PEGASUS tokenizer
 pandas
 matplotlib
+openai          # client for the local ollama OpenAI-compatible endpoint (notebooks 07-09)

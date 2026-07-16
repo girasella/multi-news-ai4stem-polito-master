@@ -19,11 +19,16 @@ multi_news_dashboard.html  # Self-contained EDA dashboard (Italian) — see "EDA
 scripts/
   README.md            # Documentation for the scripts (usage, inputs/outputs, cleaning criteria)
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
-requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer etc.)
+  import_llm_results.py  # One-off importer of the archived LM Studio LLM runs (notebooks/llm/*.csv) into results/ — superseded by the ollama re-runs, kept for provenance
+requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
-  0X_*.ipynb           # 00 sample prep, 01-04 and 06 one method each, 05 comparison
+  0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
+  llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
+                       # result CSVs (source of the originally imported qwen/gemma/mistral
+                       # results, since replaced by local ollama runs) and docx report —
+                       # see notebooks/llm/README.md
 results/
   sample/              # Shared evaluation sample TSV (committed)
   summaries/           # Generated summaries per method; *_full.tsv gitignored (large, regenerable)
@@ -88,10 +93,15 @@ get or change the stats. Key facts it establishes (details in `data/README.md`):
 
 ## Summarization benchmark (`notebooks/` + `results/`)
 
-Five methods (TextRank, LexRank extractive; BART `facebook/bart-large-cnn`, PEGASUS
-`google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` abstractive) — the first four
-run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06) — all scored with
-pyAutoSummarizer's ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
+Eight methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, PEGASUS
+`google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized abstractive);
+plus three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B, Mistral Small ~24B
+(notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`; the original LM Studio run used
+Mistral-7B-Instruct-v0.3 instead of Mistral Small — see the provenance bullet). The first
+four run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the LLMs via
+the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`) —
+all scored with pyAutoSummarizer's ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to
+respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
   EDA dashboard). `README.md`, `CLAUDE.md`, `data/README.md` etc. stay in English.
@@ -113,6 +123,26 @@ pyAutoSummarizer's ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to res
   `prepara_documento`; the library reloads HF models per call and ignores CUDA, so notebooks
   03/04/06 load the model once themselves and notebook 01 injects a shared SentenceTransformer
   into `loaded_models`.
+- **LLM results provenance (`qwen`/`gemma`/`mistral`)**: the committed summaries/metrics come
+  from local ollama runs of notebooks 07-09 (2026-07-16, 100/100 examples each). They replaced
+  an earlier import of Federica's LM Studio runs (Mac M4, 2026-07-16; archived CSVs in
+  `notebooks/llm/`, imported by `scripts/import_llm_results.py`, which verifies 1:1 alignment
+  with the shared sample, refuses to overwrite existing summary TSVs, and recomputes metrics
+  with the shared normalization — the CSVs' own metric values use different settings and must
+  not be mixed in; their BERTScore column is not carried over). Deliberate deviations of the
+  ollama runs from the original: documents pass through `prepara_documento` (separator →
+  newline) instead of raw text; no LM Studio-specific `enable_thinking` extra_body; mistral's
+  system prompt uses the real `system` role; and **mistral is a different model** — Mistral
+  Small (~24B, ollama tag `mistral-small`) instead of Mistral-7B-Instruct-v0.3, so its scores
+  aren't size-class-comparable to qwen/gemma (documented in notebook 09 and notebook 05).
+  Because of resumability, regenerating on top of a TSV from a different run would mix runs —
+  delete the TSV first.
+- **gemma coverage**: full (100/100) in the committed ollama run, thanks to `MAX_TOKENS=1500`
+  in notebook 08. The original LM Studio run had 81/100 empty responses (only 19 evaluated):
+  Gemma 4 emits reasoning tokens that exhaust `max_tokens=300` before any visible content
+  (`finish_reason=length`, empty content) — reproduced via ollama. Notebook 05 still computes
+  the shared row_id intersection only over methods with ≥`COPERTURA_MINIMA` (50) rows, as
+  protection against future low-coverage runs (which are shown with their own `n_esempi`).
 
 ## Working with the data files
 

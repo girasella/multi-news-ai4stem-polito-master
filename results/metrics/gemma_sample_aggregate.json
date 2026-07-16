@@ -1,0 +1,76 @@
+{
+  "metodo": "gemma",
+  "scope": "sample",
+  "config": {
+    "modello": "gemma4:latest",
+    "backend": "ollama (endpoint OpenAI-compatibile)",
+    "max_tokens": 1500,
+    "temperature": 0.3,
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "/no_think\n\nSummarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese; max_tokens=1500 invece dei 300 originali perche' il reasoning di Gemma 4 consumava il budget (81 risposte vuote su 100 nella corsa LM Studio)"
+  },
+  "timestamp": "2026-07-16T18:46:32+00:00",
+  "n_esempi": 100,
+  "overall": {
+    "rouge1_f1": 0.33087541383259145,
+    "rouge1_p": 0.30416961499585754,
+    "rouge1_r": 0.38031591056910324,
+    "rouge2_f1": 0.09399870219918664,
+    "rouge2_p": 0.08749620485363634,
+    "rouge2_r": 0.10852657618330216,
+    "rougeL_f1": 0.1743615944122483,
+    "rougeL_p": 0.1624246945435129,
+    "rougeL_r": 0.2016388072074782,
+    "bleu": 0.060800711108134,
+    "meteor": 0.42730224108796117,
+    "parole_generate": 291.9
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 8,
+      "rouge1_f1": 0.3411531282769529,
+      "rouge1_p": 0.3165907412442644,
+      "rouge1_r": 0.387059269704411,
+      "rouge2_f1": 0.10605160178529792,
+      "rouge2_p": 0.09613769013517313,
+      "rouge2_r": 0.12553941825982798,
+      "rougeL_f1": 0.18045770396111405,
+      "rougeL_p": 0.16720049706849846,
+      "rougeL_r": 0.21151817540079232,
+      "bleu": 0.06642021342156693,
+      "meteor": 0.44216929867531835,
+      "parole_generate": 325.125
+    },
+    "train": {
+      "n_esempi": 81,
+      "rouge1_f1": 0.32785805336625423,
+      "rouge1_p": 0.3020188143713319,
+      "rouge1_r": 0.37521965452175315,
+      "rouge2_f1": 0.09134120741390647,
+      "rouge2_p": 0.08601937278846464,
+      "rouge2_r": 0.10356133848746654,
+      "rougeL_f1": 0.174069715429049,
+      "rougeL_p": 0.16275046875007929,
+      "rougeL_r": 0.19996771154771606,
+      "bleu": 0.05778322305580872,
+      "meteor": 0.4236766933442138,
+      "parole_generate": 290.2098765432099
+    },
+    "val": {
+      "n_esempi": 11,
+      "rouge1_f1": 0.3456194576706302,
+      "rouge1_p": 0.31097378232306866,
+      "rouge1_r": 0.4129386257284573,
+      "rouge2_f1": 0.10480178228271436,
+      "rouge2_p": 0.0920863425833284,
+      "rouge2_r": 0.13271580497880037,
+      "rougeL_f1": 0.17207735088935902,
+      "rougeL_p": 0.15655250082244376,
+      "rougeL_r": 0.20675915292513436,
+      "bleu": 0.07893348508366894,
+      "meteor": 0.4431870507738411,
+      "parole_generate": 280.1818181818182
+    }
+  }
+}

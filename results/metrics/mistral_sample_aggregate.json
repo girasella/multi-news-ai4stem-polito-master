@@ -1,0 +1,76 @@
+{
+  "metodo": "mistral",
+  "scope": "sample",
+  "config": {
+    "modello": "mistral-small",
+    "backend": "ollama (endpoint OpenAI-compatibile)",
+    "max_tokens": 300,
+    "temperature": 0.3,
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "Summarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese; modello Mistral Small ~24B (tag ollama mistral-small), diverso dal mistral-7b-instruct-v0.3 della corsa originale LM Studio (il cui notebook si chiamava \"mistral-small3-7B\")"
+  },
+  "timestamp": "2026-07-16T21:33:28+00:00",
+  "n_esempi": 100,
+  "overall": {
+    "rouge1_f1": 0.34430871260396523,
+    "rouge1_p": 0.3693922371150044,
+    "rouge1_r": 0.33427749898578474,
+    "rouge2_f1": 0.10215909880851372,
+    "rouge2_p": 0.11231166326936189,
+    "rouge2_r": 0.0986245171097246,
+    "rougeL_f1": 0.18053141189026886,
+    "rougeL_p": 0.20032120910329967,
+    "rougeL_r": 0.17248376737265297,
+    "bleu": 0.06858631496401871,
+    "meteor": 0.36982371931939084,
+    "parole_generate": 193.35
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 8,
+      "rouge1_f1": 0.3456090904142417,
+      "rouge1_p": 0.40039972921131345,
+      "rouge1_r": 0.3177201583679121,
+      "rouge2_f1": 0.11054733781781803,
+      "rouge2_p": 0.12815224781019305,
+      "rouge2_r": 0.10375883787416963,
+      "rougeL_f1": 0.17446641310409686,
+      "rougeL_p": 0.21588273350231033,
+      "rougeL_r": 0.15766249882602865,
+      "bleu": 0.06913521106078716,
+      "meteor": 0.3369511675588422,
+      "parole_generate": 176.375
+    },
+    "train": {
+      "n_esempi": 81,
+      "rouge1_f1": 0.3409505603017134,
+      "rouge1_p": 0.3621586177535391,
+      "rouge1_r": 0.3323018904476225,
+      "rouge2_f1": 0.09920568725756122,
+      "rouge2_p": 0.10852240932971138,
+      "rouge2_r": 0.09535583625502948,
+      "rougeL_f1": 0.17996676914740964,
+      "rougeL_p": 0.19751971481486127,
+      "rougeL_r": 0.17227432715858204,
+      "bleu": 0.06652470845559669,
+      "meteor": 0.3718003771172293,
+      "parole_generate": 197.40740740740742
+    },
+    "val": {
+      "n_esempi": 11,
+      "rouge1_f1": 0.36809119569489096,
+      "rouge1_p": 0.4001070763430239,
+      "rouge1_r": 0.36086686412525126,
+      "rouge2_f1": 0.117806410040579,
+      "rouge2_p": 0.12869392624982018,
+      "rouge2_r": 0.11895984284742851,
+      "rougeL_f1": 0.1891001439321755,
+      "rougeL_p": 0.20963292202797487,
+      "rougeL_r": 0.1848051133465386,
+      "bleu": 0.0833680384556584,
+      "meteor": 0.3791756404520706,
+      "parole_generate": 175.8181818181818
+    }
+  }
+}

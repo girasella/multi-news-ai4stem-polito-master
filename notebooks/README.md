@@ -1,11 +1,17 @@
 # Notebook di benchmark della summarization
 
-Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano cinque
+Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano otto
 metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](../data/tab/complete.tab)):
-due estrattivi (TextRank, LexRank) e tre abstractive (BART, PEGASUS, PRIMERA), usando la libreria
-[pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA, non supportato dalla
-libreria, usa direttamente `transformers`; le metriche sono comunque quelle di pyAutoSummarizer
-per tutti i metodi).
+due estrattivi (TextRank, LexRank), tre abstractive specializzati (BART, PEGASUS, PRIMERA) e tre
+LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral Small ~24B — notebook
+07–09, via [ollama](https://ollama.com)), usando la libreria
+[pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA usa direttamente
+`transformers`, gli LLM il client `openai` verso ollama; le metriche sono comunque quelle di
+pyAutoSummarizer per tutti i metodi).
+
+La sottocartella [llm/](llm/README.md) è un **archivio**: i notebook e i risultati originali di
+Federica (LM Studio), da cui erano stati inizialmente importati i risultati committati dei metodi
+`qwen`/`gemma`/`mistral` — poi sostituiti dalle corse ollama dei notebook 07–09 (vedi sotto).
 
 ## Installazione
 
@@ -28,9 +34,48 @@ automaticamente e la usano se disponibile.
 | 04 | [04_pegasus.ipynb](04_pegasus.ipynb) | PEGASUS (`google/pegasus-multi_news`, abstractive). Solo `sample`. |
 | 05 | [05_confronto.ipynb](05_confronto.ipynb) | Confronto: tabelle e grafici dalle metriche salvate. Eseguibile su qualunque sottoinsieme di risultati. |
 | 06 | [06_primera.ipynb](06_primera.ipynb) | PRIMERA (`allenai/PRIMERA-multinews`, abstractive multi-documento, input 4096 token). Solo `sample`. |
+| 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Solo `sample`. |
+| 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Solo `sample`. |
+| 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral Small ~24B (LLM locale via ollama; la corsa originale usava Mistral-7B-Instruct-v0.3). Solo `sample`. |
 
-I notebook dei metodi (01–04 e 06) sono indipendenti tra loro e condividono le routine di
+I notebook dei metodi (01–04 e 06–09) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
+
+## LLM locali (notebook 07–09)
+
+I risultati committati di `qwen`/`gemma`/`mistral` provengono dalle **corse ollama di questi
+notebook** (2026-07-16, 100/100 esempi ciascuna). Hanno sostituito i risultati della corsa
+originale di Federica via **LM Studio** (Mac M4, 2026-07-16), a suo tempo importati con
+[`scripts/import_llm_results.py`](../scripts/README.md) dai CSV archiviati in
+[llm/](llm/README.md). Modelli usati:
+
+```bash
+ollama pull qwen2.5:7b-instruct   # 07
+ollama pull gemma4                # 08
+ollama pull mistral-small         # 09 — Mistral Small ~24B, NON il 7B della corsa originale
+ollama serve                      # se il servizio non è già attivo
+```
+
+Il modello gira nel server ollama; i notebook usano solo il client `openai` puntato
+all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
+
+- **mistral = Mistral Small (~24B)** nella corsa committata; la corsa originale usava
+  `mistralai/mistral-7b-instruct-v0.3`. È un modello ~3× più grande degli altri due LLM,
+  da tenere presente nel confronto (dettagli nel notebook 09).
+- **Ripresa = rischio di mescolare corse**: il ciclo condiviso salta i `row_id` già presenti
+  nel TSV, quindi rieseguire la generazione sopra un file esistente aggiunge solo le righe
+  mancanti — con un backend, un modello o una configurazione diversi si mescolerebbero due
+  corse nello stesso file. Per una corsa pulita eliminare prima
+  `results/summaries/{metodo}_sample.tsv`.
+- **gemma usa `MAX_TOKENS=1500`** (gli altri 200/300): il reasoning di Gemma 4 consuma il
+  budget di `max_tokens` prima della risposta visibile (`finish_reason=length`, `content`
+  vuoto) — con i 300 della corsa originale LM Studio il modello restituiva una risposta vuota
+  in 81 casi su 100 (solo 19 esempi valutati); con 1500 la corsa ollama copre tutti i 100.
+- **qwen usa `max_tokens=200`** (come la corsa originale; mistral 300, gemma 1500): riassunti
+  più corti, da tenere presente leggendo precisione/recall.
+- Il prompt (in inglese) e `temperature=0.3` replicano la corsa originale; il BERTScore
+  presente nei CSV di Federica non è stato portato in `results/` (la pipeline condivisa non
+  lo calcola).
 
 ## Parametri principali (cella di configurazione di ogni notebook)
 
@@ -41,6 +86,8 @@ I notebook dei metodi (01–04 e 06) sono indipendenti tra loro e condividono le
 - `N_SENTENCES` (solo 01/02) — frasi estratte per riassunto (default 11, la mediana di frasi
   per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei riferimenti,
   perché le frasi di cronaca sono più lunghe di quelle dei digest).
+- `MODELLO`, `OLLAMA_URL`, `MAX_TOKENS`, `TEMPERATURE` (solo 07–09) — tag del modello ollama
+  (verificare con `ollama list`), endpoint e parametri di generazione.
 
 ## File prodotti
 
@@ -69,6 +116,7 @@ metriche sono versionati.
 | PRIMERA, campione 100 | sconsigliata (minuti per esempio: input 4096, 5 beam) | ~30–60 min |
 | LexRank, `full` (56.101) | ore | ore (non serve la GPU) |
 | TextRank, `full` (56.101) | ~6–12 h | ~1 h — **consigliata la GPU** |
+| LLM via ollama, campione 100 | dipende da modello e hardware (su questa macchina: qwen ~9 min, gemma ~24 min, Mistral Small ~24B ~87 min) | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB).
