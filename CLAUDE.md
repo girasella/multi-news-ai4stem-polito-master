@@ -99,7 +99,7 @@ Eleven methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, 
 `google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized abstractive);
 three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
 Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`); plus
-three cloud LLMs on Azure AI Foundry — GPT-5-mini, Claude Haiku 4.5, DeepSeek-V3 (notebooks
+three cloud LLMs on Azure AI Foundry — GPT-5-mini, Claude Haiku 4.5, DeepSeek-V3.2 (notebooks
 10/11/12, slugs `gpt5mini`/`haiku`/`deepseek`). The first four run via pyAutoSummarizer,
 PRIMERA directly via `transformers` (notebook 06), the local LLMs via the `openai` client
 against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`), the Azure LLMs via
