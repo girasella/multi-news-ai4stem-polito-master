@@ -99,8 +99,8 @@ Eleven methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, 
 `google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized abstractive);
 three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
 Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`); plus
-three cloud LLMs on Azure AI Foundry — GPT-4o-mini, Claude Haiku 4.5, DeepSeek-V3 (notebooks
-10/11/12, slugs `gpt4omini`/`haiku`/`deepseek`). The first four run via pyAutoSummarizer,
+three cloud LLMs on Azure AI Foundry — GPT-5-mini, Claude Haiku 4.5, DeepSeek-V3 (notebooks
+10/11/12, slugs `gpt5mini`/`haiku`/`deepseek`). The first four run via pyAutoSummarizer,
 PRIMERA directly via `transformers` (notebook 06), the local LLMs via the `openai` client
 against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`), the Azure LLMs via
 `openai.AzureOpenAI` (GPT), `anthropic.AnthropicFoundry` (Claude) and `openai.OpenAI` against
@@ -114,7 +114,7 @@ ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
   Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
   Azure notebooks (10-12) also support `SCOPE='test'` (the full clean test split, 5,610 rows =
   5,622 − 12 dirty, streamed via `summ_utils.itera_split`); notebook 13 covers `SCOPE='full'`
-  for GPT-4o-mini via the Azure OpenAI **Batch API** (50% discount; Batch exists only for Azure
+  for GPT-5-mini via the Azure OpenAI **Batch API** (50% discount; Batch exists only for Azure
   OpenAI models, which is why Claude/DeepSeek stop at `test`). Batch working files live in the
   gitignored `results/batch/` (JSONL chunks + job-state JSON; the notebook is staged and
   resumable across kernel restarts).
@@ -148,9 +148,14 @@ ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
   `enable_thinking` extra_body; mistral's system prompt uses the real `system` role. Because
   of resumability, regenerating on top of a TSV from a different run would mix runs — delete
   the TSV first.
-- **Azure notebooks (10-13) conventions**: same zero-shot English prompt and generation params
-  as 07-09 (`temperature=0.3`, `max_tokens=300`, documents through `prepara_documento`; the
-  `/no_think` prefix is deliberately dropped — it was a qwen artifact). Credentials come ONLY
+- **Azure notebooks (10-13) conventions**: same zero-shot English prompt as 07-09, documents
+  through `prepara_documento`, the `/no_think` prefix deliberately dropped (qwen artifact).
+  Claude/DeepSeek keep `temperature=0.3`, `max_tokens=300`; **GPT-5-mini deviates** (documented
+  in notebook 10): it is a reasoning model, so no `temperature` (only default accepted) and
+  `max_completion_tokens=1500` with `reasoning_effort='minimal'` — reasoning tokens consume the
+  completion budget before visible output, the same failure mode as gemma (notebook 08).
+  GPT-5-mini was chosen because Azure retired the gpt-4o-mini family (deprecating state, no new
+  deployments) and gpt-4.1-mini is on the same retirement path. Credentials come ONLY
   from environment variables (`AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY` for 10/13,
   `AZURE_INFERENCE_ENDPOINT`/`AZURE_INFERENCE_API_KEY` for 12,
   `AZURE_ANTHROPIC_RESOURCE`/`AZURE_ANTHROPIC_API_KEY` for 11) — never hardcode keys. For

@@ -5,7 +5,7 @@ metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](.
 due estrattivi (TextRank, LexRank), tre abstractive specializzati (BART, PEGASUS, PRIMERA), tre
 LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral-7B — notebook
 07–09, via [ollama](https://ollama.com)) e tre LLM cloud su **Azure AI Foundry**
-(GPT-4o-mini, Claude Haiku 4.5, DeepSeek-V3 — notebook 10–13), usando la libreria
+(GPT-5-mini, Claude Haiku 4.5, DeepSeek-V3 — notebook 10–13), usando la libreria
 [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA usa direttamente
 `transformers`, gli LLM il client `openai` — o `anthropic` per Claude; le metriche sono comunque
 quelle di pyAutoSummarizer per tutti i metodi).
@@ -38,10 +38,10 @@ automaticamente e la usano se disponibile.
 | 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Solo `sample`. |
 | 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Solo `sample`. |
 | 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral-7B-Instruct-v0.3 (LLM locale via ollama). Solo `sample`. |
-| 10 | [10_azure_gpt.ipynb](10_azure_gpt.ipynb) | GPT-4o-mini (Azure OpenAI). Ambiti `sample` e `test`. |
+| 10 | [10_azure_gpt.ipynb](10_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample` e `test`. |
 | 11 | [11_azure_claude.ipynb](11_azure_claude.ipynb) | Claude Haiku 4.5 (Anthropic su Azure AI Foundry). Ambiti `sample` e `test`. |
 | 12 | [12_azure_deepseek.ipynb](12_azure_deepseek.ipynb) | DeepSeek-V3 (Azure AI Foundry Models, serverless). Ambiti `sample` e `test`. |
-| 13 | [13_azure_gpt_full_batch.ipynb](13_azure_gpt_full_batch.ipynb) | GPT-4o-mini sull'**intero dataset** (56.101 righe) via Azure OpenAI **Batch API** (a stadi: chunk → invio → raccolta → valutazione). Ambito `full`. |
+| 13 | [13_azure_gpt_full_batch.ipynb](13_azure_gpt_full_batch.ipynb) | GPT-5-mini sull'**intero dataset** (56.101 righe) via Azure OpenAI **Batch API** (a stadi: chunk → invio → raccolta → valutazione). Ambito `full`. |
 
 I notebook dei metodi (01–04 e 06–13) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
@@ -85,16 +85,19 @@ all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
 ## LLM su Azure AI Foundry (notebook 10–13)
 
 I notebook 10–12 replicano il protocollo dei notebook 07–09 (stesso prompt zero-shot in inglese,
-`temperature=0.3`, `max_tokens=300`, documento passato da `prepara_documento`; unica differenza:
-niente prefisso `/no_think`, artefatto di qwen) su tre modelli serviti da Azure AI Foundry, con
-due ambiti ciascuno:
+documento passato da `prepara_documento`; senza il prefisso `/no_think`, artefatto di qwen) su
+tre modelli serviti da Azure AI Foundry, con due ambiti ciascuno. Claude e DeepSeek mantengono
+`temperature=0.3` e `max_tokens=300`; GPT-5-mini è un modello con *reasoning* e devia in modo
+documentato (niente `temperature`, `max_completion_tokens=1500` con
+`reasoning_effort='minimal'` — il caso gemma del notebook 08; la famiglia gpt-4o-mini è ritirata
+da Azure e non è più deployabile):
 
 - `sample` — il campione condiviso da 100 esempi (confronto con tutti gli altri metodi, costo di
   pochi centesimi);
 - `test` — l'intera split **test** pulita di `complete.tab` (5.610 righe = 5.622 − 12 righe
   sporche): confronto senza le avvertenze di leakage, con numerosità ~56 volte maggiore.
 
-Il notebook 13 copre invece l'**intero dataset** (56.101 righe) con GPT-4o-mini tramite la
+Il notebook 13 copre invece l'**intero dataset** (56.101 righe) con GPT-5-mini tramite la
 **Batch API** di Azure OpenAI (sconto 50%, flusso asincrono a stadi). La Batch API è disponibile
 **solo per i modelli Azure OpenAI**: per Claude e DeepSeek l'ambito massimo resta `test`.
 
@@ -102,7 +105,7 @@ Il notebook 13 copre invece l'**intero dataset** (56.101 righe) con GPT-4o-mini 
 
 1. Creare una risorsa **Azure AI Foundry** + progetto in una regione che offra tutti e tre i
    modelli (es. *East US 2* o *Sweden Central*).
-2. Deployment: `gpt-4o-mini` **Global Standard** (notebook 10) e `gpt-4o-mini` **Global Batch**
+2. Deployment: `gpt-5-mini` **Global Standard** (notebook 10) e `gpt-5-mini` **Global Batch**
    (notebook 13); **DeepSeek-V3** serverless (Foundry Models, fatturazione Microsoft);
    **Claude Haiku 4.5** dal catalogo modelli Anthropic di Foundry.
 3. Variabili d'ambiente (mai chiavi nel codice o nei notebook):
@@ -120,10 +123,10 @@ Stime con ~2.900 token di input e ~300 di output per esempio:
 | Corsa | Costo stimato |
 |---|---|
 | `sample` (100 esempi), qualunque modello | centesimi |
-| `test` (5.610) con GPT-4o-mini (0,15/0,60 $/M) | ~3,50 $ |
+| `test` (5.610) con GPT-5-mini (0,25/2,00 $/M) | ~8 $ |
 | `test` con Claude Haiku 4.5 (1/5 $/M) | ~25 $ |
 | `test` con DeepSeek-V3 (1,14/4,56 $/M) | ~26 $ |
-| `full` (56.101) con GPT-4o-mini via Batch (−50%) | ~17–20 $ |
+| `full` (56.101) con GPT-5-mini via Batch (−50%) | ~40 $ |
 
 ### Avvertenze
 
@@ -182,7 +185,7 @@ grandi ma rigenerabili a pagamento); la cartella di lavoro `results/batch/` del 
 | LLM via ollama, campione 100 | dipende da modello e hardware (su questa macchina: qwen ~9 min, mistral ~18 min, gemma ~24 min) | — |
 | LLM Azure (10–12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
 | LLM Azure (10–12), split test 5.610 | ~5–15 h sequenziali per modello | — |
-| GPT-4o-mini via Batch (13), intero dataset | asincrono: fino a 24 h per job, nessuna attesa attiva | — |
+| GPT-5-mini via Batch (13), intero dataset | asincrono: fino a 24 h per job, nessuna attesa attiva | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB).
