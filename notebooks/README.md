@@ -1,14 +1,16 @@
 # Notebook di benchmark della summarization
 
-Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano undici
+Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano nove
 metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](../data/tab/complete.tab)):
 due estrattivi (TextRank, LexRank), tre abstractive specializzati (BART, PEGASUS, PRIMERA), tre
 LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral-7B — notebook
-07–09, via [ollama](https://ollama.com)) e tre LLM cloud su **Azure AI Foundry**
-(GPT-5-mini, Claude Haiku 4.5, DeepSeek-V3.2 — notebook 10–12), usando la libreria
+07–09, via [ollama](https://ollama.com)) e un LLM cloud su **Azure AI Foundry**
+(GPT-5-mini — notebook 10), usando la libreria
 [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA usa direttamente
-`transformers`, gli LLM il client `openai` — o `anthropic` per Claude; le metriche sono comunque
-quelle di pyAutoSummarizer per tutti i metodi).
+`transformers`, gli LLM il client `openai`; le metriche sono comunque quelle di
+pyAutoSummarizer per tutti i metodi). Due ulteriori notebook Azure (Claude Haiku 4.5 e
+DeepSeek-V3.2, ex 11–12) sono stati rimossi perché il deployment dei modelli non è riuscito:
+restano recuperabili dalla history git se si riproverà con un altro approccio.
 
 La sottocartella [llm/](llm/README.md) è un **archivio**: i notebook e i risultati originali di
 Federica (LM Studio), da cui erano stati inizialmente importati i risultati committati dei metodi
@@ -39,10 +41,8 @@ automaticamente e la usano se disponibile.
 | 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Solo `sample`. |
 | 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral-7B-Instruct-v0.3 (LLM locale via ollama). Solo `sample`. |
 | 10 | [10_azure_gpt.ipynb](10_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
-| 11 | [11_azure_claude.ipynb](11_azure_claude.ipynb) | Claude Haiku 4.5 (Anthropic su Azure AI Foundry). Ambiti `sample` e `test`. |
-| 12 | [12_azure_deepseek.ipynb](12_azure_deepseek.ipynb) | DeepSeek-V3.2 (Azure AI Foundry Models, serverless). Ambiti `sample` e `test`. |
 
-I notebook dei metodi (01–04 e 06–12) sono indipendenti tra loro e condividono le routine di
+I notebook dei metodi (01–04 e 06–10) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
 
 ## LLM locali (notebook 07–09)
@@ -81,77 +81,71 @@ all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
   presente nei CSV di Federica non è stato portato in `results/` (la pipeline condivisa non
   lo calcola).
 
-## LLM su Azure AI Foundry (notebook 10–12)
+## LLM su Azure AI Foundry (notebook 10)
 
-I notebook 10–12 replicano il protocollo dei notebook 07–09 (stesso prompt zero-shot in inglese,
+Il notebook 10 replica il protocollo dei notebook 07–09 (stesso prompt zero-shot in inglese,
 documento passato da `prepara_documento`; senza il prefisso `/no_think`, artefatto di qwen) su
-tre modelli serviti da Azure AI Foundry, con due ambiti ciascuno. Claude e DeepSeek mantengono
-`temperature=0.3` e `max_tokens=300`; GPT-5-mini è un modello con *reasoning* e devia in modo
-documentato (niente `temperature`, `max_completion_tokens=1500` con
+**GPT-5-mini** servito da Azure AI Foundry. GPT-5-mini è un modello con *reasoning* e devia in
+modo documentato (niente `temperature`, `max_completion_tokens=1500` con
 `reasoning_effort='minimal'` — il caso gemma del notebook 08; la famiglia gpt-4o-mini è ritirata
-da Azure e non è più deployabile):
+da Azure e non è più deployabile). Tre ambiti:
 
 - `sample` — il campione condiviso da 100 esempi (confronto con tutti gli altri metodi, costo di
   pochi centesimi);
 - `test` — l'intera split **test** pulita di `complete.tab` (5.610 righe = 5.622 − 12 righe
-  sporche): confronto senza le avvertenze di leakage, con numerosità ~56 volte maggiore.
-
-Il notebook 10 supporta inoltre `SCOPE='full'`: l'**intero dataset** (56.101 righe) in chiamate
-sequenziali sul deployment Standard (~2–4 giorni, interrompibile e riprendibile). ⚠️ La Batch
-API di Azure OpenAI (sconto 50%) **non offre gpt-5-mini in nessuna regione** (solo gpt-4.1*,
-gpt-4o*, gpt-5, gpt-5.1 e serie o), quindi la corsa completa va a prezzo pieno; per Claude e
-DeepSeek l'ambito massimo resta `test` per motivi di costo.
+  sporche): confronto senza le avvertenze di leakage, con numerosità ~56 volte maggiore;
+- `full` — l'**intero dataset** (56.101 righe) in chiamate sequenziali sul deployment Standard
+  (~2–4 giorni, interrompibile e riprendibile). ⚠️ La Batch API di Azure OpenAI (sconto 50%)
+  **non offre gpt-5-mini in nessuna regione** (solo gpt-4.1*, gpt-4o*, gpt-5, gpt-5.1 e serie
+  o), quindi la corsa completa va a prezzo pieno.
 
 ### Configurazione di Azure (una tantum, nel portale)
 
-1. Creare una risorsa **Azure AI Foundry** + progetto in una regione che offra tutti e tre i
-   modelli (es. *East US 2* o *Sweden Central*).
-2. Deployment: `gpt-5-mini` **Global Standard** (notebook 10); **DeepSeek-V3.2** serverless
-   (Foundry Models, fatturazione Microsoft — ha sostituito DeepSeek-V3 nel catalogo);
-   **Claude Haiku 4.5** dal catalogo modelli Anthropic di Foundry.
-3. Variabili d'ambiente (mai chiavi nel codice o nei notebook):
-
-   | Variabile | Uso |
-   |---|---|
-   | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` | notebook 10 (Azure OpenAI; solo radice della risorsa, senza path) |
-   | `AZURE_INFERENCE_ENDPOINT`, `AZURE_INFERENCE_API_KEY` | notebook 12 (rotta OpenAI-compatibile di Foundry Models) |
-   | `AZURE_ANTHROPIC_RESOURCE`, `AZURE_ANTHROPIC_API_KEY` | notebook 11 (client `AnthropicFoundry`) |
+1. Creare una risorsa **Azure AI Foundry** + progetto (es. *Sweden Central*).
+2. Deployment: `gpt-5-mini` di tipo **Global Standard**.
+3. Variabili d'ambiente (mai chiavi nel codice o nei notebook): `AZURE_OPENAI_ENDPOINT` (solo
+   la **radice** della risorsa, es. `https://<risorsa>.services.ai.azure.com`, senza path) e
+   `AZURE_OPENAI_API_KEY`.
 
 ### Costi indicativi (luglio 2026, prezzi Azure pay-as-you-go)
 
-Stime con ~2.900 token di input e ~300 di output per esempio:
+Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2,00 $/M):
 
 | Corsa | Costo stimato |
 |---|---|
-| `sample` (100 esempi), qualunque modello | centesimi |
-| `test` (5.610) con GPT-5-mini (0,25/2,00 $/M) | ~8 $ |
-| `test` con Claude Haiku 4.5 (1/5 $/M) | ~25 $ |
-| `test` con DeepSeek-V3.2 (0,58/1,68 $/M) | ~12 $ |
-| `full` (56.101) con GPT-5-mini (sequenziale, prezzo pieno) | ~80 $ |
+| `sample` (100 esempi) | centesimi |
+| `test` (5.610) | ~8 $ (corsa reale 2026-07-17: ~7 €) |
+| `full` (56.101, sequenziale a prezzo pieno) | ~80 $ |
 
 ### Avvertenze
 
 - **Ripresa = rischio di mescolare corse**, come per i notebook 07–09: ogni ambito scrive su un
   TSV separato e rieseguire sopra un file esistente aggiunge solo le righe mancanti; con un
   deployment o una configurazione diversi eliminare prima il TSV.
-- **Smoke test**: prima di una corsa `test` lanciare con `LIMIT = 3` (10–12) o
-  per verificare endpoint, chiavi e formato delle risposte.
+- **Smoke test**: prima di una corsa `test` o `full` lanciare con `LIMIT = 3` per verificare
+  endpoint, chiavi e formato delle risposte.
+- **Content filter di Azure**: alcuni cluster di cronaca (hate/violence a severità media)
+  vengono respinti dal filtro con errore `content_filter` prima di raggiungere il modello: le
+  righe restano assenti dal TSV e non sono ritentabili (nella corsa test 2026-07-17: 139 righe
+  su 5.610, più 1 nel campione). Il confronto nel notebook 05 resta equo (intersezione dei
+  `row_id`); per coprirle serve un content filter personalizzato con soglie *high-only*
+  associato al deployment.
 
 ## Parametri principali (cella di configurazione di ogni notebook)
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
 - `SCOPE` — `'sample'` = campione condiviso (tutti i metodi); `'full'` = intero `complete.tab`,
   56.101 esempi in streaming (01/02 e 10); `'test'` = intera split test, 5.610
-  esempi in streaming (solo 10–12).
+  esempi in streaming (solo 10).
 - `LIMIT` — `None` per la corsa completa; un intero piccolo (es. `3`) per uno smoke test.
 - `N_SENTENCES` (solo 01/02) — frasi estratte per riassunto (default 11, la mediana di frasi
   per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei riferimenti,
   perché le frasi di cronaca sono più lunghe di quelle dei digest).
 - `MODELLO`, `OLLAMA_URL`, `MAX_TOKENS`, `TEMPERATURE` (solo 07–09) — tag del modello ollama
   (verificare con `ollama list`), endpoint e parametri di generazione.
-- `DEPLOYMENT` / `MODELLO`, endpoint da variabili d'ambiente (solo 10–12) — nome del deployment
-  Azure e parametri del client (vedi la sezione Azure sopra); il notebook 10 usa la rotta **v1**
-  di Azure OpenAI (`<endpoint>/openai/v1/`, senza api-version datata).
+- `DEPLOYMENT`, endpoint da variabili d'ambiente (solo 10) — nome del deployment Azure e
+  parametri del client (vedi la sezione Azure sopra); il notebook 10 usa la rotta **v1** di
+  Azure OpenAI (`<endpoint>/openai/v1/`, senza api-version datata).
 
 ## File prodotti
 
@@ -181,8 +175,8 @@ grandi ma rigenerabili a pagamento).
 | LexRank, `full` (56.101) | ore | ore (non serve la GPU) |
 | TextRank, `full` (56.101) | ~6–12 h | ~1 h — **consigliata la GPU** |
 | LLM via ollama, campione 100 | dipende da modello e hardware (su questa macchina: qwen ~9 min, mistral ~18 min, gemma ~24 min) | — |
-| LLM Azure (10–12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
-| LLM Azure (10–12), split test 5.610 | ~5–15 h sequenziali per modello | — |
+| GPT-5-mini (10), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
+| GPT-5-mini (10), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (10), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;

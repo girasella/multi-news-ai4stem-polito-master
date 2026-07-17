@@ -25,7 +25,7 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
   0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
-  1X_*.ipynb           # 10-12 Azure AI Foundry LLMs (sample+test scopes; 10 also SCOPE='full')
+  1X_*.ipynb           # 10 Azure AI Foundry GPT-5-mini (scopes sample/test/full); ex 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
                        # results, since replaced by local ollama runs) and docx report —
@@ -94,29 +94,30 @@ get or change the stats. Key facts it establishes (details in `data/README.md`):
 
 ## Summarization benchmark (`notebooks/` + `results/`)
 
-Eleven methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, PEGASUS
+Nine methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, PEGASUS
 `google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized abstractive);
 three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
 Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`); plus
-three cloud LLMs on Azure AI Foundry — GPT-5-mini, Claude Haiku 4.5, DeepSeek-V3.2 (notebooks
-10/11/12, slugs `gpt5mini`/`haiku`/`deepseek`). The first four run via pyAutoSummarizer,
-PRIMERA directly via `transformers` (notebook 06), the local LLMs via the `openai` client
-against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`), the Azure LLMs via
-`openai.AzureOpenAI` (GPT), `anthropic.AnthropicFoundry` (Claude) and `openai.OpenAI` against
-the Foundry Models OpenAI-compatible route (DeepSeek) — all scored with pyAutoSummarizer's
-ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
+one cloud LLM on Azure AI Foundry — GPT-5-mini (notebook 10, slug `gpt5mini`). The first four
+run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the local LLMs via
+the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`),
+GPT-5-mini via `openai.OpenAI` against the Azure OpenAI **v1 route**
+(`<endpoint>/openai/v1/`, no dated api-version) — all scored with pyAutoSummarizer's
+ROUGE-1/2/L, BLEU, METEOR implementations. Two more Azure notebooks (Claude Haiku 4.5 and
+DeepSeek-V3.2, ex 11/12 with slugs `haiku`/`deepseek`) were removed because their Foundry
+deployments could not be created; recover them from git history if retried. Conventions to
+respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
   EDA dashboard). `README.md`, `CLAUDE.md`, `data/README.md` etc. stay in English.
 - All method notebooks evaluate the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
   default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept).
   Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
-  Azure notebooks (10-12) also support `SCOPE='test'` (the full clean test split, 5,610 rows =
-  5,622 − 12 dirty, streamed via `summ_utils.itera_split`); notebook 10 additionally supports
-  `SCOPE='full'` (all 56,101 rows, **sequential at standard pricing** — the Azure OpenAI Batch
-  API offers no gpt-5-mini in any region, so there is no 50% batch discount; Claude/DeepSeek
-  stop at `test` for cost reasons). The resumable loop makes the multi-day full run splittable
-  across sessions.
+  The Azure notebook (10) also supports `SCOPE='test'` (the full clean test split, 5,610 rows =
+  5,622 − 12 dirty, streamed via `summ_utils.itera_split`) and `SCOPE='full'` (all 56,101 rows,
+  **sequential at standard pricing** — the Azure OpenAI Batch API offers no gpt-5-mini in any
+  region, so there is no 50% batch discount). The resumable loop makes the multi-day full run
+  splittable across sessions.
 - Generation is expensive and **resumable**: summaries append to
   `results/summaries/{method}_{scope}.tsv` one flushed row at a time, and re-runs skip row_ids
   already present. Metrics sections read ONLY saved files — never make evaluation depend on
@@ -147,18 +148,20 @@ ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
   `enable_thinking` extra_body; mistral's system prompt uses the real `system` role. Because
   of resumability, regenerating on top of a TSV from a different run would mix runs — delete
   the TSV first.
-- **Azure notebooks (10-12) conventions**: same zero-shot English prompt as 07-09, documents
+- **Azure notebook (10) conventions**: same zero-shot English prompt as 07-09, documents
   through `prepara_documento`, the `/no_think` prefix deliberately dropped (qwen artifact).
-  Claude/DeepSeek keep `temperature=0.3`, `max_tokens=300`; **GPT-5-mini deviates** (documented
-  in notebook 10): it is a reasoning model, so no `temperature` (only default accepted) and
-  `max_completion_tokens=1500` with `reasoning_effort='minimal'` — reasoning tokens consume the
-  completion budget before visible output, the same failure mode as gemma (notebook 08).
-  GPT-5-mini was chosen because Azure retired the gpt-4o-mini family (deprecating state, no new
-  deployments) and gpt-4.1-mini is on the same retirement path. Credentials come ONLY
-  from environment variables (`AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY` for 10,
-  `AZURE_INFERENCE_ENDPOINT`/`AZURE_INFERENCE_API_KEY` for 12,
-  `AZURE_ANTHROPIC_RESOURCE`/`AZURE_ANTHROPIC_API_KEY` for 11) — never hardcode keys. For
-  Azure OpenAI, `model=` in requests is the **deployment name**, not the model name.
+  **GPT-5-mini deviates from the 07-09 params** (documented in notebook 10): it is a reasoning
+  model, so no `temperature` (only default accepted) and `max_completion_tokens=1500` with
+  `reasoning_effort='minimal'` — reasoning tokens consume the completion budget before visible
+  output, the same failure mode as gemma (notebook 08). GPT-5-mini was chosen because Azure
+  retired the gpt-4o-mini family (deprecating state, no new deployments) and gpt-4.1-mini is on
+  the same retirement path. Credentials come ONLY from environment variables
+  (`AZURE_OPENAI_ENDPOINT` = the bare resource root, no path; `AZURE_OPENAI_API_KEY`) — never
+  hardcode keys. For Azure OpenAI, `model=` in requests is the **deployment name**, not the
+  model name. Azure's content filter deterministically rejects some news clusters
+  (hate/violence at medium severity) with `content_filter` errors before the model sees them:
+  those rows stay absent from the TSVs and are not retryable without a custom high-only filter
+  attached to the deployment (2026-07-17 runs: 1/100 sample, 139/5,610 test rows missing).
 - **gemma coverage**: full (100/100) in the committed ollama run, thanks to `MAX_TOKENS=1500`
   in notebook 08. The original LM Studio run had 81/100 empty responses (only 19 evaluated):
   Gemma 4 emits reasoning tokens that exhaust `max_tokens=300` before any visible content
