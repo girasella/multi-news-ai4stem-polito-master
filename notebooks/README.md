@@ -150,9 +150,10 @@ Stime con ~2.900 token di input e ~300 di output per esempio:
   perché le frasi di cronaca sono più lunghe di quelle dei digest).
 - `MODELLO`, `OLLAMA_URL`, `MAX_TOKENS`, `TEMPERATURE` (solo 07–09) — tag del modello ollama
   (verificare con `ollama list`), endpoint e parametri di generazione.
-- `DEPLOYMENT` / `MODELLO`, `API_VERSION`, endpoint da variabili d'ambiente (solo 10–13) — nome
-  del deployment Azure e parametri del client (vedi la sezione Azure sopra); nel notebook 13
-  anche `DEPLOYMENT_BATCH`, `MAX_FILE_MB` e `LIMIT_RICHIESTE`.
+- `DEPLOYMENT` / `MODELLO`, endpoint da variabili d'ambiente (solo 10–13) — nome del deployment
+  Azure e parametri del client (vedi la sezione Azure sopra); 10 e 13 usano la rotta **v1** di
+  Azure OpenAI (`<endpoint>/openai/v1/`, senza api-version datata); nel notebook 13 anche
+  `DEPLOYMENT_BATCH`, `MAX_FILE_MB` e `LIMIT_RICHIESTE`.
 
 ## File prodotti
 
