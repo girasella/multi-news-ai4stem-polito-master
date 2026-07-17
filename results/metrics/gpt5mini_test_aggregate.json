@@ -1,0 +1,47 @@
+{
+  "metodo": "gpt5mini",
+  "scope": "test",
+  "config": {
+    "modello": "gpt-5-mini",
+    "deployment": "gpt-5-mini",
+    "backend": "Azure OpenAI (chat completions, API v1)",
+    "max_completion_tokens": 1500,
+    "reasoning_effort": "minimal",
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "Summarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese identico ai notebook 07-09 (senza /no_think); modello con reasoning: niente temperature, max_completion_tokens=1500 con reasoning_effort='minimal' (caso gemma); ambiti sample, test e full (full sequenziale: la Batch API non offre gpt-5-mini)"
+  },
+  "timestamp": "2026-07-17T21:07:48+00:00",
+  "n_esempi": 5471,
+  "overall": {
+    "rouge1_f1": 0.34841109900707196,
+    "rouge1_p": 0.33907586846696114,
+    "rouge1_r": 0.37970230982851727,
+    "rouge2_f1": 0.10246722321091757,
+    "rouge2_p": 0.1036128604627185,
+    "rouge2_r": 0.1091982817285855,
+    "rougeL_f1": 0.17888331365039178,
+    "rougeL_p": 0.1811848510148656,
+    "rougeL_r": 0.19183355057841459,
+    "bleu": 0.065815623148738,
+    "meteor": 0.40194817861695464,
+    "parole_generate": 240.5127033449095
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5471,
+      "rouge1_f1": 0.34841109900707196,
+      "rouge1_p": 0.33907586846696114,
+      "rouge1_r": 0.37970230982851727,
+      "rouge2_f1": 0.10246722321091757,
+      "rouge2_p": 0.1036128604627185,
+      "rouge2_r": 0.1091982817285855,
+      "rougeL_f1": 0.17888331365039178,
+      "rougeL_p": 0.1811848510148656,
+      "rougeL_r": 0.19183355057841459,
+      "bleu": 0.065815623148738,
+      "meteor": 0.40194817861695464,
+      "parole_generate": 240.5127033449095
+    }
+  }
+}

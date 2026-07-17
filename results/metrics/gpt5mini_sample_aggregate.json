@@ -1,0 +1,77 @@
+{
+  "metodo": "gpt5mini",
+  "scope": "sample",
+  "config": {
+    "modello": "gpt-5-mini",
+    "deployment": "gpt-5-mini",
+    "backend": "Azure OpenAI (chat completions, API v1)",
+    "max_completion_tokens": 1500,
+    "reasoning_effort": "minimal",
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "Summarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese identico ai notebook 07-09 (senza /no_think); modello con reasoning: niente temperature, max_completion_tokens=1500 con reasoning_effort='minimal' (caso gemma); ambiti sample, test e full (full sequenziale: la Batch API non offre gpt-5-mini)"
+  },
+  "timestamp": "2026-07-17T21:11:56+00:00",
+  "n_esempi": 99,
+  "overall": {
+    "rouge1_f1": 0.3445962246126047,
+    "rouge1_p": 0.3405834507575869,
+    "rouge1_r": 0.3689332874764132,
+    "rouge2_f1": 0.09815084474226164,
+    "rouge2_p": 0.10149609726143974,
+    "rouge2_r": 0.10206956529163702,
+    "rougeL_f1": 0.1773664168127669,
+    "rougeL_p": 0.18455894222359412,
+    "rougeL_r": 0.1837041631620382,
+    "bleu": 0.06268238679750976,
+    "meteor": 0.39039500422349044,
+    "parole_generate": 239.4949494949495
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 8,
+      "rouge1_f1": 0.3461734318754676,
+      "rouge1_p": 0.36541544144007954,
+      "rouge1_r": 0.36125309895739643,
+      "rouge2_f1": 0.1029012898145588,
+      "rouge2_p": 0.11514943536121963,
+      "rouge2_r": 0.10217075133374649,
+      "rougeL_f1": 0.18608623162131777,
+      "rougeL_p": 0.20755068981703953,
+      "rougeL_r": 0.19100543492602348,
+      "bleu": 0.0635130027752958,
+      "meteor": 0.37802555232066826,
+      "parole_generate": 284.75
+    },
+    "train": {
+      "n_esempi": 80,
+      "rouge1_f1": 0.34175890099383766,
+      "rouge1_p": 0.336944949365523,
+      "rouge1_r": 0.36532343665372913,
+      "rouge2_f1": 0.09613527790440772,
+      "rouge2_p": 0.09951810249913394,
+      "rouge2_r": 0.09946851821060049,
+      "rougeL_f1": 0.17607158108544396,
+      "rougeL_p": 0.18298601130054326,
+      "rougeL_r": 0.1816519503047756,
+      "bleu": 0.0604763514509299,
+      "meteor": 0.3889948205112457,
+      "parole_generate": 238.2875
+    },
+    "val": {
+      "n_esempi": 11,
+      "rouge1_f1": 0.36408424564882813,
+      "rouge1_p": 0.3489856494762393,
+      "rouge1_r": 0.4007723396552183,
+      "rouge2_f1": 0.10935464351043768,
+      "rouge2_p": 0.1059518132783693,
+      "rouge2_r": 0.12091268148673219,
+      "rougeL_f1": 0.18044172042344242,
+      "rougeL_p": 0.17927716886873118,
+      "rougeL_r": 0.1933193317501405,
+      "bleu": 0.07812219587970054,
+      "meteor": 0.4095741235145956,
+      "parole_generate": 215.36363636363637
+    }
+  }
+}
