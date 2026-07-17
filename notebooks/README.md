@@ -113,7 +113,8 @@ Il notebook 13 copre invece l'**intero dataset** (56.101 righe) con GPT-5-mini t
 
    | Variabile | Uso |
    |---|---|
-   | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` | notebook 10 e 13 (Azure OpenAI) |
+   | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` | notebook 10 e 13 (Azure OpenAI; solo radice della risorsa, senza path) |
+   | `AZURE_OPENAI_BATCH_ENDPOINT`, `AZURE_OPENAI_BATCH_API_KEY` | opzionali, solo notebook 13: risorsa separata per il deployment Global-Batch se la regione della risorsa Standard non offre il tipo Batch |
    | `AZURE_INFERENCE_ENDPOINT`, `AZURE_INFERENCE_API_KEY` | notebook 12 (rotta OpenAI-compatibile di Foundry Models) |
    | `AZURE_ANTHROPIC_RESOURCE`, `AZURE_ANTHROPIC_API_KEY` | notebook 11 (client `AnthropicFoundry`) |
 
