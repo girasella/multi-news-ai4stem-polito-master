@@ -25,7 +25,7 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
   0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
-  1X_*.ipynb           # 10-12 Azure AI Foundry LLMs (sample+test scopes), 13 GPT full-dataset Batch run
+  1X_*.ipynb           # 10-12 Azure AI Foundry LLMs (sample+test scopes; 10 also SCOPE='full')
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
                        # results, since replaced by local ollama runs) and docx report —
@@ -33,7 +33,6 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
 results/
   sample/              # Shared evaluation sample TSV (committed)
   summaries/           # Generated summaries per method (all committed, incl. *_full.tsv/*_test.tsv — large but regenerable)
-  batch/               # Azure Batch working dir (JSONL chunks + job state, notebook 13) — gitignored
   metrics/             # Per-example CSVs + aggregate JSONs (committed)
 data/
   README.md            # Detailed description of data/ file formats and content
@@ -113,11 +112,11 @@ ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
   default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept).
   Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
   Azure notebooks (10-12) also support `SCOPE='test'` (the full clean test split, 5,610 rows =
-  5,622 − 12 dirty, streamed via `summ_utils.itera_split`); notebook 13 covers `SCOPE='full'`
-  for GPT-5-mini via the Azure OpenAI **Batch API** (50% discount; Batch exists only for Azure
-  OpenAI models, which is why Claude/DeepSeek stop at `test`). Batch working files live in the
-  gitignored `results/batch/` (JSONL chunks + job-state JSON; the notebook is staged and
-  resumable across kernel restarts).
+  5,622 − 12 dirty, streamed via `summ_utils.itera_split`); notebook 10 additionally supports
+  `SCOPE='full'` (all 56,101 rows, **sequential at standard pricing** — the Azure OpenAI Batch
+  API offers no gpt-5-mini in any region, so there is no 50% batch discount; Claude/DeepSeek
+  stop at `test` for cost reasons). The resumable loop makes the multi-day full run splittable
+  across sessions.
 - Generation is expensive and **resumable**: summaries append to
   `results/summaries/{method}_{scope}.tsv` one flushed row at a time, and re-runs skip row_ids
   already present. Metrics sections read ONLY saved files — never make evaluation depend on
@@ -148,7 +147,7 @@ ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
   `enable_thinking` extra_body; mistral's system prompt uses the real `system` role. Because
   of resumability, regenerating on top of a TSV from a different run would mix runs — delete
   the TSV first.
-- **Azure notebooks (10-13) conventions**: same zero-shot English prompt as 07-09, documents
+- **Azure notebooks (10-12) conventions**: same zero-shot English prompt as 07-09, documents
   through `prepara_documento`, the `/no_think` prefix deliberately dropped (qwen artifact).
   Claude/DeepSeek keep `temperature=0.3`, `max_tokens=300`; **GPT-5-mini deviates** (documented
   in notebook 10): it is a reasoning model, so no `temperature` (only default accepted) and
@@ -156,7 +155,7 @@ ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
   completion budget before visible output, the same failure mode as gemma (notebook 08).
   GPT-5-mini was chosen because Azure retired the gpt-4o-mini family (deprecating state, no new
   deployments) and gpt-4.1-mini is on the same retirement path. Credentials come ONLY
-  from environment variables (`AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY` for 10/13,
+  from environment variables (`AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY` for 10,
   `AZURE_INFERENCE_ENDPOINT`/`AZURE_INFERENCE_API_KEY` for 12,
   `AZURE_ANTHROPIC_RESOURCE`/`AZURE_ANTHROPIC_API_KEY` for 11) — never hardcode keys. For
   Azure OpenAI, `model=` in requests is the **deployment name**, not the model name.
