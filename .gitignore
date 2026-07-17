@@ -1,3 +1,6 @@
 # Python / Jupyter
 __pycache__/
 .ipynb_checkpoints/
+
+# Azure Batch working files (JSONL chunks + job state, notebook 13) — regenerable
+results/batch/

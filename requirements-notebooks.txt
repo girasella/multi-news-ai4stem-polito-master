@@ -12,4 +12,5 @@ sentencepiece   # required by the PEGASUS tokenizer (google/pegasus-multi_news)
 protobuf        # required alongside sentencepiece to convert the PEGASUS tokenizer
 pandas
 matplotlib
-openai          # client for the local ollama OpenAI-compatible endpoint (notebooks 07-09)
+openai          # client for the local ollama OpenAI-compatible endpoint (notebooks 07-09) and Azure OpenAI / Foundry Models (notebooks 10, 12, 13)
+anthropic       # AnthropicFoundry client for Claude on Azure AI Foundry (notebook 11)

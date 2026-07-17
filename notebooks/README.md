@@ -1,13 +1,14 @@
 # Notebook di benchmark della summarization
 
-Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano otto
+Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano undici
 metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](../data/tab/complete.tab)):
-due estrattivi (TextRank, LexRank), tre abstractive specializzati (BART, PEGASUS, PRIMERA) e tre
+due estrattivi (TextRank, LexRank), tre abstractive specializzati (BART, PEGASUS, PRIMERA), tre
 LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral-7B — notebook
-07–09, via [ollama](https://ollama.com)), usando la libreria
+07–09, via [ollama](https://ollama.com)) e tre LLM cloud su **Azure AI Foundry**
+(GPT-4o-mini, Claude Haiku 4.5, DeepSeek-V3 — notebook 10–13), usando la libreria
 [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA usa direttamente
-`transformers`, gli LLM il client `openai` verso ollama; le metriche sono comunque quelle di
-pyAutoSummarizer per tutti i metodi).
+`transformers`, gli LLM il client `openai` — o `anthropic` per Claude; le metriche sono comunque
+quelle di pyAutoSummarizer per tutti i metodi).
 
 La sottocartella [llm/](llm/README.md) è un **archivio**: i notebook e i risultati originali di
 Federica (LM Studio), da cui erano stati inizialmente importati i risultati committati dei metodi
@@ -37,8 +38,12 @@ automaticamente e la usano se disponibile.
 | 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Solo `sample`. |
 | 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Solo `sample`. |
 | 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral-7B-Instruct-v0.3 (LLM locale via ollama). Solo `sample`. |
+| 10 | [10_azure_gpt.ipynb](10_azure_gpt.ipynb) | GPT-4o-mini (Azure OpenAI). Ambiti `sample` e `test`. |
+| 11 | [11_azure_claude.ipynb](11_azure_claude.ipynb) | Claude Haiku 4.5 (Anthropic su Azure AI Foundry). Ambiti `sample` e `test`. |
+| 12 | [12_azure_deepseek.ipynb](12_azure_deepseek.ipynb) | DeepSeek-V3 (Azure AI Foundry Models, serverless). Ambiti `sample` e `test`. |
+| 13 | [13_azure_gpt_full_batch.ipynb](13_azure_gpt_full_batch.ipynb) | GPT-4o-mini sull'**intero dataset** (56.101 righe) via Azure OpenAI **Batch API** (a stadi: chunk → invio → raccolta → valutazione). Ambito `full`. |
 
-I notebook dei metodi (01–04 e 06–09) sono indipendenti tra loro e condividono le routine di
+I notebook dei metodi (01–04 e 06–13) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
 
 ## LLM locali (notebook 07–09)
@@ -77,17 +82,74 @@ all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
   presente nei CSV di Federica non è stato portato in `results/` (la pipeline condivisa non
   lo calcola).
 
+## LLM su Azure AI Foundry (notebook 10–13)
+
+I notebook 10–12 replicano il protocollo dei notebook 07–09 (stesso prompt zero-shot in inglese,
+`temperature=0.3`, `max_tokens=300`, documento passato da `prepara_documento`; unica differenza:
+niente prefisso `/no_think`, artefatto di qwen) su tre modelli serviti da Azure AI Foundry, con
+due ambiti ciascuno:
+
+- `sample` — il campione condiviso da 100 esempi (confronto con tutti gli altri metodi, costo di
+  pochi centesimi);
+- `test` — l'intera split **test** pulita di `complete.tab` (5.610 righe = 5.622 − 12 righe
+  sporche): confronto senza le avvertenze di leakage, con numerosità ~56 volte maggiore.
+
+Il notebook 13 copre invece l'**intero dataset** (56.101 righe) con GPT-4o-mini tramite la
+**Batch API** di Azure OpenAI (sconto 50%, flusso asincrono a stadi). La Batch API è disponibile
+**solo per i modelli Azure OpenAI**: per Claude e DeepSeek l'ambito massimo resta `test`.
+
+### Configurazione di Azure (una tantum, nel portale)
+
+1. Creare una risorsa **Azure AI Foundry** + progetto in una regione che offra tutti e tre i
+   modelli (es. *East US 2* o *Sweden Central*).
+2. Deployment: `gpt-4o-mini` **Global Standard** (notebook 10) e `gpt-4o-mini` **Global Batch**
+   (notebook 13); **DeepSeek-V3** serverless (Foundry Models, fatturazione Microsoft);
+   **Claude Haiku 4.5** dal catalogo modelli Anthropic di Foundry.
+3. Variabili d'ambiente (mai chiavi nel codice o nei notebook):
+
+   | Variabile | Uso |
+   |---|---|
+   | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` | notebook 10 e 13 (Azure OpenAI) |
+   | `AZURE_INFERENCE_ENDPOINT`, `AZURE_INFERENCE_API_KEY` | notebook 12 (rotta OpenAI-compatibile di Foundry Models) |
+   | `AZURE_ANTHROPIC_RESOURCE`, `AZURE_ANTHROPIC_API_KEY` | notebook 11 (client `AnthropicFoundry`) |
+
+### Costi indicativi (luglio 2026, prezzi Azure pay-as-you-go)
+
+Stime con ~2.900 token di input e ~300 di output per esempio:
+
+| Corsa | Costo stimato |
+|---|---|
+| `sample` (100 esempi), qualunque modello | centesimi |
+| `test` (5.610) con GPT-4o-mini (0,15/0,60 $/M) | ~3,50 $ |
+| `test` con Claude Haiku 4.5 (1/5 $/M) | ~25 $ |
+| `test` con DeepSeek-V3 (1,14/4,56 $/M) | ~26 $ |
+| `full` (56.101) con GPT-4o-mini via Batch (−50%) | ~17–20 $ |
+
+### Avvertenze
+
+- **Ripresa = rischio di mescolare corse**, come per i notebook 07–09: ogni ambito scrive su un
+  TSV separato e rieseguire sopra un file esistente aggiunge solo le righe mancanti; con un
+  deployment o una configurazione diversi eliminare prima il TSV.
+- **Smoke test**: prima di una corsa `test` lanciare con `LIMIT = 3` (10–12) o
+  `LIMIT_RICHIESTE = 10` (13) per verificare endpoint, chiavi e formato delle risposte.
+- La cella di invio del notebook 13 si ferma al primo rifiuto per quota di *enqueued tokens*:
+  rilanciarla quando i job precedenti sono stati raccolti.
+
 ## Parametri principali (cella di configurazione di ogni notebook)
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
-- `SCOPE` (solo 01/02) — `'sample'` = campione condiviso (confronto con gli abstractive);
-  `'full'` = intero `complete.tab`, 56.101 esempi in streaming (confronto tra estrattivi).
+- `SCOPE` — `'sample'` = campione condiviso (tutti i metodi); `'full'` = intero `complete.tab`,
+  56.101 esempi in streaming (01/02 e, via Batch, 13); `'test'` = intera split test, 5.610
+  esempi in streaming (solo 10–12).
 - `LIMIT` — `None` per la corsa completa; un intero piccolo (es. `3`) per uno smoke test.
 - `N_SENTENCES` (solo 01/02) — frasi estratte per riassunto (default 11, la mediana di frasi
   per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei riferimenti,
   perché le frasi di cronaca sono più lunghe di quelle dei digest).
 - `MODELLO`, `OLLAMA_URL`, `MAX_TOKENS`, `TEMPERATURE` (solo 07–09) — tag del modello ollama
   (verificare con `ollama list`), endpoint e parametri di generazione.
+- `DEPLOYMENT` / `MODELLO`, `API_VERSION`, endpoint da variabili d'ambiente (solo 10–13) — nome
+  del deployment Azure e parametri del client (vedi la sezione Azure sopra); nel notebook 13
+  anche `DEPLOYMENT_BATCH`, `MAX_FILE_MB` e `LIMIT_RICHIESTE`.
 
 ## File prodotti
 
@@ -103,8 +165,9 @@ I riassunti sono la parte costosa: vengono scritti **incrementalmente** (una rig
 flush immediato) e un'esecuzione interrotta **riprende** da dove era arrivata, saltando i `row_id`
 già presenti nel file. Le metriche invece si ricalcolano in pochi secondi **leggendo solo i file
 salvati**: la sezione «Valutazione» di ogni notebook è rieseguibile senza rigenerare nulla.
-I file `*_full.tsv` (decine di MB) sono esclusi da git ([.gitignore](../.gitignore)); campione e
-metriche sono versionati.
+Campione, riassunti e metriche sono versionati (compresi i TSV `*_full.tsv` e `*_test.tsv`,
+grandi ma rigenerabili a pagamento); la cartella di lavoro `results/batch/` del notebook 13
+(chunk JSONL + stato dei job) è invece esclusa da git ([.gitignore](../.gitignore)).
 
 ## Tempi indicativi
 
@@ -117,6 +180,9 @@ metriche sono versionati.
 | LexRank, `full` (56.101) | ore | ore (non serve la GPU) |
 | TextRank, `full` (56.101) | ~6–12 h | ~1 h — **consigliata la GPU** |
 | LLM via ollama, campione 100 | dipende da modello e hardware (su questa macchina: qwen ~9 min, mistral ~18 min, gemma ~24 min) | — |
+| LLM Azure (10–12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
+| LLM Azure (10–12), split test 5.610 | ~5–15 h sequenziali per modello | — |
+| GPT-4o-mini via Batch (13), intero dataset | asincrono: fino a 24 h per job, nessuna attesa attiva | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB).

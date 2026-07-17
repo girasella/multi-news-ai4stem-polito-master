@@ -80,6 +80,17 @@ def itera_complete_tab(path):
             yield {'row_id': i, 'split': split, 'document': document, 'summary': summary}
 
 
+def itera_split(path, split):
+    """Itera in streaming le sole righe di complete.tab con lo split richiesto.
+
+    Usato dai notebook Azure (10-13) per l'ambito 'test': i row_id restano gli
+    indici globali di complete.tab, coerenti con gli altri ambiti.
+    """
+    for es in itera_complete_tab(path):
+        if es['split'] == split:
+            yield es
+
+
 def carica_campione(path):
     """Carica il TSV del campione prodotto da 00_prepara_campione.ipynb."""
     esempi = []

@@ -25,13 +25,15 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
   0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
+  1X_*.ipynb           # 10-12 Azure AI Foundry LLMs (sample+test scopes), 13 GPT full-dataset Batch run
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
                        # results, since replaced by local ollama runs) and docx report —
                        # see notebooks/llm/README.md
 results/
   sample/              # Shared evaluation sample TSV (committed)
-  summaries/           # Generated summaries per method; *_full.tsv gitignored (large, regenerable)
+  summaries/           # Generated summaries per method (all committed, incl. *_full.tsv/*_test.tsv — large but regenerable)
+  batch/               # Azure Batch working dir (JSONL chunks + job state, notebook 13) — gitignored
   metrics/             # Per-example CSVs + aggregate JSONs (committed)
 data/
   README.md            # Detailed description of data/ file formats and content
@@ -93,20 +95,29 @@ get or change the stats. Key facts it establishes (details in `data/README.md`):
 
 ## Summarization benchmark (`notebooks/` + `results/`)
 
-Eight methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, PEGASUS
+Eleven methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, PEGASUS
 `google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized abstractive);
-plus three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
-Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`). The first
-four run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the LLMs via
-the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`) —
-all scored with pyAutoSummarizer's ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to
-respect:
+three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
+Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`); plus
+three cloud LLMs on Azure AI Foundry — GPT-4o-mini, Claude Haiku 4.5, DeepSeek-V3 (notebooks
+10/11/12, slugs `gpt4omini`/`haiku`/`deepseek`). The first four run via pyAutoSummarizer,
+PRIMERA directly via `transformers` (notebook 06), the local LLMs via the `openai` client
+against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`), the Azure LLMs via
+`openai.AzureOpenAI` (GPT), `anthropic.AnthropicFoundry` (Claude) and `openai.OpenAI` against
+the Foundry Models OpenAI-compatible route (DeepSeek) — all scored with pyAutoSummarizer's
+ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
   EDA dashboard). `README.md`, `CLAUDE.md`, `data/README.md` etc. stay in English.
 - All method notebooks evaluate the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
   default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept).
   Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
+  Azure notebooks (10-12) also support `SCOPE='test'` (the full clean test split, 5,610 rows =
+  5,622 − 12 dirty, streamed via `summ_utils.itera_split`); notebook 13 covers `SCOPE='full'`
+  for GPT-4o-mini via the Azure OpenAI **Batch API** (50% discount; Batch exists only for Azure
+  OpenAI models, which is why Claude/DeepSeek stop at `test`). Batch working files live in the
+  gitignored `results/batch/` (JSONL chunks + job-state JSON; the notebook is staged and
+  resumable across kernel restarts).
 - Generation is expensive and **resumable**: summaries append to
   `results/summaries/{method}_{scope}.tsv` one flushed row at a time, and re-runs skip row_ids
   already present. Metrics sections read ONLY saved files — never make evaluation depend on
@@ -137,6 +148,13 @@ respect:
   `enable_thinking` extra_body; mistral's system prompt uses the real `system` role. Because
   of resumability, regenerating on top of a TSV from a different run would mix runs — delete
   the TSV first.
+- **Azure notebooks (10-13) conventions**: same zero-shot English prompt and generation params
+  as 07-09 (`temperature=0.3`, `max_tokens=300`, documents through `prepara_documento`; the
+  `/no_think` prefix is deliberately dropped — it was a qwen artifact). Credentials come ONLY
+  from environment variables (`AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY` for 10/13,
+  `AZURE_INFERENCE_ENDPOINT`/`AZURE_INFERENCE_API_KEY` for 12,
+  `AZURE_ANTHROPIC_RESOURCE`/`AZURE_ANTHROPIC_API_KEY` for 11) — never hardcode keys. For
+  Azure OpenAI, `model=` in requests is the **deployment name**, not the model name.
 - **gemma coverage**: full (100/100) in the committed ollama run, thanks to `MAX_TOKENS=1500`
   in notebook 08. The original LM Studio run had 81/100 empty responses (only 19 evaluated):
   Gemma 4 emits reasoning tokens that exhaust `max_tokens=300` before any visible content
