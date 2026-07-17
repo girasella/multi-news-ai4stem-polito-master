@@ -3,7 +3,7 @@
 Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano otto
 metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](../data/tab/complete.tab)):
 due estrattivi (TextRank, LexRank), tre abstractive specializzati (BART, PEGASUS, PRIMERA) e tre
-LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral Small ~24B — notebook
+LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral-7B — notebook
 07–09, via [ollama](https://ollama.com)), usando la libreria
 [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA usa direttamente
 `transformers`, gli LLM il client `openai` verso ollama; le metriche sono comunque quelle di
@@ -36,7 +36,7 @@ automaticamente e la usano se disponibile.
 | 06 | [06_primera.ipynb](06_primera.ipynb) | PRIMERA (`allenai/PRIMERA-multinews`, abstractive multi-documento, input 4096 token). Solo `sample`. |
 | 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Solo `sample`. |
 | 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Solo `sample`. |
-| 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral Small ~24B (LLM locale via ollama; la corsa originale usava Mistral-7B-Instruct-v0.3). Solo `sample`. |
+| 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral-7B-Instruct-v0.3 (LLM locale via ollama). Solo `sample`. |
 
 I notebook dei metodi (01–04 e 06–09) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
@@ -44,24 +44,24 @@ I notebook dei metodi (01–04 e 06–09) sono indipendenti tra loro e condivido
 ## LLM locali (notebook 07–09)
 
 I risultati committati di `qwen`/`gemma`/`mistral` provengono dalle **corse ollama di questi
-notebook** (2026-07-16, 100/100 esempi ciascuna). Hanno sostituito i risultati della corsa
-originale di Federica via **LM Studio** (Mac M4, 2026-07-16), a suo tempo importati con
+notebook** (qwen/gemma 2026-07-16, mistral 2026-07-17; 100/100 esempi ciascuna). Hanno
+sostituito i risultati della corsa originale di Federica via **LM Studio** (Mac M4,
+2026-07-16), a suo tempo importati con
 [`scripts/import_llm_results.py`](../scripts/README.md) dai CSV archiviati in
-[llm/](llm/README.md). Modelli usati:
+[llm/](llm/README.md). Una prima corsa ollama di mistral (2026-07-16) aveva usato per errore
+Mistral Small ~24B ed è stata scartata e rifatta con il modello corretto (vedi notebook 09).
+Modelli usati:
 
 ```bash
-ollama pull qwen2.5:7b-instruct   # 07
-ollama pull gemma4                # 08
-ollama pull mistral-small         # 09 — Mistral Small ~24B, NON il 7B della corsa originale
-ollama serve                      # se il servizio non è già attivo
+ollama pull qwen2.5:7b-instruct              # 07
+ollama pull gemma4                           # 08
+ollama pull mistral:7b-instruct-v0.3-q4_K_M  # 09
+ollama serve                                 # se il servizio non è già attivo
 ```
 
 Il modello gira nel server ollama; i notebook usano solo il client `openai` puntato
 all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
 
-- **mistral = Mistral Small (~24B)** nella corsa committata; la corsa originale usava
-  `mistralai/mistral-7b-instruct-v0.3`. È un modello ~3× più grande degli altri due LLM,
-  da tenere presente nel confronto (dettagli nel notebook 09).
 - **Ripresa = rischio di mescolare corse**: il ciclo condiviso salta i `row_id` già presenti
   nel TSV, quindi rieseguire la generazione sopra un file esistente aggiunge solo le righe
   mancanti — con un backend, un modello o una configurazione diversi si mescolerebbero due
@@ -116,7 +116,7 @@ metriche sono versionati.
 | PRIMERA, campione 100 | sconsigliata (minuti per esempio: input 4096, 5 beam) | ~30–60 min |
 | LexRank, `full` (56.101) | ore | ore (non serve la GPU) |
 | TextRank, `full` (56.101) | ~6–12 h | ~1 h — **consigliata la GPU** |
-| LLM via ollama, campione 100 | dipende da modello e hardware (su questa macchina: qwen ~9 min, gemma ~24 min, Mistral Small ~24B ~87 min) | — |
+| LLM via ollama, campione 100 | dipende da modello e hardware (su questa macchina: qwen ~9 min, mistral ~18 min, gemma ~24 min) | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB).
