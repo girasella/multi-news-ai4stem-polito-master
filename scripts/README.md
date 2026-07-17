@@ -6,8 +6,8 @@ One-off importer of Federica's local-LLM benchmark results (LM Studio runs, arch
 [`notebooks/llm/`](../notebooks/llm/README.md)) into the shared `results/` layout.
 
 > **Historical note:** the committed `results/` files for `qwen`/`gemma`/`mistral` were later
-> regenerated from scratch via local ollama runs of notebooks 07–09 (2026-07-16) and no longer
-> match this import. The script is kept to document/reproduce the original LM Studio import;
+> regenerated from scratch via local ollama runs of notebooks 07–09 (qwen/gemma 2026-07-16,
+> mistral 2026-07-17) and no longer match this import. The script is kept to document/reproduce the original LM Studio import;
 > its overwrite guard (below) prevents it from clobbering the ollama results.
 
 ### Usage

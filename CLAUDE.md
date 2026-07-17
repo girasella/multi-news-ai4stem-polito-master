@@ -95,9 +95,8 @@ get or change the stats. Key facts it establishes (details in `data/README.md`):
 
 Eight methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, PEGASUS
 `google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized abstractive);
-plus three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B, Mistral Small ~24B
-(notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`; the original LM Studio run used
-Mistral-7B-Instruct-v0.3 instead of Mistral Small — see the provenance bullet). The first
+plus three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
+Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`). The first
 four run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the LLMs via
 the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`) —
 all scored with pyAutoSummarizer's ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to
@@ -124,19 +123,20 @@ respect:
   03/04/06 load the model once themselves and notebook 01 injects a shared SentenceTransformer
   into `loaded_models`.
 - **LLM results provenance (`qwen`/`gemma`/`mistral`)**: the committed summaries/metrics come
-  from local ollama runs of notebooks 07-09 (2026-07-16, 100/100 examples each). They replaced
-  an earlier import of Federica's LM Studio runs (Mac M4, 2026-07-16; archived CSVs in
-  `notebooks/llm/`, imported by `scripts/import_llm_results.py`, which verifies 1:1 alignment
-  with the shared sample, refuses to overwrite existing summary TSVs, and recomputes metrics
-  with the shared normalization — the CSVs' own metric values use different settings and must
-  not be mixed in; their BERTScore column is not carried over). Deliberate deviations of the
-  ollama runs from the original: documents pass through `prepara_documento` (separator →
-  newline) instead of raw text; no LM Studio-specific `enable_thinking` extra_body; mistral's
-  system prompt uses the real `system` role; and **mistral is a different model** — Mistral
-  Small (~24B, ollama tag `mistral-small`) instead of Mistral-7B-Instruct-v0.3, so its scores
-  aren't size-class-comparable to qwen/gemma (documented in notebook 09 and notebook 05).
-  Because of resumability, regenerating on top of a TSV from a different run would mix runs —
-  delete the TSV first.
+  from local ollama runs of notebooks 07-09 (qwen/gemma 2026-07-16, mistral 2026-07-17,
+  100/100 examples each). They replaced an earlier import of Federica's LM Studio runs (Mac
+  M4, 2026-07-16; archived CSVs in `notebooks/llm/`, imported by
+  `scripts/import_llm_results.py`, which verifies 1:1 alignment with the shared sample,
+  refuses to overwrite existing summary TSVs, and recomputes metrics with the shared
+  normalization — the CSVs' own metric values use different settings and must not be mixed
+  in; their BERTScore column is not carried over). An interim ollama run of mistral
+  (2026-07-16) mistakenly used Mistral Small ~24B (tag `mistral-small`) and was discarded and
+  redone with the correct `mistral:7b-instruct-v0.3-q4_K_M` (documented in notebook 09).
+  Deliberate deviations of the ollama runs from the original: documents pass through
+  `prepara_documento` (separator → newline) instead of raw text; no LM Studio-specific
+  `enable_thinking` extra_body; mistral's system prompt uses the real `system` role. Because
+  of resumability, regenerating on top of a TSV from a different run would mix runs — delete
+  the TSV first.
 - **gemma coverage**: full (100/100) in the committed ollama run, thanks to `MAX_TOKENS=1500`
   in notebook 08. The original LM Studio run had 81/100 empty responses (only 19 evaluated):
   Gemma 4 emits reasoning tokens that exhaust `max_tokens=300` before any visible content

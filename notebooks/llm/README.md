@@ -21,9 +21,8 @@ I tre CSV sono stati la **fonte** della prima versione dei riassunti committati 
 [`scripts/import_llm_results.py`](../../scripts/README.md): le loro righe sono allineate
 1:1, in ordine, con `results/sample/sample_100_seed42.tsv` (`doc_index` i = riga i del campione;
 verificato confrontando tutti i `reference_summary`). I file committati in `results/` sono stati
-poi **rigenerati da zero via ollama** dai notebook 07–09 (2026-07-16) e non provengono più da
-questi CSV — per mistral con un modello diverso (Mistral Small ~24B invece del 7B v0.3, vedi
-[09_mistral](../09_mistral.ipynb)).
+poi **rigenerati da zero via ollama** dai notebook 07–09 (qwen/gemma 2026-07-16, mistral
+2026-07-17) e non provengono più da questi CSV.
 
 ⚠️ La cella di caricamento dati nei notebook mostra una **variante precedente** che leggeva il
 mirror HF `Awesome075/multi_news_parquet`: non riflette la corsa che ha prodotto i CSV, che è
