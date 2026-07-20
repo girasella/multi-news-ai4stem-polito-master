@@ -20,6 +20,7 @@ scripts/
   README.md            # Documentation for the scripts (usage, inputs/outputs, cleaning criteria)
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
   import_llm_results.py  # One-off importer of the archived LM Studio LLM runs (notebooks/llm/*.csv) into results/ — superseded by the ollama re-runs, kept for provenance
+  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-09 with SCOPE='test' back-to-back, derives textrank/lexrank test metrics from their full run, re-runs notebook 05
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
@@ -113,11 +114,18 @@ respect:
 - All method notebooks evaluate the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
   default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept).
   Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
-  The Azure notebook (10) also supports `SCOPE='test'` (the full clean test split, 5,610 rows =
-  5,622 − 12 dirty, streamed via `summ_utils.itera_split`) and `SCOPE='full'` (all 56,101 rows,
-  **sequential at standard pricing** — the Azure OpenAI Batch API offers no gpt-5-mini in any
-  region, so there is no 50% batch discount). The resumable loop makes the multi-day full run
-  splittable across sessions.
+  Notebooks 03-04 and 06-09 (BART/PEGASUS/PRIMERA/Qwen/Gemma/Mistral) also support
+  `SCOPE='test'` (the full clean test split, 5,610 rows = 5,622 − 12 dirty, streamed via
+  `summ_utils.itera_split`) — read from `os.environ.get('SUMM_SCOPE', 'sample')` so opening
+  them by hand in Jupyter is unaffected; `LIMIT` is similarly overridable via `SUMM_LIMIT`.
+  `scripts/run_benchmark_test.py` drives all six unattended, fastest-to-slowest, setting those
+  env vars per subprocess (`jupyter nbconvert --execute --inplace`) — see its docstring and
+  `scripts/README.md`. TextRank/LexRank test-split metrics are *derived* by that script from
+  their existing `full`-scope per-example CSV (filtered on `split == 'test'`) rather than
+  re-run, since metrics are computed per example. The Azure notebook (10) also supports
+  `SCOPE='test'` and `SCOPE='full'` (all 56,101 rows, **sequential at standard pricing** — the
+  Azure OpenAI Batch API offers no gpt-5-mini in any region, so there is no 50% batch
+  discount). The resumable loop makes the multi-day full run splittable across sessions.
 - Generation is expensive and **resumable**: summaries append to
   `results/summaries/{method}_{scope}.tsv` one flushed row at a time, and re-runs skip row_ids
   already present. Metrics sections read ONLY saved files — never make evaluation depend on

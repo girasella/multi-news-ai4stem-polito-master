@@ -33,13 +33,13 @@ automaticamente e la usano se disponibile.
 | 00 | [00_prepara_campione.ipynb](00_prepara_campione.ipynb) | **Da eseguire per primo.** Estrae il campione casuale riproducibile condiviso (default: 100 esempi, seed 42) da `complete.tab` e lo salva in `results/sample/`. |
 | 01 | [01_textrank.ipynb](01_textrank.ipynb) | TextRank (estrattivo, sentence embeddings + PageRank). Ambiti `sample` e `full`. |
 | 02 | [02_lexrank.ipynb](02_lexrank.ipynb) | LexRank (estrattivo, TF-IDF + PageRank). Ambiti `sample` e `full`. |
-| 03 | [03_bart.ipynb](03_bart.ipynb) | BART (`facebook/bart-large-cnn`, abstractive). Solo `sample`. |
-| 04 | [04_pegasus.ipynb](04_pegasus.ipynb) | PEGASUS (`google/pegasus-multi_news`, abstractive). Solo `sample`. |
+| 03 | [03_bart.ipynb](03_bart.ipynb) | BART (`facebook/bart-large-cnn`, abstractive). Ambiti `sample` e `test`. |
+| 04 | [04_pegasus.ipynb](04_pegasus.ipynb) | PEGASUS (`google/pegasus-multi_news`, abstractive). Ambiti `sample` e `test`. |
 | 05 | [05_confronto.ipynb](05_confronto.ipynb) | Confronto: tabelle e grafici dalle metriche salvate. Eseguibile su qualunque sottoinsieme di risultati. |
-| 06 | [06_primera.ipynb](06_primera.ipynb) | PRIMERA (`allenai/PRIMERA-multinews`, abstractive multi-documento, input 4096 token). Solo `sample`. |
-| 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Solo `sample`. |
-| 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Solo `sample`. |
-| 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral-7B-Instruct-v0.3 (LLM locale via ollama). Solo `sample`. |
+| 06 | [06_primera.ipynb](06_primera.ipynb) | PRIMERA (`allenai/PRIMERA-multinews`, abstractive multi-documento, input 4096 token). Ambiti `sample` e `test`. |
+| 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Ambiti `sample` e `test`. |
+| 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Ambiti `sample` e `test`. |
+| 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral-7B-Instruct-v0.3 (LLM locale via ollama). Ambiti `sample` e `test`. |
 | 10 | [10_azure_gpt.ipynb](10_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
 
 I notebook dei metodi (01–04 e 06–10) sono indipendenti tra loro e condividono le routine di
@@ -80,6 +80,33 @@ all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
 - Il prompt (in inglese) e `temperature=0.3` replicano la corsa originale; il BERTScore
   presente nei CSV di Federica non è stato portato in `results/` (la pipeline condivisa non
   lo calcola).
+
+## Corsa completa sulla split test (notebook 03-04, 06-09)
+
+`scripts/run_benchmark_test.py` esegue in **un'unica sessione non presidiata** i sei notebook
+che finora coprivano solo il campione (03 BART, 04 PEGASUS, 06 PRIMERA, 07 Qwen, 08 Gemma, 09
+Mistral) con `SCOPE='test'` — l'intera split test pulita, 5.610 righe — dal più veloce al più
+lento, senza bisogno di riaprire i notebook uno per uno tra una corsa e l'altra:
+
+```bash
+python scripts/run_benchmark_test.py            # corsa completa (~3,5-5 giorni su questa macchina)
+python scripts/run_benchmark_test.py --limit 2   # prova end-to-end economica, 2 righe per metodo
+```
+
+Meccanismo: ogni notebook legge l'ambito da `SCOPE = os.environ.get('SUMM_SCOPE', 'sample')` —
+se aperto a mano in Jupyter senza questa variabile d'ambiente si comporta come sempre
+(`SCOPE='sample'`); lo script imposta `SUMM_SCOPE=test` (e `SUMM_LIMIT` se `--limit` è passato)
+ed esegue ciascun notebook via `jupyter nbconvert --execute --inplace`, salvando l'output
+eseguito nel notebook stesso. TextRank e LexRank **non vengono rieseguiti**: le loro metriche
+`test` sono derivate filtrando la corsa `full` già committata (stesso risultato numerico, perché
+le metriche sono calcolate per esempio). Il notebook 05 viene poi rieseguito automaticamente per
+aggiornare le viste di confronto.
+
+Un notebook fallito viene **registrato e non blocca** i successivi (`run_benchmark_test.log`
+nella root del repo); grazie alla ripresa condivisa, rilanciare lo script in seguito completa
+solo le righe mancanti. Prima di una corsa lunga: disattivare la sospensione di Windows
+(`powercfg /change standby-timeout-ac 0`), tenere `ollama serve` attivo e verificare i tag con
+`ollama list` (`qwen2.5:7b-instruct`, `gemma4:latest`, `mistral:7b-instruct-v0.3-q4_K_M`).
 
 ## LLM su Azure AI Foundry (notebook 10)
 
@@ -135,9 +162,12 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
 - `SCOPE` — `'sample'` = campione condiviso (tutti i metodi); `'full'` = intero `complete.tab`,
-  56.101 esempi in streaming (01/02 e 10); `'test'` = intera split test, 5.610
-  esempi in streaming (solo 10).
-- `LIMIT` — `None` per la corsa completa; un intero piccolo (es. `3`) per uno smoke test.
+  56.101 esempi in streaming (01/02 e 10); `'test'` = intera split test, 5.610 esempi in
+  streaming (03-04, 06-10; nei notebook 03-04 e 06-09 letto dalla variabile d'ambiente
+  `SUMM_SCOPE`, impostata da `scripts/run_benchmark_test.py` — default `'sample'` se assente).
+- `LIMIT` — `None` per la corsa completa; un intero piccolo (es. `3`) per uno smoke test. Nei
+  notebook 03-04 e 06-09 letto anche dalla variabile d'ambiente `SUMM_LIMIT` (usata da
+  `run_benchmark_test.py --limit N`).
 - `N_SENTENCES` (solo 01/02) — frasi estratte per riassunto (default 11, la mediana di frasi
   per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei riferimenti,
   perché le frasi di cronaca sono più lunghe di quelle dei digest).
@@ -175,6 +205,12 @@ grandi ma rigenerabili a pagamento).
 | LexRank, `full` (56.101) | ore | ore (non serve la GPU) |
 | TextRank, `full` (56.101) | ~6–12 h | ~1 h — **consigliata la GPU** |
 | LLM via ollama, campione 100 | dipende da modello e hardware (su questa macchina: qwen ~9 min, mistral ~18 min, gemma ~24 min) | — |
+| BART, `test` (5.610) | — | ~2 h |
+| PEGASUS, `test` (5.610) | — | ~5-9 h |
+| Qwen, `test` (5.610) | — | ~8 h |
+| Mistral, `test` (5.610) | — | ~17 h |
+| Gemma, `test` (5.610) | — | ~22 h |
+| PRIMERA, `test` (5.610) | sconsigliata | ~28-56 h — **richiede la GPU** |
 | GPT-5-mini (10), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
 | GPT-5-mini (10), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (10), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |

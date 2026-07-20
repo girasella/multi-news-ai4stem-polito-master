@@ -1,3 +1,6 @@
 # Python / Jupyter
 __pycache__/
 .ipynb_checkpoints/
+
+# Log of scripts/run_benchmark_test.py — regenerable, append-only
+run_benchmark_test.log
