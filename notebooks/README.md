@@ -1,8 +1,10 @@
 # Notebook di benchmark della summarization
 
-Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano otto
+Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano i
 metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](../data/tab/complete.tab)):
-due estrattivi (TextRank, LexRank), tre abstractive specializzati (BART, PEGASUS, PRIMERA) e tre
+la baseline posizionale First-k / Lead (notebook 10, in due varianti di segmentazione), tre
+estrattivi (TextRank, LexRank e Centroid-based + MMR *custom* in due varianti di vettorizzazione,
+TF-IDF e BERT — notebook 11), tre abstractive specializzati (BART, PEGASUS, PRIMERA) e tre
 LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral-7B — notebook
 07–09, via [ollama](https://ollama.com)), usando la libreria
 [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA usa direttamente
@@ -37,9 +39,61 @@ automaticamente e la usano se disponibile.
 | 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Solo `sample`. |
 | 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Solo `sample`. |
 | 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral-7B-Instruct-v0.3 (LLM locale via ollama). Solo `sample`. |
+| 10 | [10_firstk.ipynb](10_firstk.ipynb) | First-k / Lead (baseline posizionale, prime k frasi per articolo). Genera **due varianti** confrontabili — `firstk_psr` e `firstk_nltk` — che differiscono solo per il segmentatore di frasi. Ambiti `sample` e `full`. |
+| 11 | [11_centroid_mmr.ipynb](11_centroid_mmr.ipynb) | Centroid-based (MEAD) + MMR (estrattivo nativo MDS, implementazione *custom* scikit-learn: centroide + selezione greedy MMR con parametro `λ`). Genera **due varianti** — `centroid_mmr` (vettorizzazione TF-IDF) e `centroid_mmr_bert` (embeddings BERT `all-MiniLM-L6-v2`) — che differiscono solo per il vettorizzatore. Ambiti `sample` e `full`. |
 
-I notebook dei metodi (01–04 e 06–09) sono indipendenti tra loro e condividono le routine di
+I notebook dei metodi (01–04 e 06–11) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
+
+## Baseline First-k (notebook 10)
+
+First-k / Lead è la baseline posizionale del paper Multi-News (con `k=3` = "First-3"): per ogni
+articolo del cluster prende le prime `K_SENTENCES` frasi e le concatena. Il notebook produce
+**due varianti** che si distinguono solo per come dividono ogni articolo in frasi, così da
+misurare se una segmentazione più raffinata cambia le metriche MDS:
+
+- **`firstk_psr`** — segmentazione di `psr.summarization` (per punteggiatura), la **stessa** di
+  TextRank/LexRank: confronto equo con gli altri estrattivi.
+- **`firstk_nltk`** — `nltk.sent_tokenize` (modello Punkt, gestisce le abbreviazioni):
+  segmentazione più raffinata.
+
+I due segmentatori sono alternative (una per variante); la valutazione resta quella condivisa di
+pyAutoSummarizer. È una baseline senza modelli né ranking, quindi rapidissima anche su CPU.
+
+## Centroid-based + MMR (notebook 11)
+
+Primo metodo **nativo MDS** del benchmark, che gestisce esplicitamente la **ridondanza tra fonti**
+(§3.4 del documento-guida; MMR è trattato a lezione con la formula esplicita). È il principale
+**contributo implementativo originale** del gruppo: nessuna libreria plug-and-play, la pipeline è
+scritta a mano con scikit-learn. Passi:
+
+1. **Segmentazione** in frasi via `psr.summarization` (la **stessa** di TextRank/LexRank/firstk_psr),
+   così il pool di candidati è identico agli altri estrattivi.
+2. **Vettorizzazione** di tutte le frasi del cluster → **centroide** (media dei vettori); la
+   **rilevanza** di una frase è la sua cosine similarity col centroide (idea *MEAD*).
+3. Selezione **greedy MMR**: a ogni passo si aggiunge la frase che massimizza
+   `λ·rilevanza − (1−λ)·max(similarità con le già scelte)`, fino a `N_SENTENCES` frasi. Il parametro
+   `LAMBDA` (default 0.7) bilancia salienza e diversità; le frasi scelte sono riportate in ordine di
+   documento.
+
+**Due varianti** che differiscono solo per il passo 2 (il vettorizzatore), per misurare se una
+rappresentazione semantica migliora le metriche MDS:
+
+- **`centroid_mmr`** — **TF-IDF** (`sklearn.TfidfVectorizer`): lessicale, sparso, rapidissimo su CPU;
+  ambiti `sample` e `full` come 01/02.
+- **`centroid_mmr_bert`** — **embeddings BERT** (`all-MiniLM-L6-v2`, lo stesso modello di TextRank):
+  semantico, coglie ridondanze anche senza parole in comune. Più pesante (encoding): su `full`
+  conviene la GPU (rilevata via `su.rileva_device()`).
+
+Attesa: in letteratura, su Multi-News, MMR supera LexRank.
+
+Il notebook include una sezione **"Come funziona, passo per passo"** che apre la pipeline su un
+documento-esempio (`RIGA_DEMO`) e con un vettorizzatore a scelta (`VETTORIZZAZIONE_DEMO`), con tre
+figure: scatter PCA delle frasi + centroide, heatmap della similarità frase-frase (ridondanza) ed
+effetto di `λ` sulle frasi selezionate. Con `SALVA_FIGURE` le figure vengono salvate anche come PNG
+in `results/figures/centroid_mmr/`. La sezione è puramente illustrativa: `analizza_mmr` (che espone
+gli artefatti intermedi) è la stessa funzione usata in produzione da `make_genera`, quindi le figure
+riflettono esattamente ciò che il metodo calcola.
 
 ## LLM locali (notebook 07–09)
 
