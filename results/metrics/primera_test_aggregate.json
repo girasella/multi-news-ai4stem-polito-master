@@ -1,0 +1,46 @@
+{
+  "metodo": "primera",
+  "scope": "test",
+  "config": {
+    "checkpoint": "allenai/PRIMERA-multinews",
+    "max_len": 1024,
+    "num_beams": 5,
+    "max_input_tokens": 4096,
+    "device": "cuda",
+    "note": "articoli uniti da <doc-sep> (global attention), budget di token uguale per articolo; checkpoint multi_news (leakage su split train)",
+    "libreria": "transformers (parametri di generazione del repo allenai/PRIMER)"
+  },
+  "timestamp": "2026-07-25T13:34:53+00:00",
+  "n_esempi": 5610,
+  "overall": {
+    "rouge1_f1": 0.444606830508223,
+    "rouge1_p": 0.4659699596287182,
+    "rouge1_r": 0.44080059200495686,
+    "rouge2_f1": 0.197403155136547,
+    "rouge2_p": 0.20685479641893462,
+    "rouge2_r": 0.19786507729351202,
+    "rougeL_f1": 0.24823633338021617,
+    "rougeL_p": 0.2608365988848288,
+    "rougeL_r": 0.24932665328803713,
+    "bleu": 0.1469370498717342,
+    "meteor": 0.4745134840784806,
+    "parole_generate": 210.82032085561497
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5610,
+      "rouge1_f1": 0.444606830508223,
+      "rouge1_p": 0.4659699596287182,
+      "rouge1_r": 0.44080059200495686,
+      "rouge2_f1": 0.197403155136547,
+      "rouge2_p": 0.20685479641893462,
+      "rouge2_r": 0.19786507729351202,
+      "rougeL_f1": 0.24823633338021617,
+      "rougeL_p": 0.2608365988848288,
+      "rougeL_r": 0.24932665328803713,
+      "bleu": 0.1469370498717342,
+      "meteor": 0.4745134840784806,
+      "parole_generate": 210.82032085561497
+    }
+  }
+}

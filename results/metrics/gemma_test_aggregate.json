@@ -1,0 +1,46 @@
+{
+  "metodo": "gemma",
+  "scope": "test",
+  "config": {
+    "modello": "gemma4:latest",
+    "backend": "ollama (endpoint OpenAI-compatibile)",
+    "max_tokens": 1500,
+    "temperature": 0.3,
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "/no_think\n\nSummarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese; max_tokens=1500 invece dei 300 originali perche' il reasoning di Gemma 4 consumava il budget (81 risposte vuote su 100 nella corsa LM Studio)"
+  },
+  "timestamp": "2026-07-25T07:14:14+00:00",
+  "n_esempi": 5610,
+  "overall": {
+    "rouge1_f1": 0.33459609216843467,
+    "rouge1_p": 0.302827377776502,
+    "rouge1_r": 0.3904438546921984,
+    "rouge2_f1": 0.09938513610834326,
+    "rouge2_p": 0.09074971729892582,
+    "rouge2_r": 0.11651067820319114,
+    "rougeL_f1": 0.17644194487991513,
+    "rougeL_p": 0.16014559475113296,
+    "rougeL_r": 0.20983282299298905,
+    "bleu": 0.0646578115048369,
+    "meteor": 0.4345439872408315,
+    "parole_generate": 292.05383244206774
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5610,
+      "rouge1_f1": 0.33459609216843467,
+      "rouge1_p": 0.302827377776502,
+      "rouge1_r": 0.3904438546921984,
+      "rouge2_f1": 0.09938513610834326,
+      "rouge2_p": 0.09074971729892582,
+      "rouge2_r": 0.11651067820319114,
+      "rougeL_f1": 0.17644194487991513,
+      "rougeL_p": 0.16014559475113296,
+      "rougeL_r": 0.20983282299298905,
+      "bleu": 0.0646578115048369,
+      "meteor": 0.4345439872408315,
+      "parole_generate": 292.05383244206774
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "metodo": "qwen",
+  "scope": "test",
+  "config": {
+    "modello": "qwen2.5:7b-instruct",
+    "backend": "ollama (endpoint OpenAI-compatibile)",
+    "max_tokens": 200,
+    "temperature": 0.3,
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "/no_think\n\nSummarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese; max_tokens=200 come la corsa originale (unico modello con limite 200 invece di 300)"
+  },
+  "timestamp": "2026-07-25T07:12:10+00:00",
+  "n_esempi": 5610,
+  "overall": {
+    "rouge1_f1": 0.34425670584165363,
+    "rouge1_p": 0.4060684699103289,
+    "rouge1_r": 0.3087647433855241,
+    "rouge2_f1": 0.09723251120410524,
+    "rouge2_p": 0.12244871558220512,
+    "rouge2_r": 0.08416660348900595,
+    "rougeL_f1": 0.17738406566481124,
+    "rougeL_p": 0.22578746072068714,
+    "rougeL_r": 0.15296827338423055,
+    "bleu": 0.057039743222032493,
+    "meteor": 0.32120155814529083,
+    "parole_generate": 140.32798573975043
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5610,
+      "rouge1_f1": 0.34425670584165363,
+      "rouge1_p": 0.4060684699103289,
+      "rouge1_r": 0.3087647433855241,
+      "rouge2_f1": 0.09723251120410524,
+      "rouge2_p": 0.12244871558220512,
+      "rouge2_r": 0.08416660348900595,
+      "rougeL_f1": 0.17738406566481124,
+      "rougeL_p": 0.22578746072068714,
+      "rougeL_r": 0.15296827338423055,
+      "bleu": 0.057039743222032493,
+      "meteor": 0.32120155814529083,
+      "parole_generate": 140.32798573975043
+    }
+  }
+}

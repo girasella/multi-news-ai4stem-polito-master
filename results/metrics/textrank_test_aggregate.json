@@ -1,0 +1,47 @@
+{
+  "metodo": "textrank",
+  "scope": "test",
+  "config": {
+    "n_sentences": 11,
+    "st_model": "all-MiniLM-L6-v2",
+    "stop_words": [
+      "en"
+    ],
+    "device": "cuda",
+    "libreria": "pyAutoSummarizer 1.2.0"
+  },
+  "timestamp": "2026-07-12T21:27:31+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.369682004915476,
+    "rouge1_p": 0.33003283403108086,
+    "rouge1_r": 0.4481281324200551,
+    "rouge2_f1": 0.13514141517526196,
+    "rouge2_p": 0.11501692772209719,
+    "rouge2_r": 0.17821236741343616,
+    "rougeL_f1": 0.17584426258547797,
+    "rougeL_p": 0.1443628758860457,
+    "rougeL_r": 0.24678697298862803,
+    "bleu": 0.08833747859768101,
+    "meteor": 0.4874044973387083,
+    "parole_generate": 368.0001789549034
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.369682004915476,
+      "rouge1_p": 0.33003283403108086,
+      "rouge1_r": 0.4481281324200551,
+      "rouge2_f1": 0.13514141517526196,
+      "rouge2_p": 0.11501692772209719,
+      "rouge2_r": 0.17821236741343616,
+      "rougeL_f1": 0.17584426258547797,
+      "rougeL_p": 0.1443628758860457,
+      "rougeL_r": 0.24678697298862803,
+      "bleu": 0.08833747859768101,
+      "meteor": 0.4874044973387083,
+      "parole_generate": 368.0001789549034
+    }
+  },
+  "nota_derivazione": "Derivato filtrando textrank_full_per_example.csv sulla split test (scripts/run_benchmark_test.py), non da una corsa dedicata."
+}

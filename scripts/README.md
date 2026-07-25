@@ -1,5 +1,55 @@
 # `scripts/` contents
 
+## `run_benchmark_test.py`
+
+Unattended driver for the `SCOPE='test'` benchmark stint: runs notebooks 03 (BART), 04
+(PEGASUS), 07 (Qwen), 09 (Mistral), 08 (Gemma) and 06 (PRIMERA) — in that fastest-to-slowest
+order — against the full clean test split (5,610 rows), one after another, without needing to
+reopen and re-run each notebook by hand.
+
+### Usage
+
+```
+python scripts/run_benchmark_test.py            # full run, all rows (~3.5-5 days on a CUDA GPU)
+python scripts/run_benchmark_test.py --limit 2   # smoke test: 2 rows per method, end-to-end
+```
+
+Run from anywhere — paths are resolved relative to the script's own location. Requires the
+notebook dependencies (`pip install -r requirements-notebooks.txt`) plus `jupyter`/`nbconvert`.
+
+### What it does
+
+1. **Preflight**: checks a CUDA GPU is available, `ollama` is reachable at
+   `http://localhost:11434` with the three required model tags pulled, `data/tab/complete.tab`
+   exists, and `jupyter nbconvert` is importable — fails fast before committing to a multi-day
+   run.
+2. **Executes each notebook** via `jupyter nbconvert --to notebook --execute --inplace`, with
+   `SUMM_SCOPE=test` (and `SUMM_LIMIT=N` if `--limit` was passed) in the subprocess
+   environment. Each of the six notebooks reads its scope from
+   `os.environ.get('SUMM_SCOPE', 'sample')`, so opening them by hand in Jupyter without this
+   env var still runs the default `sample` scope unchanged. A failed notebook is logged and
+   does **not** stop the run — the shared resumable generation loop
+   (`notebooks/summ_utils.py`) means re-running this script later just completes whatever rows
+   are still missing.
+3. **Derives TextRank/LexRank `test` metrics** by filtering their already-committed
+   `SCOPE='full'` per-example CSV on `split == 'test'`, instead of re-running notebooks 01/02
+   (which already cover the entire dataset, test split included). This is numerically
+   identical to a dedicated test-scope run because metrics are computed per example.
+4. **Re-executes notebook 05** so the comparison views reflect the new results.
+
+### Output
+
+- `results/summaries/{method}_test.tsv` and `results/metrics/{method}_test_{per_example.csv,aggregate.json}`
+  for the six generated methods, plus the two derived ones (`textrank`, `lexrank`).
+- `run_benchmark_test.log` in the repo root (gitignored) — append-only, timestamped, one line
+  per notebook start/end plus a final summary.
+
+### Before a long run
+
+Disable Windows sleep (`powercfg /change standby-timeout-ac 0`), make sure `ollama serve` is
+running with the required tags (`ollama list`), and expect the machine to be busy for several
+days — the script does not throttle GPU/CPU usage.
+
 ## `import_llm_results.py`
 
 One-off importer of Federica's local-LLM benchmark results (LM Studio runs, archived in

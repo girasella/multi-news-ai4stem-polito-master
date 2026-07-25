@@ -20,18 +20,20 @@ scripts/
   README.md            # Documentation for the scripts (usage, inputs/outputs, cleaning criteria)
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
   import_llm_results.py  # One-off importer of the archived LM Studio LLM runs (notebooks/llm/*.csv) into results/ — superseded by the ollama re-runs, kept for provenance
+  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-09 with SCOPE='test' back-to-back, derives textrank/lexrank test metrics from their full run, re-runs notebook 05
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
   0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
+  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full); ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
                        # results, since replaced by local ollama runs) and docx report —
                        # see notebooks/llm/README.md
 results/
   sample/              # Shared evaluation sample TSV (committed)
-  summaries/           # Generated summaries per method; *_full.tsv gitignored (large, regenerable)
+  summaries/           # Generated summaries per method, scope=test/full only (large but regenerable); scope=sample is a local smoke-test artifact, not committed
   metrics/             # Per-example CSVs + aggregate JSONs (committed)
 data/
   README.md            # Detailed description of data/ file formats and content
@@ -93,20 +95,48 @@ get or change the stats. Key facts it establishes (details in `data/README.md`):
 
 ## Summarization benchmark (`notebooks/` + `results/`)
 
-Eight methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, PEGASUS
-`google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized abstractive);
-plus three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
-Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`). The first
-four run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the LLMs via
-the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`) —
-all scored with pyAutoSummarizer's ROUGE-1/2/L, BLEU, METEOR implementations. Conventions to
+Eleven method slugs: the First-k / Lead positional baseline in two sentence-segmentation
+variants (notebook 10, slugs `firstk_psr`/`firstk_nltk`); TextRank, LexRank (extractive) plus
+a custom scikit-learn Centroid-based (MEAD) + MMR in two vectorization variants (notebook 11,
+slugs `centroid_mmr` TF-IDF / `centroid_mmr_bert` BERT); BART `facebook/bart-large-cnn`,
+PEGASUS `google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized
+abstractive); three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
+Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`); plus
+one cloud LLM on Azure AI Foundry — GPT-5-mini (notebook 12, slug `gpt5mini`). TextRank/LexRank
+and BART/PEGASUS
+run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the local LLMs via
+the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`),
+GPT-5-mini via `openai.OpenAI` against the Azure OpenAI **v1 route**
+(`<endpoint>/openai/v1/`, no dated api-version) — all scored with pyAutoSummarizer's
+ROUGE-1/2/L, BLEU, METEOR implementations. Two more Azure notebooks (Claude Haiku 4.5 and
+DeepSeek-V3.2, slugs `haiku`/`deepseek`, formerly numbered 11/12) were removed because their
+Foundry deployments could not be created; recover them from git history if retried (the
+numbers were since reused: 10/11 are now the First-k and Centroid+MMR baselines, 12 the Azure
+GPT-5-mini notebook). Baseline notebooks 10/11 support `SCOPE='sample'`/`'full'` only (no
+`SUMM_SCOPE` env override, not driven by `run_benchmark_test.py`); their `test`-scope metrics
+can be derived from a `full` run the same way as TextRank/LexRank. Conventions to
 respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
   EDA dashboard). `README.md`, `CLAUDE.md`, `data/README.md` etc. stay in English.
-- All method notebooks evaluate the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
-  default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept).
+- All method notebooks default to the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
+  default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept)
+  as a **local smoke-test convenience only** — `SCOPE='sample'` results are no longer committed
+  to `results/` (superseded by the `test`-scope run below, which now covers every method); the
+  sample TSV itself stays versioned since notebooks still read it whenever `SCOPE='sample'`.
   Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
+  Notebooks 03-04 and 06-09 (BART/PEGASUS/PRIMERA/Qwen/Gemma/Mistral) also support
+  `SCOPE='test'` (the full clean test split, 5,610 rows = 5,622 − 12 dirty, streamed via
+  `summ_utils.itera_split`) — read from `os.environ.get('SUMM_SCOPE', 'sample')` so opening
+  them by hand in Jupyter is unaffected; `LIMIT` is similarly overridable via `SUMM_LIMIT`.
+  `scripts/run_benchmark_test.py` drives all six unattended, fastest-to-slowest, setting those
+  env vars per subprocess (`jupyter nbconvert --execute --inplace`) — see its docstring and
+  `scripts/README.md`. TextRank/LexRank test-split metrics are *derived* by that script from
+  their existing `full`-scope per-example CSV (filtered on `split == 'test'`) rather than
+  re-run, since metrics are computed per example. The Azure notebook (12) also supports
+  `SCOPE='test'` and `SCOPE='full'` (all 56,101 rows, **sequential at standard pricing** — the
+  Azure OpenAI Batch API offers no gpt-5-mini in any region, so there is no 50% batch
+  discount). The resumable loop makes the multi-day full run splittable across sessions.
 - Generation is expensive and **resumable**: summaries append to
   `results/summaries/{method}_{scope}.tsv` one flushed row at a time, and re-runs skip row_ids
   already present. Metrics sections read ONLY saved files — never make evaluation depend on
@@ -122,10 +152,12 @@ respect:
   `prepara_documento`; the library reloads HF models per call and ignores CUDA, so notebooks
   03/04/06 load the model once themselves and notebook 01 injects a shared SentenceTransformer
   into `loaded_models`.
-- **LLM results provenance (`qwen`/`gemma`/`mistral`)**: the committed summaries/metrics come
-  from local ollama runs of notebooks 07-09 (qwen/gemma 2026-07-16, mistral 2026-07-17,
-  100/100 examples each). They replaced an earlier import of Federica's LM Studio runs (Mac
-  M4, 2026-07-16; archived CSVs in `notebooks/llm/`, imported by
+- **LLM results provenance (`qwen`/`gemma`/`mistral`), historical**: this describes the
+  retired `sample`-scope validation, not the currently-committed `test`-scope results. The
+  first (sample-scope) summaries/metrics came from local ollama runs of notebooks 07-09
+  (qwen/gemma 2026-07-16, mistral 2026-07-17, 100/100 examples each). They replaced an earlier
+  import of Federica's LM Studio runs (Mac M4, 2026-07-16; archived CSVs in `notebooks/llm/`,
+  imported by
   `scripts/import_llm_results.py`, which verifies 1:1 alignment with the shared sample,
   refuses to overwrite existing summary TSVs, and recomputes metrics with the shared
   normalization — the CSVs' own metric values use different settings and must not be mixed
@@ -137,12 +169,36 @@ respect:
   `enable_thinking` extra_body; mistral's system prompt uses the real `system` role. Because
   of resumability, regenerating on top of a TSV from a different run would mix runs — delete
   the TSV first.
-- **gemma coverage**: full (100/100) in the committed ollama run, thanks to `MAX_TOKENS=1500`
-  in notebook 08. The original LM Studio run had 81/100 empty responses (only 19 evaluated):
-  Gemma 4 emits reasoning tokens that exhaust `max_tokens=300` before any visible content
-  (`finish_reason=length`, empty content) — reproduced via ollama. Notebook 05 still computes
-  the shared row_id intersection only over methods with ≥`COPERTURA_MINIMA` (50) rows, as
-  protection against future low-coverage runs (which are shown with their own `n_esempi`).
+- **Azure notebook (12) conventions**: same zero-shot English prompt as 07-09, documents
+  through `prepara_documento`, the `/no_think` prefix deliberately dropped (qwen artifact).
+  **GPT-5-mini deviates from the 07-09 params** (documented in notebook 12): it is a reasoning
+  model, so no `temperature` (only default accepted) and `max_completion_tokens=1500` with
+  `reasoning_effort='minimal'` — reasoning tokens consume the completion budget before visible
+  output, the same failure mode as gemma (notebook 08). GPT-5-mini was chosen because Azure
+  retired the gpt-4o-mini family (deprecating state, no new deployments) and gpt-4.1-mini is on
+  the same retirement path. Credentials come ONLY from environment variables
+  (`AZURE_OPENAI_ENDPOINT` = the bare resource root, no path; `AZURE_OPENAI_API_KEY`) — never
+  hardcode keys. For Azure OpenAI, `model=` in requests is the **deployment name**, not the
+  model name. Azure's content filter deterministically rejects some news clusters
+  (hate/violence at medium severity) with `content_filter` errors before the model sees them:
+  those rows stay absent from the TSVs and are not retryable without a custom high-only filter
+  attached to the deployment (139/5,610 test rows missing, 2026-07-17 run).
+- **gemma coverage**: full (5,610/5,610 in the committed `test`-scope run; also full 100/100 in
+  the retired sample-scope run), thanks to `MAX_TOKENS=1500` in notebook 08. The original LM
+  Studio run had 81/100 empty responses (only 19 evaluated): Gemma 4 emits reasoning tokens
+  that exhaust `max_tokens=300` before any visible content (`finish_reason=length`, empty
+  content) — reproduced via ollama, and still occasionally seen even at 1500 (one `test`-scope
+  retry needed on 2026-07-24). Notebook 05 still computes the shared row_id intersection only
+  over methods with ≥`COPERTURA_MINIMA` (50) rows, as protection against future low-coverage
+  runs (which are shown with their own `n_esempi`).
+- **METEOR unreliable for degenerate output**: pyAutoSummarizer's `meteor()` formula
+  (`meteor = fmean * (1 - penalty**3)`) is unbounded for pathological inputs. In the `test`-scope
+  run, PEGASUS hits it on 2/5,610 rows — a beam-search repetition loop (row_id 51178, meteor
+  -1959.12) and a likely source/summary mismatch (row_id 56099, meteor -2.10) — dragging its
+  reported mean METEOR from a true ≈0.42 down to 0.079; ROUGE/BLEU/row counts are unaffected.
+  LexRank has one much milder case (row_id 55805, meteor -1.24 out of 5,588 rows), negligible
+  effect on its mean. Documented as a caveat in notebook 05 and the README — no per-example CSV
+  or aggregate JSON was altered to compensate for it.
 
 ## Working with the data files
 
