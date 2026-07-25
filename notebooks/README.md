@@ -1,15 +1,17 @@
 # Notebook di benchmark della summarization
 
-Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano nove
+Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano i
 metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](../data/tab/complete.tab)):
-due estrattivi (TextRank, LexRank), tre abstractive specializzati (BART, PEGASUS, PRIMERA), tre
+la baseline posizionale First-k / Lead (notebook 10, in due varianti di segmentazione), tre
+estrattivi (TextRank, LexRank e Centroid-based + MMR *custom* in due varianti di vettorizzazione,
+TF-IDF e BERT — notebook 11), tre abstractive specializzati (BART, PEGASUS, PRIMERA), tre
 LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral-7B — notebook
 07–09, via [ollama](https://ollama.com)) e un LLM cloud su **Azure AI Foundry**
-(GPT-5-mini — notebook 10), usando la libreria
+(GPT-5-mini — notebook 12), usando la libreria
 [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA usa direttamente
 `transformers`, gli LLM il client `openai`; le metriche sono comunque quelle di
 pyAutoSummarizer per tutti i metodi). Due ulteriori notebook Azure (Claude Haiku 4.5 e
-DeepSeek-V3.2, ex 11–12) sono stati rimossi perché il deployment dei modelli non è riuscito:
+DeepSeek-V3.2) sono stati rimossi perché il deployment dei modelli non è riuscito:
 restano recuperabili dalla history git se si riproverà con un altro approccio.
 
 La sottocartella [llm/](llm/README.md) è un **archivio**: i notebook e i risultati originali di
@@ -49,10 +51,62 @@ automaticamente e la usano se disponibile.
 | 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Ambiti `sample` e `test`. |
 | 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Ambiti `sample` e `test`. |
 | 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral-7B-Instruct-v0.3 (LLM locale via ollama). Ambiti `sample` e `test`. |
-| 10 | [10_azure_gpt.ipynb](10_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
+| 10 | [10_firstk.ipynb](10_firstk.ipynb) | First-k / Lead (baseline posizionale, prime k frasi per articolo). Genera **due varianti** confrontabili — `firstk_psr` e `firstk_nltk` — che differiscono solo per il segmentatore di frasi. Ambiti `sample` e `full`. |
+| 11 | [11_centroid_mmr.ipynb](11_centroid_mmr.ipynb) | Centroid-based (MEAD) + MMR (estrattivo nativo MDS, implementazione *custom* scikit-learn: centroide + selezione greedy MMR con parametro `λ`). Genera **due varianti** — `centroid_mmr` (vettorizzazione TF-IDF) e `centroid_mmr_bert` (embeddings BERT `all-MiniLM-L6-v2`) — che differiscono solo per il vettorizzatore. Ambiti `sample` e `full`. |
+| 12 | [12_azure_gpt.ipynb](12_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
 
-I notebook dei metodi (01–04 e 06–10) sono indipendenti tra loro e condividono le routine di
+I notebook dei metodi (01–04 e 06–12) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
+
+## Baseline First-k (notebook 10)
+
+First-k / Lead è la baseline posizionale del paper Multi-News (con `k=3` = "First-3"): per ogni
+articolo del cluster prende le prime `K_SENTENCES` frasi e le concatena. Il notebook produce
+**due varianti** che si distinguono solo per come dividono ogni articolo in frasi, così da
+misurare se una segmentazione più raffinata cambia le metriche MDS:
+
+- **`firstk_psr`** — segmentazione di `psr.summarization` (per punteggiatura), la **stessa** di
+  TextRank/LexRank: confronto equo con gli altri estrattivi.
+- **`firstk_nltk`** — `nltk.sent_tokenize` (modello Punkt, gestisce le abbreviazioni):
+  segmentazione più raffinata.
+
+I due segmentatori sono alternative (una per variante); la valutazione resta quella condivisa di
+pyAutoSummarizer. È una baseline senza modelli né ranking, quindi rapidissima anche su CPU.
+
+## Centroid-based + MMR (notebook 11)
+
+Primo metodo **nativo MDS** del benchmark, che gestisce esplicitamente la **ridondanza tra fonti**
+(§3.4 del documento-guida; MMR è trattato a lezione con la formula esplicita). È il principale
+**contributo implementativo originale** del gruppo: nessuna libreria plug-and-play, la pipeline è
+scritta a mano con scikit-learn. Passi:
+
+1. **Segmentazione** in frasi via `psr.summarization` (la **stessa** di TextRank/LexRank/firstk_psr),
+   così il pool di candidati è identico agli altri estrattivi.
+2. **Vettorizzazione** di tutte le frasi del cluster → **centroide** (media dei vettori); la
+   **rilevanza** di una frase è la sua cosine similarity col centroide (idea *MEAD*).
+3. Selezione **greedy MMR**: a ogni passo si aggiunge la frase che massimizza
+   `λ·rilevanza − (1−λ)·max(similarità con le già scelte)`, fino a `N_SENTENCES` frasi. Il parametro
+   `LAMBDA` (default 0.7) bilancia salienza e diversità; le frasi scelte sono riportate in ordine di
+   documento.
+
+**Due varianti** che differiscono solo per il passo 2 (il vettorizzatore), per misurare se una
+rappresentazione semantica migliora le metriche MDS:
+
+- **`centroid_mmr`** — **TF-IDF** (`sklearn.TfidfVectorizer`): lessicale, sparso, rapidissimo su CPU;
+  ambiti `sample` e `full` come 01/02.
+- **`centroid_mmr_bert`** — **embeddings BERT** (`all-MiniLM-L6-v2`, lo stesso modello di TextRank):
+  semantico, coglie ridondanze anche senza parole in comune. Più pesante (encoding): su `full`
+  conviene la GPU (rilevata via `su.rileva_device()`).
+
+Attesa: in letteratura, su Multi-News, MMR supera LexRank.
+
+Il notebook include una sezione **"Come funziona, passo per passo"** che apre la pipeline su un
+documento-esempio (`RIGA_DEMO`) e con un vettorizzatore a scelta (`VETTORIZZAZIONE_DEMO`), con tre
+figure: scatter PCA delle frasi + centroide, heatmap della similarità frase-frase (ridondanza) ed
+effetto di `λ` sulle frasi selezionate. Con `SALVA_FIGURE` le figure vengono salvate anche come PNG
+in `results/figures/centroid_mmr/`. La sezione è puramente illustrativa: `analizza_mmr` (che espone
+gli artefatti intermedi) è la stessa funzione usata in produzione da `make_genera`, quindi le figure
+riflettono esattamente ciò che il metodo calcola.
 
 ## LLM locali (notebook 07–09)
 
@@ -121,9 +175,9 @@ solo le righe mancanti. Prima di una corsa lunga: disattivare la sospensione di 
 (`powercfg /change standby-timeout-ac 0`), tenere `ollama serve` attivo e verificare i tag con
 `ollama list` (`qwen2.5:7b-instruct`, `gemma4:latest`, `mistral:7b-instruct-v0.3-q4_K_M`).
 
-## LLM su Azure AI Foundry (notebook 10)
+## LLM su Azure AI Foundry (notebook 12)
 
-Il notebook 10 replica il protocollo dei notebook 07–09 (stesso prompt zero-shot in inglese,
+Il notebook 12 replica il protocollo dei notebook 07–09 (stesso prompt zero-shot in inglese,
 documento passato da `prepara_documento`; senza il prefisso `/no_think`, artefatto di qwen) su
 **GPT-5-mini** servito da Azure AI Foundry. GPT-5-mini è un modello con *reasoning* e devia in
 modo documentato (niente `temperature`, `max_completion_tokens=1500` con
@@ -174,19 +228,19 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
 - `SCOPE` — `'sample'` = campione condiviso (tutti i metodi); `'full'` = intero `complete.tab`,
-  56.101 esempi in streaming (01/02 e 10); `'test'` = intera split test, 5.610 esempi in
-  streaming (03-04, 06-10; nei notebook 03-04 e 06-09 letto dalla variabile d'ambiente
+  56.101 esempi in streaming (01/02, 10/11 e 12); `'test'` = intera split test, 5.610 esempi in
+  streaming (03-04, 06-09 e 12; nei notebook 03-04 e 06-09 letto dalla variabile d'ambiente
   `SUMM_SCOPE`, impostata da `scripts/run_benchmark_test.py` — default `'sample'` se assente).
 - `LIMIT` — `None` per la corsa completa; un intero piccolo (es. `3`) per uno smoke test. Nei
   notebook 03-04 e 06-09 letto anche dalla variabile d'ambiente `SUMM_LIMIT` (usata da
   `run_benchmark_test.py --limit N`).
-- `N_SENTENCES` (solo 01/02) — frasi estratte per riassunto (default 11, la mediana di frasi
+- `N_SENTENCES` (01/02 e 11) — frasi estratte per riassunto (default 11, la mediana di frasi
   per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei riferimenti,
   perché le frasi di cronaca sono più lunghe di quelle dei digest).
 - `MODELLO`, `OLLAMA_URL`, `MAX_TOKENS`, `TEMPERATURE` (solo 07–09) — tag del modello ollama
   (verificare con `ollama list`), endpoint e parametri di generazione.
-- `DEPLOYMENT`, endpoint da variabili d'ambiente (solo 10) — nome del deployment Azure e
-  parametri del client (vedi la sezione Azure sopra); il notebook 10 usa la rotta **v1** di
+- `DEPLOYMENT`, endpoint da variabili d'ambiente (solo 12) — nome del deployment Azure e
+  parametri del client (vedi la sezione Azure sopra); il notebook 12 usa la rotta **v1** di
   Azure OpenAI (`<endpoint>/openai/v1/`, senza api-version datata).
 
 ## File prodotti
@@ -225,9 +279,9 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | Mistral, `test` (5.610) | — | ~17 h |
 | Gemma, `test` (5.610) | — | ~22 h |
 | PRIMERA, `test` (5.610) | sconsigliata | ~28-56 h — **richiede la GPU** |
-| GPT-5-mini (10), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
-| GPT-5-mini (10), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
-| GPT-5-mini (10), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
+| GPT-5-mini (12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
+| GPT-5-mini (12), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
+| GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB).

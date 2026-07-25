@@ -26,7 +26,7 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
   0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
-  1X_*.ipynb           # 10 Azure AI Foundry GPT-5-mini (scopes sample/test/full); ex 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
+  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full); ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
                        # results, since replaced by local ollama runs) and docx report —
@@ -95,18 +95,26 @@ get or change the stats. Key facts it establishes (details in `data/README.md`):
 
 ## Summarization benchmark (`notebooks/` + `results/`)
 
-Nine methods: TextRank, LexRank (extractive); BART `facebook/bart-large-cnn`, PEGASUS
-`google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized abstractive);
-three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
+Eleven method slugs: the First-k / Lead positional baseline in two sentence-segmentation
+variants (notebook 10, slugs `firstk_psr`/`firstk_nltk`); TextRank, LexRank (extractive) plus
+a custom scikit-learn Centroid-based (MEAD) + MMR in two vectorization variants (notebook 11,
+slugs `centroid_mmr` TF-IDF / `centroid_mmr_bert` BERT); BART `facebook/bart-large-cnn`,
+PEGASUS `google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized
+abstractive); three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
 Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`); plus
-one cloud LLM on Azure AI Foundry — GPT-5-mini (notebook 10, slug `gpt5mini`). The first four
+one cloud LLM on Azure AI Foundry — GPT-5-mini (notebook 12, slug `gpt5mini`). TextRank/LexRank
+and BART/PEGASUS
 run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the local LLMs via
 the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`),
 GPT-5-mini via `openai.OpenAI` against the Azure OpenAI **v1 route**
 (`<endpoint>/openai/v1/`, no dated api-version) — all scored with pyAutoSummarizer's
 ROUGE-1/2/L, BLEU, METEOR implementations. Two more Azure notebooks (Claude Haiku 4.5 and
-DeepSeek-V3.2, ex 11/12 with slugs `haiku`/`deepseek`) were removed because their Foundry
-deployments could not be created; recover them from git history if retried. Conventions to
+DeepSeek-V3.2, slugs `haiku`/`deepseek`, formerly numbered 11/12) were removed because their
+Foundry deployments could not be created; recover them from git history if retried (the
+numbers were since reused: 10/11 are now the First-k and Centroid+MMR baselines, 12 the Azure
+GPT-5-mini notebook). Baseline notebooks 10/11 support `SCOPE='sample'`/`'full'` only (no
+`SUMM_SCOPE` env override, not driven by `run_benchmark_test.py`); their `test`-scope metrics
+can be derived from a `full` run the same way as TextRank/LexRank. Conventions to
 respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
@@ -125,7 +133,7 @@ respect:
   env vars per subprocess (`jupyter nbconvert --execute --inplace`) — see its docstring and
   `scripts/README.md`. TextRank/LexRank test-split metrics are *derived* by that script from
   their existing `full`-scope per-example CSV (filtered on `split == 'test'`) rather than
-  re-run, since metrics are computed per example. The Azure notebook (10) also supports
+  re-run, since metrics are computed per example. The Azure notebook (12) also supports
   `SCOPE='test'` and `SCOPE='full'` (all 56,101 rows, **sequential at standard pricing** — the
   Azure OpenAI Batch API offers no gpt-5-mini in any region, so there is no 50% batch
   discount). The resumable loop makes the multi-day full run splittable across sessions.
@@ -161,9 +169,9 @@ respect:
   `enable_thinking` extra_body; mistral's system prompt uses the real `system` role. Because
   of resumability, regenerating on top of a TSV from a different run would mix runs — delete
   the TSV first.
-- **Azure notebook (10) conventions**: same zero-shot English prompt as 07-09, documents
+- **Azure notebook (12) conventions**: same zero-shot English prompt as 07-09, documents
   through `prepara_documento`, the `/no_think` prefix deliberately dropped (qwen artifact).
-  **GPT-5-mini deviates from the 07-09 params** (documented in notebook 10): it is a reasoning
+  **GPT-5-mini deviates from the 07-09 params** (documented in notebook 12): it is a reasoning
   model, so no `temperature` (only default accepted) and `max_completion_tokens=1500` with
   `reasoning_effort='minimal'` — reasoning tokens consume the completion budget before visible
   output, the same failure mode as gemma (notebook 08). GPT-5-mini was chosen because Azure
