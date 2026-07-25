@@ -33,7 +33,7 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
                        # see notebooks/llm/README.md
 results/
   sample/              # Shared evaluation sample TSV (committed)
-  summaries/           # Generated summaries per method (all committed, incl. *_full.tsv/*_test.tsv — large but regenerable)
+  summaries/           # Generated summaries per method, scope=test/full only (large but regenerable); scope=sample is a local smoke-test artifact, not committed
   metrics/             # Per-example CSVs + aggregate JSONs (committed)
 data/
   README.md            # Detailed description of data/ file formats and content
@@ -111,8 +111,11 @@ respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
   EDA dashboard). `README.md`, `CLAUDE.md`, `data/README.md` etc. stay in English.
-- All method notebooks evaluate the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
-  default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept).
+- All method notebooks default to the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
+  default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept)
+  as a **local smoke-test convenience only** — `SCOPE='sample'` results are no longer committed
+  to `results/` (superseded by the `test`-scope run below, which now covers every method); the
+  sample TSV itself stays versioned since notebooks still read it whenever `SCOPE='sample'`.
   Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
   Notebooks 03-04 and 06-09 (BART/PEGASUS/PRIMERA/Qwen/Gemma/Mistral) also support
   `SCOPE='test'` (the full clean test split, 5,610 rows = 5,622 − 12 dirty, streamed via
@@ -141,10 +144,12 @@ respect:
   `prepara_documento`; the library reloads HF models per call and ignores CUDA, so notebooks
   03/04/06 load the model once themselves and notebook 01 injects a shared SentenceTransformer
   into `loaded_models`.
-- **LLM results provenance (`qwen`/`gemma`/`mistral`)**: the committed summaries/metrics come
-  from local ollama runs of notebooks 07-09 (qwen/gemma 2026-07-16, mistral 2026-07-17,
-  100/100 examples each). They replaced an earlier import of Federica's LM Studio runs (Mac
-  M4, 2026-07-16; archived CSVs in `notebooks/llm/`, imported by
+- **LLM results provenance (`qwen`/`gemma`/`mistral`), historical**: this describes the
+  retired `sample`-scope validation, not the currently-committed `test`-scope results. The
+  first (sample-scope) summaries/metrics came from local ollama runs of notebooks 07-09
+  (qwen/gemma 2026-07-16, mistral 2026-07-17, 100/100 examples each). They replaced an earlier
+  import of Federica's LM Studio runs (Mac M4, 2026-07-16; archived CSVs in `notebooks/llm/`,
+  imported by
   `scripts/import_llm_results.py`, which verifies 1:1 alignment with the shared sample,
   refuses to overwrite existing summary TSVs, and recomputes metrics with the shared
   normalization — the CSVs' own metric values use different settings and must not be mixed
@@ -169,13 +174,23 @@ respect:
   model name. Azure's content filter deterministically rejects some news clusters
   (hate/violence at medium severity) with `content_filter` errors before the model sees them:
   those rows stay absent from the TSVs and are not retryable without a custom high-only filter
-  attached to the deployment (2026-07-17 runs: 1/100 sample, 139/5,610 test rows missing).
-- **gemma coverage**: full (100/100) in the committed ollama run, thanks to `MAX_TOKENS=1500`
-  in notebook 08. The original LM Studio run had 81/100 empty responses (only 19 evaluated):
-  Gemma 4 emits reasoning tokens that exhaust `max_tokens=300` before any visible content
-  (`finish_reason=length`, empty content) — reproduced via ollama. Notebook 05 still computes
-  the shared row_id intersection only over methods with ≥`COPERTURA_MINIMA` (50) rows, as
-  protection against future low-coverage runs (which are shown with their own `n_esempi`).
+  attached to the deployment (139/5,610 test rows missing, 2026-07-17 run).
+- **gemma coverage**: full (5,610/5,610 in the committed `test`-scope run; also full 100/100 in
+  the retired sample-scope run), thanks to `MAX_TOKENS=1500` in notebook 08. The original LM
+  Studio run had 81/100 empty responses (only 19 evaluated): Gemma 4 emits reasoning tokens
+  that exhaust `max_tokens=300` before any visible content (`finish_reason=length`, empty
+  content) — reproduced via ollama, and still occasionally seen even at 1500 (one `test`-scope
+  retry needed on 2026-07-24). Notebook 05 still computes the shared row_id intersection only
+  over methods with ≥`COPERTURA_MINIMA` (50) rows, as protection against future low-coverage
+  runs (which are shown with their own `n_esempi`).
+- **METEOR unreliable for degenerate output**: pyAutoSummarizer's `meteor()` formula
+  (`meteor = fmean * (1 - penalty**3)`) is unbounded for pathological inputs. In the `test`-scope
+  run, PEGASUS hits it on 2/5,610 rows — a beam-search repetition loop (row_id 51178, meteor
+  -1959.12) and a likely source/summary mismatch (row_id 56099, meteor -2.10) — dragging its
+  reported mean METEOR from a true ≈0.42 down to 0.079; ROUGE/BLEU/row counts are unaffected.
+  LexRank has one much milder case (row_id 55805, meteor -1.24 out of 5,588 rows), negligible
+  effect on its mean. Documented as a caveat in notebook 05 and the README — no per-example CSV
+  or aggregate JSON was altered to compensate for it.
 
 ## Working with the data files
 

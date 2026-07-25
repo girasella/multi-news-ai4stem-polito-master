@@ -16,6 +16,15 @@ La sottocartella [llm/](llm/README.md) è un **archivio**: i notebook e i risult
 Federica (LM Studio), da cui erano stati inizialmente importati i risultati committati dei metodi
 `qwen`/`gemma`/`mistral` — poi sostituiti dalle corse ollama dei notebook 07–09 (vedi sotto).
 
+> ⚠️ **L'ambito `sample` non è più pubblicato.** Fino a luglio 2026 ogni metodo veniva anche
+> valutato sul campione condiviso da 100 esempi e i risultati (`results/summaries/{metodo}_sample.tsv`
+> e le metriche corrispondenti) erano versionati. Con la corsa `test` completa disponibile per
+> tutti e nove i metodi (sezione dedicata più sotto), quel confronto più piccolo non aggiungeva
+> informazione ed è stato rimosso da `results/` per tenere il repository più snello. `SCOPE='sample'`
+> resta comunque il default di ogni notebook dei metodi, per uno smoke test locale rapido
+> (tipicamente con `LIMIT` a un numero piccolo) prima di lanciare una corsa `test`/`full`; il file
+> di input `results/sample/sample_100_seed42.tsv` resta versionato per questo scopo.
+
 ## Installazione
 
 ```bash
@@ -47,10 +56,14 @@ I notebook dei metodi (01–04 e 06–10) sono indipendenti tra loro e condivido
 
 ## LLM locali (notebook 07–09)
 
-I risultati committati di `qwen`/`gemma`/`mistral` provengono dalle **corse ollama di questi
-notebook** (qwen/gemma 2026-07-16, mistral 2026-07-17; 100/100 esempi ciascuna). Hanno
-sostituito i risultati della corsa originale di Federica via **LM Studio** (Mac M4,
-2026-07-16), a suo tempo importati con
+> Nota storica: le informazioni sotto descrivono la validazione originale sull'ambito `sample`
+> (100 esempi). I risultati committati oggi sono quelli dell'ambito `test` (sezione dedicata più
+> sotto); i file `*_sample.tsv` a cui si fa riferimento qui non sono più nel repository.
+
+I primi risultati di `qwen`/`gemma`/`mistral`, poi superati dalla corsa `test` completa,
+provenivano dalle **corse ollama di questi notebook** (qwen/gemma 2026-07-16, mistral
+2026-07-17; 100/100 esempi ciascuna). Avevano sostituito i risultati della corsa originale di
+Federica via **LM Studio** (Mac M4, 2026-07-16), a suo tempo importati con
 [`scripts/import_llm_results.py`](../scripts/README.md) dai CSV archiviati in
 [llm/](llm/README.md). Una prima corsa ollama di mistral (2026-07-16) aveva usato per errore
 Mistral Small ~24B ed è stata scartata e rifatta con il modello corretto (vedi notebook 09).
@@ -154,9 +167,8 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
 - **Content filter di Azure**: alcuni cluster di cronaca (hate/violence a severità media)
   vengono respinti dal filtro con errore `content_filter` prima di raggiungere il modello: le
   righe restano assenti dal TSV e non sono ritentabili (nella corsa test 2026-07-17: 139 righe
-  su 5.610, più 1 nel campione). Il confronto nel notebook 05 resta equo (intersezione dei
-  `row_id`); per coprirle serve un content filter personalizzato con soglie *high-only*
-  associato al deployment.
+  su 5.610). Il confronto nel notebook 05 resta equo (intersezione dei `row_id`); per coprirle
+  serve un content filter personalizzato con soglie *high-only* associato al deployment.
 
 ## Parametri principali (cella di configurazione di ogni notebook)
 
@@ -181,8 +193,8 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
 
 ```
 results/
-  sample/sample_{N}_seed{S}.tsv        # campione condiviso (row_id, split, document, summary)
-  summaries/{metodo}_{scope}.tsv       # riassunti generati (row_id, generated_summary)
+  sample/sample_{N}_seed{S}.tsv        # campione condiviso (row_id, split, document, summary) — solo input
+  summaries/{metodo}_{scope}.tsv       # riassunti generati (row_id, generated_summary); scope = test o full
   metrics/{metodo}_{scope}_per_example.csv   # ROUGE-1/2/L (F1,P,R), BLEU, METEOR per esempio
   metrics/{metodo}_{scope}_aggregate.json    # medie complessive e per split + configurazione usata
 ```
@@ -191,8 +203,10 @@ I riassunti sono la parte costosa: vengono scritti **incrementalmente** (una rig
 flush immediato) e un'esecuzione interrotta **riprende** da dove era arrivata, saltando i `row_id`
 già presenti nel file. Le metriche invece si ricalcolano in pochi secondi **leggendo solo i file
 salvati**: la sezione «Valutazione» di ogni notebook è rieseguibile senza rigenerare nulla.
-Campione, riassunti e metriche sono versionati (compresi i TSV `*_full.tsv` e `*_test.tsv`,
-grandi ma rigenerabili a pagamento).
+Il file campione e le corse `test`/`full` sono versionati (compresi i TSV `*_full.tsv` e
+`*_test.tsv`, grandi ma rigenerabili a pagamento); i risultati dell'ambito `sample`, superato
+dalla corsa `test` completa, non sono più committati — restano generabili localmente
+(`SCOPE='sample'`, il default di ogni notebook) per uno smoke test rapido.
 
 ## Tempi indicativi
 
@@ -243,8 +257,14 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB).
   (notebook 06) arriva invece a 4096 token, con budget uguale per articolo e separatore
   `<doc-sep>`: il divario con BART/PEGASUS riflette quindi anche la diversa copertura
   dell'input, non solo il modello.
-- **Righe saltate dagli estrattivi**: su rari testi (~1% del campione) il costruttore di
-  `psr.summarization` solleva un `IndexError` (bug della libreria: dopo la pulizia le liste di
-  frasi possono disallinearsi). Il ciclo registra l'errore e prosegue: la riga manca dal file dei
-  riassunti di quel metodo. Il notebook 05 confronta i metodi sull'**intersezione** dei `row_id`
-  valutati da tutti, quindi le medie restano eque.
+- **Righe saltate dagli estrattivi**: su rari testi (22/5.610 nella split test, ~0,4%) il
+  costruttore di `psr.summarization` solleva un `IndexError` (bug della libreria: dopo la pulizia
+  le liste di frasi possono disallinearsi). Il ciclo registra l'errore e prosegue: la riga manca
+  dal file dei riassunti di quel metodo. Il notebook 05 confronta i metodi sull'**intersezione**
+  dei `row_id` valutati da tutti, quindi le medie restano eque.
+- **METEOR non affidabile per output degeneri**: la formula `meteor()` di pyAutoSummarizer
+  (`meteor = fmean * (1 - penalty**3)`) non è limitata a [0,1]. Nella corsa `test`, PEGASUS
+  produce due riassunti patologici (un loop di ripetizione del beam search e un probabile
+  mismatch sorgente/riferimento) con METEOR rispettivamente -1959.12 e -2.10, che trascinano la
+  sua media riportata da ~0.42 a 0.079 — solo quella colonna va letta con questa avvertenza (vedi
+  il dettaglio nel notebook 05). LexRank ha un caso molto più lieve, con effetto trascurabile.

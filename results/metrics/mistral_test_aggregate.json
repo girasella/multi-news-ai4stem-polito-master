@@ -1,0 +1,46 @@
+{
+  "metodo": "mistral",
+  "scope": "test",
+  "config": {
+    "modello": "mistral:7b-instruct-v0.3-q4_K_M",
+    "backend": "ollama (endpoint OpenAI-compatibile)",
+    "max_tokens": 300,
+    "temperature": 0.3,
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "Summarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese; stesso modello della corsa originale LM Studio (mistral-7b-instruct-v0.3; il nome \"small3\" del notebook di origine era improprio), quantizzazione Q4_K_M come qwen"
+  },
+  "timestamp": "2026-07-25T07:13:00+00:00",
+  "n_esempi": 5610,
+  "overall": {
+    "rouge1_f1": 0.3542399842549084,
+    "rouge1_p": 0.41105426827377306,
+    "rouge1_r": 0.3247146264871867,
+    "rouge2_f1": 0.11105606575958703,
+    "rouge2_p": 0.13267456592583052,
+    "rouge2_r": 0.10112874323281067,
+    "rougeL_f1": 0.1900919219199887,
+    "rougeL_p": 0.22785443949476902,
+    "rougeL_r": 0.17350825014470966,
+    "bleu": 0.06713391807267394,
+    "meteor": 0.36066702849459187,
+    "parole_generate": 161.28841354723707
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5610,
+      "rouge1_f1": 0.3542399842549084,
+      "rouge1_p": 0.41105426827377306,
+      "rouge1_r": 0.3247146264871867,
+      "rouge2_f1": 0.11105606575958703,
+      "rouge2_p": 0.13267456592583052,
+      "rouge2_r": 0.10112874323281067,
+      "rougeL_f1": 0.1900919219199887,
+      "rougeL_p": 0.22785443949476902,
+      "rougeL_r": 0.17350825014470966,
+      "bleu": 0.06713391807267394,
+      "meteor": 0.36066702849459187,
+      "parole_generate": 161.28841354723707
+    }
+  }
+}
