@@ -1,17 +1,24 @@
 """Unattended driver for the SCOPE='test' benchmark stint.
 
-Executes notebooks 03 (BART), 04 (PEGASUS), 07 (Qwen), 09 (Mistral), 08 (Gemma) and
-06 (PRIMERA) — in that fastest-to-slowest order — with SUMM_SCOPE=test, so each generates
-summaries and metrics for the full clean test split (5,610 rows) without any manual
-babysitting between notebooks. TextRank/LexRank test-split metrics are derived by filtering
-their already-committed SCOPE='full' per-example CSVs (no need to rerun them: metrics are
-computed per example, so filtering is numerically identical to a fresh test-scope run).
-Notebook 05 is re-executed at the end so the comparison views reflect the new results.
+Executes notebooks 10 (First-k), 11 (Centroid+MMR), 03 (BART), 04 (PEGASUS), 07 (Qwen),
+09 (Mistral), 08 (Gemma) and 06 (PRIMERA) — in that fastest-to-slowest order — with
+SUMM_SCOPE=test, so each generates summaries and metrics for the full clean test split
+(5,610 rows) without any manual babysitting between notebooks. TextRank/LexRank test-split
+metrics are derived by filtering their already-committed SCOPE='full' per-example CSVs (no
+need to rerun them: metrics are computed per example, so filtering is numerically identical
+to a fresh test-scope run). Notebook 05 is re-executed at the end so the comparison views
+reflect the new results.
 
 Usage (from the repo root or anywhere — paths are resolved relative to this script):
 
-    python scripts/run_benchmark_test.py            # full run, all rows
-    python scripts/run_benchmark_test.py --limit 2  # smoke test: 2 rows per method
+    python scripts/run_benchmark_test.py                 # full run, all notebooks, all rows
+    python scripts/run_benchmark_test.py --limit 2       # smoke test: 2 rows per method
+    python scripts/run_benchmark_test.py --only 10,11    # only notebooks 10 and 11 (+ 05)
+
+--only takes comma-separated notebook number prefixes and skips the others (useful when the
+rest already completed: re-executing them would reload models and recompute metrics for
+nothing). Preflight checks shrink accordingly (ollama only for 07-09, GPU for 03/04/06/11).
+Notebook 05 is always re-executed at the end.
 
 A failed notebook is logged and does NOT stop the run — thanks to the shared resumable
 generation loop (notebooks/summ_utils.py), simply re-running this script later completes
@@ -44,6 +51,8 @@ import summ_utils as su  # noqa: E402  (needs NOTEBOOKS_DIR on sys.path first)
 # Fastest-to-slowest, estimated on a machine with a CUDA GPU and ollama already serving
 # the three local models (see notebooks/README.md for per-method duration estimates).
 NOTEBOOKS = [
+    '10_firstk.ipynb',
+    '11_centroid_mmr.ipynb',
     '03_bart.ipynb',
     '04_pegasus.ipynb',
     '07_qwen.ipynb',
@@ -51,6 +60,19 @@ NOTEBOOKS = [
     '08_gemma.ipynb',
     '06_primera.ipynb',
 ]
+
+# Notebooks that generate more than one method slug (two variants each); for the others
+# the single slug is derived from the filename (e.g. 03_bart -> bart).
+METODI_PER_NOTEBOOK = {
+    '10_firstk.ipynb': ['firstk_psr', 'firstk_nltk'],
+    '11_centroid_mmr.ipynb': ['centroid_mmr', 'centroid_mmr_bert'],
+}
+
+# Notebooks that need ollama serving / a CUDA GPU: preflight checks only apply when at
+# least one selected notebook requires them (11's BERT variant encodes on the GPU).
+NOTEBOOKS_OLLAMA = {'07_qwen.ipynb', '08_gemma.ipynb', '09_mistral.ipynb'}
+NOTEBOOKS_GPU = {'03_bart.ipynb', '04_pegasus.ipynb', '06_primera.ipynb',
+                 '11_centroid_mmr.ipynb'}
 
 # Methods whose SCOPE='test' metrics are derived from an existing SCOPE='full' run
 # instead of executing a notebook (TextRank/LexRank already cover the full dataset).
@@ -74,28 +96,34 @@ def log(message):
 # Preflight
 # ---------------------------------------------------------------------------
 
-def preflight():
-    """Fail fast on anything that would otherwise break hours into the stint."""
+def preflight(selezionati):
+    """Fail fast on anything that would otherwise break hours into the stint.
+
+    GPU/ollama checks only apply if at least one selected notebook needs them.
+    """
     problemi = []
 
-    try:
-        import torch
-        if not torch.cuda.is_available():
-            problemi.append('Nessuna GPU CUDA rilevata (torch.cuda.is_available() = False): '
-                            'PRIMERA/PEGASUS/BART sarebbero impraticabili sull\'intera split test.')
-    except ImportError:
-        problemi.append('torch non importabile: installare requirements-notebooks.txt')
+    if NOTEBOOKS_GPU & set(selezionati):
+        try:
+            import torch
+            if not torch.cuda.is_available():
+                problemi.append('Nessuna GPU CUDA rilevata (torch.cuda.is_available() = False): '
+                                'PRIMERA/PEGASUS/BART (e l\'encoding BERT del notebook 11) '
+                                'sarebbero impraticabili sull\'intera split test.')
+        except ImportError:
+            problemi.append('torch non importabile: installare requirements-notebooks.txt')
 
-    try:
-        with urllib.request.urlopen('http://localhost:11434/api/tags', timeout=5) as resp:
-            tags = {m['name'] for m in json.load(resp)['models']}
-        mancanti = [t for t in OLLAMA_TAGS_REQUIRED if t not in tags]
-        if mancanti:
-            problemi.append(f'Tag ollama mancanti: {mancanti} (disponibili: {sorted(tags)}). '
-                            f'Eseguire "ollama pull <tag>" per ciascuno.')
-    except (urllib.error.URLError, ConnectionError, OSError) as exc:
-        problemi.append(f'ollama non raggiungibile su http://localhost:11434 ({exc}). '
-                        'Eseguire "ollama serve".')
+    if NOTEBOOKS_OLLAMA & set(selezionati):
+        try:
+            with urllib.request.urlopen('http://localhost:11434/api/tags', timeout=5) as resp:
+                tags = {m['name'] for m in json.load(resp)['models']}
+            mancanti = [t for t in OLLAMA_TAGS_REQUIRED if t not in tags]
+            if mancanti:
+                problemi.append(f'Tag ollama mancanti: {mancanti} (disponibili: {sorted(tags)}). '
+                                f'Eseguire "ollama pull <tag>" per ciascuno.')
+        except (urllib.error.URLError, ConnectionError, OSError) as exc:
+            problemi.append(f'ollama non raggiungibile su http://localhost:11434 ({exc}). '
+                            'Eseguire "ollama serve".')
 
     complete_tab = REPO_ROOT / 'data' / 'tab' / 'complete.tab'
     if not complete_tab.exists():
@@ -113,7 +141,7 @@ def preflight():
         for p in problemi:
             log(f'  - {p}')
         return False
-    log('Preflight OK: GPU, ollama, complete.tab, nbconvert tutti disponibili.')
+    log('Preflight OK: tutti i requisiti dei notebook selezionati sono disponibili.')
     return True
 
 
@@ -147,10 +175,13 @@ def esegui_notebook(nome, limit=None):
         log(f'=== Completato {nome} in {durata:.0f}s ===')
         return True
 
-    metodo = nome.split('_', 1)[1].removesuffix('.ipynb').split('_')[0]
-    tsv = RESULTS_DIR / 'summaries' / f'{metodo}_test.tsv'
-    n_righe = len(su.carica_riassunti(tsv)) if tsv.exists() else 0
-    log(f'=== Completato {nome} in {durata:.0f}s — {n_righe} riassunti in {tsv.name} ===')
+    metodi = METODI_PER_NOTEBOOK.get(nome, [nome.split('_', 1)[1].removesuffix('.ipynb')])
+    conteggi = []
+    for metodo in metodi:
+        tsv = RESULTS_DIR / 'summaries' / f'{metodo}_test.tsv'
+        n_righe = len(su.carica_riassunti(tsv)) if tsv.exists() else 0
+        conteggi.append(f'{n_righe} riassunti in {tsv.name}')
+    log(f'=== Completato {nome} in {durata:.0f}s — {"; ".join(conteggi)} ===')
     return True
 
 
@@ -220,15 +251,29 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--limit', type=int, default=None,
                         help='Limita ogni notebook a N esempi nuovi (smoke test end-to-end).')
+    parser.add_argument('--only', default=None,
+                        help='Prefissi numerici dei soli notebook da eseguire, separati da '
+                             'virgola (es. "10,11"). Il notebook 05 viene comunque rieseguito.')
     args = parser.parse_args()
 
-    log(f'--- Avvio corsa benchmark test (limit={args.limit}) ---')
-    if not preflight():
+    if args.only:
+        prefissi = {p.strip() for p in args.only.split(',') if p.strip()}
+        noti = {n.split('_')[0] for n in NOTEBOOKS}
+        sconosciuti = prefissi - noti
+        if sconosciuti:
+            parser.error(f'--only: prefissi sconosciuti {sorted(sconosciuti)} '
+                         f'(disponibili: {sorted(noti)})')
+        selezionati = [n for n in NOTEBOOKS if n.split('_')[0] in prefissi]
+    else:
+        selezionati = list(NOTEBOOKS)
+
+    log(f'--- Avvio corsa benchmark test (limit={args.limit}, notebook={selezionati}) ---')
+    if not preflight(selezionati):
         log('Interruzione: risolvere i problemi sopra prima di rilanciare.')
         sys.exit(1)
 
     esiti = {}
-    for nome in NOTEBOOKS:
+    for nome in selezionati:
         esiti[nome] = esegui_notebook(nome, limit=args.limit)
 
     log('--- Derivazione metriche test per textrank/lexrank (da corse full esistenti) ---')

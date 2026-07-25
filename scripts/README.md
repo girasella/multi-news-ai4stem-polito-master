@@ -2,30 +2,38 @@
 
 ## `run_benchmark_test.py`
 
-Unattended driver for the `SCOPE='test'` benchmark stint: runs notebooks 03 (BART), 04
-(PEGASUS), 07 (Qwen), 09 (Mistral), 08 (Gemma) and 06 (PRIMERA) — in that fastest-to-slowest
-order — against the full clean test split (5,610 rows), one after another, without needing to
-reopen and re-run each notebook by hand.
+Unattended driver for the `SCOPE='test'` benchmark stint: runs notebooks 10 (First-k), 11
+(Centroid+MMR), 03 (BART), 04 (PEGASUS), 07 (Qwen), 09 (Mistral), 08 (Gemma) and 06 (PRIMERA)
+— in that fastest-to-slowest order — against the full clean test split (5,610 rows), one after
+another, without needing to reopen and re-run each notebook by hand. Notebooks 10 and 11 each
+generate two method variants (`firstk_psr`/`firstk_nltk` and
+`centroid_mmr`/`centroid_mmr_bert`).
 
 ### Usage
 
 ```
-python scripts/run_benchmark_test.py            # full run, all rows (~3.5-5 days on a CUDA GPU)
+python scripts/run_benchmark_test.py             # full run, all rows (~3.5-5 days on a CUDA GPU)
 python scripts/run_benchmark_test.py --limit 2   # smoke test: 2 rows per method, end-to-end
+python scripts/run_benchmark_test.py --only 10,11  # only the listed notebooks (05 still re-runs)
 ```
+
+`--only` takes comma-separated notebook number prefixes; useful when the other notebooks have
+already completed their test run (re-executing them would reload models and recompute metrics
+for nothing). Preflight checks shrink to what the selection needs (ollama for 07-09, GPU for
+03/04/06/11).
 
 Run from anywhere — paths are resolved relative to the script's own location. Requires the
 notebook dependencies (`pip install -r requirements-notebooks.txt`) plus `jupyter`/`nbconvert`.
 
 ### What it does
 
-1. **Preflight**: checks a CUDA GPU is available, `ollama` is reachable at
-   `http://localhost:11434` with the three required model tags pulled, `data/tab/complete.tab`
-   exists, and `jupyter nbconvert` is importable — fails fast before committing to a multi-day
-   run.
-2. **Executes each notebook** via `jupyter nbconvert --to notebook --execute --inplace`, with
-   `SUMM_SCOPE=test` (and `SUMM_LIMIT=N` if `--limit` was passed) in the subprocess
-   environment. Each of the six notebooks reads its scope from
+1. **Preflight**: checks a CUDA GPU is available (if any of 03/04/06/11 is selected), `ollama`
+   is reachable at `http://localhost:11434` with the three required model tags pulled (if any
+   of 07-09 is selected), `data/tab/complete.tab` exists, and `jupyter nbconvert` is importable
+   — fails fast before committing to a multi-day run.
+2. **Executes each selected notebook** via `jupyter nbconvert --to notebook --execute
+   --inplace`, with `SUMM_SCOPE=test` (and `SUMM_LIMIT=N` if `--limit` was passed) in the
+   subprocess environment. Each method notebook reads its scope from
    `os.environ.get('SUMM_SCOPE', 'sample')`, so opening them by hand in Jupyter without this
    env var still runs the default `sample` scope unchanged. A failed notebook is logged and
    does **not** stop the run — the shared resumable generation loop
@@ -40,7 +48,8 @@ notebook dependencies (`pip install -r requirements-notebooks.txt`) plus `jupyte
 ### Output
 
 - `results/summaries/{method}_test.tsv` and `results/metrics/{method}_test_{per_example.csv,aggregate.json}`
-  for the six generated methods, plus the two derived ones (`textrank`, `lexrank`).
+  for the ten generated method slugs (six single-method notebooks + the two variants each of
+  notebooks 10/11), plus the two derived ones (`textrank`, `lexrank`).
 - `run_benchmark_test.log` in the repo root (gitignored) — append-only, timestamped, one line
   per notebook start/end plus a final summary.
 
