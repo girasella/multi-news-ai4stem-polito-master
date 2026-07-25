@@ -1,0 +1,46 @@
+{
+  "metodo": "centroid_mmr_bert",
+  "scope": "test",
+  "config": {
+    "n_sentences": 11,
+    "lambda_mmr": 0.7,
+    "segmentazione": "psr.summarization",
+    "vettorizzazione": "sentence-BERT (all-MiniLM-L6-v2)",
+    "rilevanza": "cosine vs centroide (MEAD)",
+    "selezione": "MMR greedy",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0"
+  },
+  "timestamp": "2026-07-25T20:21:17+00:00",
+  "n_esempi": 2,
+  "overall": {
+    "rouge1_f1": 0.3526659604519774,
+    "rouge1_p": 0.2741567065073041,
+    "rouge1_r": 0.5182267814618062,
+    "rouge2_f1": 0.14471847370870172,
+    "rouge2_p": 0.10822031950350534,
+    "rouge2_r": 0.23072562358276644,
+    "rougeL_f1": 0.14707594678776234,
+    "rougeL_p": 0.10781207320404261,
+    "rougeL_r": 0.2476859920219976,
+    "bleu": 0.07762954411258832,
+    "meteor": 0.5240645920193392,
+    "parole_generate": 375.0
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 2,
+      "rouge1_f1": 0.3526659604519774,
+      "rouge1_p": 0.2741567065073041,
+      "rouge1_r": 0.5182267814618062,
+      "rouge2_f1": 0.14471847370870172,
+      "rouge2_p": 0.10822031950350534,
+      "rouge2_r": 0.23072562358276644,
+      "rougeL_f1": 0.14707594678776234,
+      "rougeL_p": 0.10781207320404261,
+      "rougeL_r": 0.2476859920219976,
+      "bleu": 0.07762954411258832,
+      "meteor": 0.5240645920193392,
+      "parole_generate": 375.0
+    }
+  }
+}

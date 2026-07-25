@@ -13,3 +13,6 @@ protobuf        # required alongside sentencepiece to convert the PEGASUS tokeni
 pandas
 matplotlib
 openai          # client for the local ollama OpenAI-compatible endpoint (notebooks 07-09) and Azure OpenAI (notebook 12)
+nltk            # Punkt sentence tokenizer for the firstk_nltk variant (notebook 10)
+scikit-learn    # TF-IDF, cosine similarity, PCA for Centroid+MMR (notebook 11)
+sentence-transformers  # MiniLM sentence embeddings (notebooks 01 and 11)
