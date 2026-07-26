@@ -286,6 +286,8 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | Mistral, `test` (5.610) | — | ~17 h |
 | Gemma, `test` (5.610) | — | ~22 h |
 | PRIMERA, `test` (5.610) | sconsigliata | ~28-56 h — **richiede la GPU** |
+| First-k, `test` (5.610, **entrambe le varianti**) | ~3 min | ~3 min (nessun modello) |
+| Centroid+MMR, `test` (5.610, **entrambe le varianti**) | non misurata (TF-IDF rapida, BERT lenta senza GPU) | ~8 min (corsa reale 2026-07-25, encoding BERT su GPU) |
 | GPT-5-mini (12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
 | GPT-5-mini (12), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
