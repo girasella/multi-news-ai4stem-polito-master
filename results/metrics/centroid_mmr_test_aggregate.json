@@ -1,0 +1,46 @@
+{
+  "metodo": "centroid_mmr",
+  "scope": "test",
+  "config": {
+    "n_sentences": 11,
+    "lambda_mmr": 0.7,
+    "segmentazione": "psr.summarization",
+    "vettorizzazione": "sklearn TfidfVectorizer (stop_words=english)",
+    "rilevanza": "cosine vs centroide (MEAD)",
+    "selezione": "MMR greedy",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0"
+  },
+  "timestamp": "2026-07-25T20:39:25+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.38308260716518977,
+    "rouge1_p": 0.3404650127217718,
+    "rouge1_r": 0.4645022946493169,
+    "rouge2_f1": 0.14432428970304725,
+    "rouge2_p": 0.12223509327697088,
+    "rouge2_r": 0.19063905105072,
+    "rougeL_f1": 0.1885776975125014,
+    "rougeL_p": 0.1559326320316959,
+    "rougeL_r": 0.2605570082971454,
+    "bleu": 0.0966492138974645,
+    "meteor": 0.5003489235719181,
+    "parole_generate": 361.79688618468145
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.38308260716518977,
+      "rouge1_p": 0.3404650127217718,
+      "rouge1_r": 0.4645022946493169,
+      "rouge2_f1": 0.14432428970304725,
+      "rouge2_p": 0.12223509327697088,
+      "rouge2_r": 0.19063905105072,
+      "rougeL_f1": 0.1885776975125014,
+      "rougeL_p": 0.1559326320316959,
+      "rougeL_r": 0.2605570082971454,
+      "bleu": 0.0966492138974645,
+      "meteor": 0.5003489235719181,
+      "parole_generate": 361.79688618468145
+    }
+  }
+}

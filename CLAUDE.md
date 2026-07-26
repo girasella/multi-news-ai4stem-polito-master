@@ -15,12 +15,13 @@ multi_news.py         # HF `datasets` GeneratorBasedBuilder loader script (uncha
 README.md              # Project README (AI4STEM final project) + dataset summary and condensed licensing; YAML frontmatter intentionally removed — this repo no longer targets HF Hub dataset-card compatibility
 LICENSE                # Full upstream Dataset Usage Agreement (moved out of README.md)
 Multi-News_paper.md    # Original paper (Fabbri et al., 2019) — background/context only, not consumed by any tooling
+Tecniche_MDS_non_LLM_MultiNews.md  # Annotated survey of non-LLM MDS techniques vs the PoliTO lecture (Italian) — the "documento-guida" cited by notebooks/README.md; reference only, not consumed by tooling
 multi_news_dashboard.html  # Self-contained EDA dashboard (Italian) — see "EDA dashboard" section below
 scripts/
   README.md            # Documentation for the scripts (usage, inputs/outputs, cleaning criteria)
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
   import_llm_results.py  # One-off importer of the archived LM Studio LLM runs (notebooks/llm/*.csv) into results/ — superseded by the ollama re-runs, kept for provenance
-  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-09 with SCOPE='test' back-to-back, derives textrank/lexrank test metrics from their full run, re-runs notebook 05
+  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs notebook 05
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
@@ -112,9 +113,10 @@ ROUGE-1/2/L, BLEU, METEOR implementations. Two more Azure notebooks (Claude Haik
 DeepSeek-V3.2, slugs `haiku`/`deepseek`, formerly numbered 11/12) were removed because their
 Foundry deployments could not be created; recover them from git history if retried (the
 numbers were since reused: 10/11 are now the First-k and Centroid+MMR baselines, 12 the Azure
-GPT-5-mini notebook). Baseline notebooks 10/11 support `SCOPE='sample'`/`'full'` only (no
-`SUMM_SCOPE` env override, not driven by `run_benchmark_test.py`); their `test`-scope metrics
-can be derived from a `full` run the same way as TextRank/LexRank. Conventions to
+GPT-5-mini notebook). Baseline notebooks 10/11 support all three scopes
+(`sample`/`test`/`full`, `SUMM_SCOPE`/`SUMM_LIMIT` env overrides like 03-04/06-09) and are
+driven by `run_benchmark_test.py`, listed first as the fastest methods; each generates its two
+variant slugs in one execution. Conventions to
 respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
@@ -125,12 +127,16 @@ respect:
   to `results/` (superseded by the `test`-scope run below, which now covers every method); the
   sample TSV itself stays versioned since notebooks still read it whenever `SCOPE='sample'`.
   Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
-  Notebooks 03-04 and 06-09 (BART/PEGASUS/PRIMERA/Qwen/Gemma/Mistral) also support
-  `SCOPE='test'` (the full clean test split, 5,610 rows = 5,622 − 12 dirty, streamed via
-  `summ_utils.itera_split`) — read from `os.environ.get('SUMM_SCOPE', 'sample')` so opening
+  Notebooks 03-04 and 06-11 (BART/PEGASUS/PRIMERA/Qwen/Gemma/Mistral/First-k/Centroid+MMR)
+  also support `SCOPE='test'` (the full clean test split, 5,610 rows = 5,622 − 12 dirty,
+  streamed via `summ_utils.itera_split`; 10/11 support `'full'` too) — read from
+  `os.environ.get('SUMM_SCOPE', 'sample')` so opening
   them by hand in Jupyter is unaffected; `LIMIT` is similarly overridable via `SUMM_LIMIT`.
-  `scripts/run_benchmark_test.py` drives all six unattended, fastest-to-slowest, setting those
-  env vars per subprocess (`jupyter nbconvert --execute --inplace`) — see its docstring and
+  `scripts/run_benchmark_test.py` drives all eight unattended, fastest-to-slowest (10/11
+  first), setting those
+  env vars per subprocess (`jupyter nbconvert --execute --inplace`); `--only 10,11` restricts
+  the run to the listed notebook numbers (preflight checks shrink to match) — see its
+  docstring and
   `scripts/README.md`. TextRank/LexRank test-split metrics are *derived* by that script from
   their existing `full`-scope per-example CSV (filtered on `split == 'test'`) rather than
   re-run, since metrics are computed per example. The Azure notebook (12) also supports

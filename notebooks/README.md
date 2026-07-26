@@ -51,8 +51,8 @@ automaticamente e la usano se disponibile.
 | 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Ambiti `sample` e `test`. |
 | 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Ambiti `sample` e `test`. |
 | 09 | [09_mistral.ipynb](09_mistral.ipynb) | Mistral-7B-Instruct-v0.3 (LLM locale via ollama). Ambiti `sample` e `test`. |
-| 10 | [10_firstk.ipynb](10_firstk.ipynb) | First-k / Lead (baseline posizionale, prime k frasi per articolo). Genera **due varianti** confrontabili — `firstk_psr` e `firstk_nltk` — che differiscono solo per il segmentatore di frasi. Ambiti `sample` e `full`. |
-| 11 | [11_centroid_mmr.ipynb](11_centroid_mmr.ipynb) | Centroid-based (MEAD) + MMR (estrattivo nativo MDS, implementazione *custom* scikit-learn: centroide + selezione greedy MMR con parametro `λ`). Genera **due varianti** — `centroid_mmr` (vettorizzazione TF-IDF) e `centroid_mmr_bert` (embeddings BERT `all-MiniLM-L6-v2`) — che differiscono solo per il vettorizzatore. Ambiti `sample` e `full`. |
+| 10 | [10_firstk.ipynb](10_firstk.ipynb) | First-k / Lead (baseline posizionale, prime k frasi per articolo). Genera **due varianti** confrontabili — `firstk_psr` e `firstk_nltk` — che differiscono solo per il segmentatore di frasi. Ambiti `sample`, `test` e `full`. |
+| 11 | [11_centroid_mmr.ipynb](11_centroid_mmr.ipynb) | Centroid-based (MEAD) + MMR (estrattivo nativo MDS, implementazione *custom* scikit-learn: centroide + selezione greedy MMR con parametro `λ`). Genera **due varianti** — `centroid_mmr` (vettorizzazione TF-IDF) e `centroid_mmr_bert` (embeddings BERT `all-MiniLM-L6-v2`) — che differiscono solo per il vettorizzatore. Ambiti `sample`, `test` e `full`. |
 | 12 | [12_azure_gpt.ipynb](12_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
 
 I notebook dei metodi (01–04 e 06–12) sono indipendenti tra loro e condividono le routine di
@@ -76,7 +76,8 @@ pyAutoSummarizer. È una baseline senza modelli né ranking, quindi rapidissima 
 ## Centroid-based + MMR (notebook 11)
 
 Primo metodo **nativo MDS** del benchmark, che gestisce esplicitamente la **ridondanza tra fonti**
-(§3.4 del documento-guida; MMR è trattato a lezione con la formula esplicita). È il principale
+(§3.4 del [documento-guida](../Tecniche_MDS_non_LLM_MultiNews.md); MMR è trattato a lezione con
+la formula esplicita). È il principale
 **contributo implementativo originale** del gruppo: nessuna libreria plug-and-play, la pipeline è
 scritta a mano con scikit-learn. Passi:
 
@@ -92,11 +93,10 @@ scritta a mano con scikit-learn. Passi:
 **Due varianti** che differiscono solo per il passo 2 (il vettorizzatore), per misurare se una
 rappresentazione semantica migliora le metriche MDS:
 
-- **`centroid_mmr`** — **TF-IDF** (`sklearn.TfidfVectorizer`): lessicale, sparso, rapidissimo su CPU;
-  ambiti `sample` e `full` come 01/02.
+- **`centroid_mmr`** — **TF-IDF** (`sklearn.TfidfVectorizer`): lessicale, sparso, rapidissimo su CPU.
 - **`centroid_mmr_bert`** — **embeddings BERT** (`all-MiniLM-L6-v2`, lo stesso modello di TextRank):
-  semantico, coglie ridondanze anche senza parole in comune. Più pesante (encoding): su `full`
-  conviene la GPU (rilevata via `su.rileva_device()`).
+  semantico, coglie ridondanze anche senza parole in comune. Più pesante (encoding): su
+  `test`/`full` conviene la GPU (rilevata via `su.rileva_device()`).
 
 Attesa: in letteratura, su Multi-News, MMR supera LexRank.
 
@@ -148,17 +148,24 @@ all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
   presente nei CSV di Federica non è stato portato in `results/` (la pipeline condivisa non
   lo calcola).
 
-## Corsa completa sulla split test (notebook 03-04, 06-09)
+## Corsa completa sulla split test (notebook 03-04, 06-11)
 
-`scripts/run_benchmark_test.py` esegue in **un'unica sessione non presidiata** i sei notebook
-che finora coprivano solo il campione (03 BART, 04 PEGASUS, 06 PRIMERA, 07 Qwen, 08 Gemma, 09
-Mistral) con `SCOPE='test'` — l'intera split test pulita, 5.610 righe — dal più veloce al più
-lento, senza bisogno di riaprire i notebook uno per uno tra una corsa e l'altra:
+`scripts/run_benchmark_test.py` esegue in **un'unica sessione non presidiata** gli otto notebook
+dei metodi non coperti dalla derivazione da `full` (10 First-k, 11 Centroid+MMR, 03 BART, 04
+PEGASUS, 07 Qwen, 09 Mistral, 08 Gemma, 06 PRIMERA) con `SCOPE='test'` — l'intera split test
+pulita, 5.610 righe — dal più veloce al più lento, senza bisogno di riaprire i notebook uno per
+uno tra una corsa e l'altra:
 
 ```bash
-python scripts/run_benchmark_test.py            # corsa completa (~3,5-5 giorni su questa macchina)
+python scripts/run_benchmark_test.py             # corsa completa (~3,5-5 giorni su questa macchina)
 python scripts/run_benchmark_test.py --limit 2   # prova end-to-end economica, 2 righe per metodo
+python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (il 05 viene comunque rieseguito)
 ```
+
+`--only` accetta i prefissi numerici dei notebook separati da virgola: utile quando gli altri
+metodi hanno già completato la corsa (rieseguirli ricaricherebbe i modelli e ricalcolerebbe le
+metriche per nulla). I controlli preliminari si restringono di conseguenza: ollama serve solo
+per 07-09, la GPU per 03/04/06/11.
 
 Meccanismo: ogni notebook legge l'ambito da `SCOPE = os.environ.get('SUMM_SCOPE', 'sample')` —
 se aperto a mano in Jupyter senza questa variabile d'ambiente si comporta come sempre
@@ -229,10 +236,10 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
 - `SCOPE` — `'sample'` = campione condiviso (tutti i metodi); `'full'` = intero `complete.tab`,
   56.101 esempi in streaming (01/02, 10/11 e 12); `'test'` = intera split test, 5.610 esempi in
-  streaming (03-04, 06-09 e 12; nei notebook 03-04 e 06-09 letto dalla variabile d'ambiente
+  streaming (03-04, 06-11 e 12; nei notebook 03-04 e 06-11 letto dalla variabile d'ambiente
   `SUMM_SCOPE`, impostata da `scripts/run_benchmark_test.py` — default `'sample'` se assente).
 - `LIMIT` — `None` per la corsa completa; un intero piccolo (es. `3`) per uno smoke test. Nei
-  notebook 03-04 e 06-09 letto anche dalla variabile d'ambiente `SUMM_LIMIT` (usata da
+  notebook 03-04 e 06-11 letto anche dalla variabile d'ambiente `SUMM_LIMIT` (usata da
   `run_benchmark_test.py --limit N`).
 - `N_SENTENCES` (01/02 e 11) — frasi estratte per riassunto (default 11, la mediana di frasi
   per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei riferimenti,
@@ -279,6 +286,8 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | Mistral, `test` (5.610) | — | ~17 h |
 | Gemma, `test` (5.610) | — | ~22 h |
 | PRIMERA, `test` (5.610) | sconsigliata | ~28-56 h — **richiede la GPU** |
+| First-k, `test` (5.610, **entrambe le varianti**) | ~3 min | ~3 min (nessun modello) |
+| Centroid+MMR, `test` (5.610, **entrambe le varianti**) | non misurata (TF-IDF rapida, BERT lenta senza GPU) | ~8 min (corsa reale 2026-07-25, encoding BERT su GPU) |
 | GPT-5-mini (12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
 | GPT-5-mini (12), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |

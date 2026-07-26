@@ -1,0 +1,43 @@
+{
+  "metodo": "firstk_nltk",
+  "scope": "test",
+  "config": {
+    "k_sentences_per_articolo": 3,
+    "variante": "per-articolo",
+    "segmentatore": "nltk (Punkt)",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0"
+  },
+  "timestamp": "2026-07-25T20:32:25+00:00",
+  "n_esempi": 5610,
+  "overall": {
+    "rouge1_f1": 0.35612849077636033,
+    "rouge1_p": 0.3879452342235696,
+    "rouge1_r": 0.34823628410782764,
+    "rouge2_f1": 0.12264566204128566,
+    "rouge2_p": 0.13331876432755113,
+    "rouge2_r": 0.1228708137878501,
+    "rougeL_f1": 0.18094099846697811,
+    "rougeL_p": 0.19226646487313656,
+    "rougeL_r": 0.18740506019596362,
+    "bleu": 0.0829820410085695,
+    "meteor": 0.39105101352040617,
+    "parole_generate": 218.75008912655971
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5610,
+      "rouge1_f1": 0.35612849077636033,
+      "rouge1_p": 0.3879452342235696,
+      "rouge1_r": 0.34823628410782764,
+      "rouge2_f1": 0.12264566204128566,
+      "rouge2_p": 0.13331876432755113,
+      "rouge2_r": 0.1228708137878501,
+      "rougeL_f1": 0.18094099846697811,
+      "rougeL_p": 0.19226646487313656,
+      "rougeL_r": 0.18740506019596362,
+      "bleu": 0.0829820410085695,
+      "meteor": 0.39105101352040617,
+      "parole_generate": 218.75008912655971
+    }
+  }
+}

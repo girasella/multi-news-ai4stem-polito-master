@@ -1,0 +1,43 @@
+{
+  "metodo": "firstk_psr",
+  "scope": "test",
+  "config": {
+    "k_sentences_per_articolo": 3,
+    "variante": "per-articolo",
+    "segmentatore": "psr.summarization",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0"
+  },
+  "timestamp": "2026-07-25T20:31:38+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.35462047621328224,
+    "rouge1_p": 0.38692746465277333,
+    "rouge1_r": 0.3472910966156065,
+    "rouge2_f1": 0.12115089536036555,
+    "rouge2_p": 0.13192053734332168,
+    "rouge2_r": 0.12183760755306479,
+    "rougeL_f1": 0.18039412561729598,
+    "rougeL_p": 0.19273330424445465,
+    "rougeL_r": 0.18628782472545483,
+    "bleu": 0.08188322756594558,
+    "meteor": 0.38926099637760153,
+    "parole_generate": 216.55493915533285
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.35462047621328224,
+      "rouge1_p": 0.38692746465277333,
+      "rouge1_r": 0.3472910966156065,
+      "rouge2_f1": 0.12115089536036555,
+      "rouge2_p": 0.13192053734332168,
+      "rouge2_r": 0.12183760755306479,
+      "rougeL_f1": 0.18039412561729598,
+      "rougeL_p": 0.19273330424445465,
+      "rougeL_r": 0.18628782472545483,
+      "bleu": 0.08188322756594558,
+      "meteor": 0.38926099637760153,
+      "parole_generate": 216.55493915533285
+    }
+  }
+}

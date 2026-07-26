@@ -83,8 +83,8 @@ def itera_complete_tab(path):
 def itera_split(path, split):
     """Itera in streaming le sole righe di complete.tab con lo split richiesto.
 
-    Usato dai notebook Azure (10-13) per l'ambito 'test': i row_id restano gli
-    indici globali di complete.tab, coerenti con gli altri ambiti.
+    Usato per l'ambito 'test' (notebook 03-04, 06-12 via SUMM_SCOPE o SCOPE): i
+    row_id restano gli indici globali di complete.tab, coerenti con gli altri ambiti.
     """
     for es in itera_complete_tab(path):
         if es['split'] == split:
