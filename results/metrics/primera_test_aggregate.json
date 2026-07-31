@@ -10,7 +10,7 @@
     "note": "articoli uniti da <doc-sep> (global attention), budget di token uguale per articolo; checkpoint multi_news (leakage su split train)",
     "libreria": "transformers (parametri di generazione del repo allenai/PRIMER)"
   },
-  "timestamp": "2026-07-25T13:34:53+00:00",
+  "timestamp": "2026-07-31T19:25:08+00:00",
   "n_esempi": 5610,
   "overall": {
     "rouge1_f1": 0.444606830508223,
@@ -24,7 +24,10 @@
     "rougeL_r": 0.24932665328803713,
     "bleu": 0.1469370498717342,
     "meteor": 0.4745134840784806,
-    "parole_generate": 210.82032085561497
+    "parole_generate": 210.82032085561497,
+    "bertscore_f1": 0.8741546858546994,
+    "bertscore_p": 0.8757236101941841,
+    "bertscore_r": 0.8728076720513974
   },
   "per_split": {
     "test": {
@@ -40,7 +43,10 @@
       "rougeL_r": 0.24932665328803713,
       "bleu": 0.1469370498717342,
       "meteor": 0.4745134840784806,
-      "parole_generate": 210.82032085561497
+      "parole_generate": 210.82032085561497,
+      "bertscore_f1": 0.8741546858546994,
+      "bertscore_p": 0.8757236101941841,
+      "bertscore_r": 0.8728076720513974
     }
   }
 }
