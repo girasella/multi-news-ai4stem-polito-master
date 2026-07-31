@@ -8,9 +8,10 @@
       "en"
     ],
     "device": "cuda",
-    "libreria": "pyAutoSummarizer 1.2.0"
+    "libreria": "pyAutoSummarizer 1.2.0",
+    "nota_bertscore": "rouge/bleu/meteor ricalcolati direttamente sulle sole righe della split test (non piu' filtrando la corsa full) in occasione del backfill BERTScore (notebook 13); valori numericamente equivalenti alla derivazione precedente (scripts/run_benchmark_test.py)."
   },
-  "timestamp": "2026-07-12T21:27:31+00:00",
+  "timestamp": "2026-07-31T19:01:22+00:00",
   "n_esempi": 5588,
   "overall": {
     "rouge1_f1": 0.369682004915476,
@@ -22,9 +23,12 @@
     "rougeL_f1": 0.17584426258547797,
     "rougeL_p": 0.1443628758860457,
     "rougeL_r": 0.24678697298862803,
-    "bleu": 0.08833747859768101,
+    "bleu": 0.08833747859768126,
     "meteor": 0.4874044973387083,
-    "parole_generate": 368.0001789549034
+    "parole_generate": 368.0001789549034,
+    "bertscore_f1": 0.8404961880736463,
+    "bertscore_p": 0.8284877929289851,
+    "bertscore_r": 0.8530782925267687
   },
   "per_split": {
     "test": {
@@ -38,10 +42,12 @@
       "rougeL_f1": 0.17584426258547797,
       "rougeL_p": 0.1443628758860457,
       "rougeL_r": 0.24678697298862803,
-      "bleu": 0.08833747859768101,
+      "bleu": 0.08833747859768126,
       "meteor": 0.4874044973387083,
-      "parole_generate": 368.0001789549034
+      "parole_generate": 368.0001789549034,
+      "bertscore_f1": 0.8404961880736463,
+      "bertscore_p": 0.8284877929289851,
+      "bertscore_r": 0.8530782925267687
     }
-  },
-  "nota_derivazione": "Derivato filtrando textrank_full_per_example.csv sulla split test (scripts/run_benchmark_test.py), non da una corsa dedicata."
+  }
 }

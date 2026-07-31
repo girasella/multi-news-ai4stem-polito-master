@@ -7,7 +7,7 @@
     "segmentatore": "nltk (Punkt)",
     "libreria_valutazione": "pyAutoSummarizer 1.2.0"
   },
-  "timestamp": "2026-07-25T20:32:25+00:00",
+  "timestamp": "2026-07-31T18:36:43+00:00",
   "n_esempi": 5610,
   "overall": {
     "rouge1_f1": 0.35612849077636033,
@@ -21,7 +21,10 @@
     "rougeL_r": 0.18740506019596362,
     "bleu": 0.0829820410085695,
     "meteor": 0.39105101352040617,
-    "parole_generate": 218.75008912655971
+    "parole_generate": 218.75008912655971,
+    "bertscore_f1": 0.8425698997396411,
+    "bertscore_p": 0.8395666121692793,
+    "bertscore_r": 0.8459166387398188
   },
   "per_split": {
     "test": {
@@ -37,7 +40,10 @@
       "rougeL_r": 0.18740506019596362,
       "bleu": 0.0829820410085695,
       "meteor": 0.39105101352040617,
-      "parole_generate": 218.75008912655971
+      "parole_generate": 218.75008912655971,
+      "bertscore_f1": 0.8425698997396411,
+      "bertscore_p": 0.8395666121692793,
+      "bertscore_r": 0.8459166387398188
     }
   }
 }

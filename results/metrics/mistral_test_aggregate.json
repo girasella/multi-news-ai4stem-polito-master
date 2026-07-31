@@ -10,7 +10,7 @@
     "prompt_user": "Summarize the following document into a comprehensive summary: {documento}",
     "note": "prompt zero-shot in inglese; stesso modello della corsa originale LM Studio (mistral-7b-instruct-v0.3; il nome \"small3\" del notebook di origine era improprio), quantizzazione Q4_K_M come qwen"
   },
-  "timestamp": "2026-07-25T07:13:00+00:00",
+  "timestamp": "2026-07-31T19:42:57+00:00",
   "n_esempi": 5610,
   "overall": {
     "rouge1_f1": 0.3542399842549084,
@@ -24,7 +24,10 @@
     "rougeL_r": 0.17350825014470966,
     "bleu": 0.06713391807267394,
     "meteor": 0.36066702849459187,
-    "parole_generate": 161.28841354723707
+    "parole_generate": 161.28841354723707,
+    "bertscore_f1": 0.8598018811242041,
+    "bertscore_p": 0.8685861985419948,
+    "bertscore_r": 0.8514056390407039
   },
   "per_split": {
     "test": {
@@ -40,7 +43,10 @@
       "rougeL_r": 0.17350825014470966,
       "bleu": 0.06713391807267394,
       "meteor": 0.36066702849459187,
-      "parole_generate": 161.28841354723707
+      "parole_generate": 161.28841354723707,
+      "bertscore_f1": 0.8598018811242041,
+      "bertscore_p": 0.8685861985419948,
+      "bertscore_r": 0.8514056390407039
     }
   }
 }

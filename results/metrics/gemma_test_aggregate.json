@@ -10,7 +10,7 @@
     "prompt_user": "/no_think\n\nSummarize the following document into a comprehensive summary: {documento}",
     "note": "prompt zero-shot in inglese; max_tokens=1500 invece dei 300 originali perche' il reasoning di Gemma 4 consumava il budget (81 risposte vuote su 100 nella corsa LM Studio)"
   },
-  "timestamp": "2026-07-25T07:14:14+00:00",
+  "timestamp": "2026-07-31T19:37:45+00:00",
   "n_esempi": 5610,
   "overall": {
     "rouge1_f1": 0.33459609216843467,
@@ -24,7 +24,10 @@
     "rougeL_r": 0.20983282299298905,
     "bleu": 0.0646578115048369,
     "meteor": 0.4345439872408315,
-    "parole_generate": 292.05383244206774
+    "parole_generate": 292.05383244206774,
+    "bertscore_f1": 0.8389956558133191,
+    "bertscore_p": 0.8266289944423498,
+    "bertscore_r": 0.8519391329318232
   },
   "per_split": {
     "test": {
@@ -40,7 +43,10 @@
       "rougeL_r": 0.20983282299298905,
       "bleu": 0.0646578115048369,
       "meteor": 0.4345439872408315,
-      "parole_generate": 292.05383244206774
+      "parole_generate": 292.05383244206774,
+      "bertscore_f1": 0.8389956558133191,
+      "bertscore_p": 0.8266289944423498,
+      "bertscore_r": 0.8519391329318232
     }
   }
 }

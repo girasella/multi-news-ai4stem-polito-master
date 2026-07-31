@@ -6,9 +6,10 @@
     "stop_words": [
       "en"
     ],
-    "libreria": "pyAutoSummarizer 1.2.0"
+    "libreria": "pyAutoSummarizer 1.2.0",
+    "nota_bertscore": "rouge/bleu/meteor ricalcolati direttamente sulle sole righe della split test (non piu' filtrando la corsa full) in occasione del backfill BERTScore (notebook 13); valori numericamente equivalenti alla derivazione precedente (scripts/run_benchmark_test.py)."
   },
-  "timestamp": "2026-07-13T08:00:46+00:00",
+  "timestamp": "2026-07-31T19:09:57+00:00",
   "n_esempi": 5588,
   "overall": {
     "rouge1_f1": 0.36513483900691124,
@@ -22,7 +23,10 @@
     "rougeL_r": 0.2665529239184245,
     "bleu": 0.08285226944933682,
     "meteor": 0.5037021579085252,
-    "parole_generate": 450.12437365783825
+    "parole_generate": 450.12437365783825,
+    "bertscore_f1": 0.8369737249254412,
+    "bertscore_p": 0.8214150936840771,
+    "bertscore_r": 0.8533485933402306
   },
   "per_split": {
     "test": {
@@ -38,8 +42,10 @@
       "rougeL_r": 0.2665529239184245,
       "bleu": 0.08285226944933682,
       "meteor": 0.5037021579085252,
-      "parole_generate": 450.12437365783825
+      "parole_generate": 450.12437365783825,
+      "bertscore_f1": 0.8369737249254412,
+      "bertscore_p": 0.8214150936840771,
+      "bertscore_r": 0.8533485933402306
     }
-  },
-  "nota_derivazione": "Derivato filtrando lexrank_full_per_example.csv sulla split test (scripts/run_benchmark_test.py), non da una corsa dedicata."
+  }
 }

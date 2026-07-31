@@ -10,7 +10,7 @@
     "selezione": "MMR greedy",
     "libreria_valutazione": "pyAutoSummarizer 1.2.0"
   },
-  "timestamp": "2026-07-25T20:39:25+00:00",
+  "timestamp": "2026-07-31T18:44:54+00:00",
   "n_esempi": 5588,
   "overall": {
     "rouge1_f1": 0.38308260716518977,
@@ -24,7 +24,10 @@
     "rougeL_r": 0.2605570082971454,
     "bleu": 0.0966492138974645,
     "meteor": 0.5003489235719181,
-    "parole_generate": 361.79688618468145
+    "parole_generate": 361.79688618468145,
+    "bertscore_f1": 0.841640105781678,
+    "bertscore_p": 0.8282642021039254,
+    "bertscore_r": 0.8556791692652187
   },
   "per_split": {
     "test": {
@@ -40,7 +43,10 @@
       "rougeL_r": 0.2605570082971454,
       "bleu": 0.0966492138974645,
       "meteor": 0.5003489235719181,
-      "parole_generate": 361.79688618468145
+      "parole_generate": 361.79688618468145,
+      "bertscore_f1": 0.841640105781678,
+      "bertscore_p": 0.8282642021039254,
+      "bertscore_r": 0.8556791692652187
     }
   }
 }

@@ -11,7 +11,7 @@
     "prompt_user": "Summarize the following document into a comprehensive summary: {documento}",
     "note": "prompt zero-shot in inglese identico ai notebook 07-09 (senza /no_think); modello con reasoning: niente temperature, max_completion_tokens=1500 con reasoning_effort='minimal' (caso gemma); ambiti sample, test e full (full sequenziale: la Batch API non offre gpt-5-mini)"
   },
-  "timestamp": "2026-07-17T21:07:48+00:00",
+  "timestamp": "2026-07-31T19:49:40+00:00",
   "n_esempi": 5471,
   "overall": {
     "rouge1_f1": 0.34841109900707196,
@@ -25,7 +25,10 @@
     "rougeL_r": 0.19183355057841459,
     "bleu": 0.065815623148738,
     "meteor": 0.40194817861695464,
-    "parole_generate": 240.5127033449095
+    "parole_generate": 240.5127033449095,
+    "bertscore_f1": 0.8523372285240988,
+    "bertscore_p": 0.84876268758915,
+    "bertscore_r": 0.8561648482532045
   },
   "per_split": {
     "test": {
@@ -41,7 +44,10 @@
       "rougeL_r": 0.19183355057841459,
       "bleu": 0.065815623148738,
       "meteor": 0.40194817861695464,
-      "parole_generate": 240.5127033449095
+      "parole_generate": 240.5127033449095,
+      "bertscore_f1": 0.8523372285240988,
+      "bertscore_p": 0.84876268758915,
+      "bertscore_r": 0.8561648482532045
     }
   }
 }

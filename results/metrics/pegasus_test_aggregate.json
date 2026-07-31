@@ -12,7 +12,7 @@
     "note": "niente prefisso summarize:, checkpoint multi_news (leakage su split train)",
     "libreria": "transformers (parametri di pyAutoSummarizer.summ_abst_pegasus)"
   },
-  "timestamp": "2026-07-25T07:11:21+00:00",
+  "timestamp": "2026-07-31T19:19:07+00:00",
   "n_esempi": 5610,
   "overall": {
     "rouge1_f1": 0.4238804285509651,
@@ -26,7 +26,10 @@
     "rougeL_r": 0.22644682553099768,
     "bleu": 0.13136684272529864,
     "meteor": 0.07938235148100381,
-    "parole_generate": 178.37557932263815
+    "parole_generate": 178.37557932263815,
+    "bertscore_f1": 0.871104036656718,
+    "bertscore_p": 0.8767979768295764,
+    "bertscore_r": 0.8656540100799738
   },
   "per_split": {
     "test": {
@@ -42,7 +45,10 @@
       "rougeL_r": 0.22644682553099768,
       "bleu": 0.13136684272529864,
       "meteor": 0.07938235148100381,
-      "parole_generate": 178.37557932263815
+      "parole_generate": 178.37557932263815,
+      "bertscore_f1": 0.871104036656718,
+      "bertscore_p": 0.8767979768295764,
+      "bertscore_r": 0.8656540100799738
     }
   }
 }
