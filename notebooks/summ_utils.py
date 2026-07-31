@@ -29,6 +29,11 @@ COLONNE_METRICHE = ['rouge1_f1', 'rouge1_p', 'rouge1_r',
                     'rougeL_f1', 'rougeL_p', 'rougeL_r',
                     'bleu', 'meteor', 'parole_generate']
 
+# Colonne opzionali del BERTScore (13_bertscore.ipynb, backfill separato):
+# tenute FUORI da COLONNE_METRICHE cosi' i notebook 01-04/06-12, che non le
+# calcolano, restano invariati.
+COLONNE_METRICHE_BERTSCORE = ['bertscore_f1', 'bertscore_p', 'bertscore_r']
+
 
 # ---------------------------------------------------------------------------
 # Percorsi e configurazione
@@ -244,12 +249,43 @@ def metriche_esempio(valutatore, generato, riferimento):
     }
 
 
-def valuta_e_salva(riferimenti, riassunti, metodo, scope, metrics_dir, config):
+def calcola_bertscore_batch(coppie, model_type='roberta-large', device=None, batch_size=64):
+    """BERTScore per una lista di coppie (row_id, candidato, riferimento), in un unico batch.
+
+    A differenza di `psr.bert_score()` di pyAutoSummarizer (che ricarica il modello
+    ad OGNI chiamata — inutilizzabile su migliaia di esempi), qui il modello viene
+    caricato UNA SOLA volta (`bert_score.BERTScorer`) e tutte le coppie vengono
+    valutate in un'unica chiamata batched. Ritorna {row_id: {'bertscore_f1': ...,
+    'bertscore_p': ..., 'bertscore_r': ...}}.
+    """
+    from bert_score import BERTScorer
+
+    row_ids = [rid for rid, _, _ in coppie]
+    candidati = [c for _, c, _ in coppie]
+    riferimenti_testo = [r for _, _, r in coppie]
+
+    scorer = BERTScorer(model_type=model_type, lang='en',
+                        device=device or rileva_device(), batch_size=batch_size)
+    p, r, f1 = scorer.score(candidati, riferimenti_testo, batch_size=batch_size)
+
+    return {rid: {'bertscore_f1': float(f1[i]), 'bertscore_p': float(p[i]),
+                 'bertscore_r': float(r[i])}
+           for i, rid in enumerate(row_ids)}
+
+
+def valuta_e_salva(riferimenti, riassunti, metodo, scope, metrics_dir, config,
+                   extra_metriche=None, colonne_extra=None):
     """Calcola le metriche dai file salvati e scrive i due output.
 
     - `riferimenti`: iterabile di dict row_id/split/summary (campione o streaming
       di complete.tab) — vengono valutati solo i row_id presenti in `riassunti`
     - `riassunti`: dict {row_id: riassunto generato} (da carica_riassunti)
+    - `extra_metriche`: opzionale, {row_id: {colonna: valore}} da unire alle
+      metriche standard (usato da 13_bertscore.ipynb per il backfill del BERTScore,
+      gia' calcolato altrove in batch — vedi `calcola_bertscore_batch`)
+    - `colonne_extra`: opzionale, lista di nomi colonna corrispondenti a
+      `extra_metriche`, aggiunta in coda a COLONNE_METRICHE per intestazione,
+      scrittura e media
     - scrive {metodo}_{scope}_per_example.csv e {metodo}_{scope}_aggregate.json
 
     Ritorna (righe_per_esempio, aggregato).
@@ -257,6 +293,8 @@ def valuta_e_salva(riferimenti, riassunti, metodo, scope, metrics_dir, config):
     valutatore = crea_valutatore()
     metrics_dir = Path(metrics_dir)
     metrics_dir.mkdir(parents=True, exist_ok=True)
+    extra_metriche = extra_metriche or {}
+    colonne = COLONNE_METRICHE + (colonne_extra or [])
 
     righe = []
     for rif in riferimenti:
@@ -265,18 +303,19 @@ def valuta_e_salva(riferimenti, riassunti, metodo, scope, metrics_dir, config):
             continue
         m = metriche_esempio(valutatore, riassunti[row_id],
                              pulisci_riferimento(rif['summary']))
+        m.update(extra_metriche.get(row_id, {}))
         righe.append({'row_id': row_id, 'split': rif['split'], **m})
 
     per_example_path = metrics_dir / f'{metodo}_{scope}_per_example.csv'
     with open(per_example_path, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['row_id', 'split'] + COLONNE_METRICHE)
+        writer.writerow(['row_id', 'split'] + colonne)
         for r in righe:
-            writer.writerow([r['row_id'], r['split']] + [r[c] for c in COLONNE_METRICHE])
+            writer.writerow([r['row_id'], r['split']] + [r[c] for c in colonne])
 
     def media(sottoinsieme):
         return {c: sum(r[c] for r in sottoinsieme) / len(sottoinsieme)
-                for c in COLONNE_METRICHE}
+                for c in colonne}
 
     per_split = defaultdict(list)
     for r in righe:

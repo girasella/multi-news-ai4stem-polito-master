@@ -16,3 +16,4 @@ openai          # client for the local ollama OpenAI-compatible endpoint (notebo
 nltk            # Punkt sentence tokenizer for the firstk_nltk variant (notebook 10)
 scikit-learn    # TF-IDF, cosine similarity, PCA for Centroid+MMR (notebook 11)
 sentence-transformers  # MiniLM sentence embeddings (notebooks 01 and 11)
+bert-score      # BERTScore against roberta-large (notebook 13, backfill)

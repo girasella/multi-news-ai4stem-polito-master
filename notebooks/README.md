@@ -54,6 +54,7 @@ automaticamente e la usano se disponibile.
 | 10 | [10_firstk.ipynb](10_firstk.ipynb) | First-k / Lead (baseline posizionale, prime k frasi per articolo). Genera **due varianti** confrontabili — `firstk_psr` e `firstk_nltk` — che differiscono solo per il segmentatore di frasi. Ambiti `sample`, `test` e `full`. |
 | 11 | [11_centroid_mmr.ipynb](11_centroid_mmr.ipynb) | Centroid-based (MEAD) + MMR (estrattivo nativo MDS, implementazione *custom* scikit-learn: centroide + selezione greedy MMR con parametro `λ`). Genera **due varianti** — `centroid_mmr` (vettorizzazione TF-IDF) e `centroid_mmr_bert` (embeddings BERT `all-MiniLM-L6-v2`) — che differiscono solo per il vettorizzatore. Ambiti `sample`, `test` e `full`. |
 | 12 | [12_azure_gpt.ipynb](12_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
+| 13 | [13_bertscore.ipynb](13_bertscore.ipynb) | BERTScore (`roberta-large`, backfill separato). Aggiunge `bertscore_f1/p/r` alle metriche `test` già calcolate dai 13 metodi, senza rieseguire i notebook 01–04/06–12. |
 
 I notebook dei metodi (01–04 e 06–12) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
@@ -231,6 +232,31 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
   su 5.610). Il confronto nel notebook 05 resta equo (intersezione dei `row_id`); per coprirle
   serve un content filter personalizzato con soglie *high-only* associato al deployment.
 
+## BERTScore (notebook 13, backfill)
+
+Aggiunge il **BERTScore** (Zhang et al., 2020 — similarità semantica su embedding contestuali
+BERT, `roberta-large`) alle metriche `test` di tutti e 13 i metodi, come **backfill una tantum**
+sui riassunti già generati: non tocca i notebook 01–04/06–12 né il loro ciclo di
+generazione/valutazione dal vivo.
+
+`pyAutoSummarizer` espone un wrapper di comodo `bert_score()`, ma questo ricarica
+`roberta-large` da zero a **ogni chiamata** (nessuna cache tra chiamate nella libreria
+`bert-score` che chiama) — inutilizzabile dentro il ciclo per-esempio condiviso, che
+richiederebbe migliaia di ricaricamenti per metodo. Il notebook 13 usa invece
+`bert_score.BERTScorer` **direttamente**: un solo caricamento del modello per metodo, poi
+tutte le coppie candidato/riferimento valutate in un'unica chiamata batched
+(`su.calcola_bertscore_batch`, `batch_size=64`).
+
+Stima (misurata su questa macchina, GPU RTX PRO 2000 Blackwell Laptop, su un sottoinsieme di
+300 righe di `firstk_psr`): caricamento del modello ~6 s (una tantum per metodo, quindi ~13
+volte in tutta la corsa) e ~21 righe/s di scoring puro — **circa 1 ora di calcolo GPU in
+totale** per tutti e 13 i metodi sulla split test (~5.600 righe ciascuno). TextRank
+e LexRank (che hanno solo una corsa `_full.tsv`, non `_test.tsv` dedicata) vedono anche
+ROUGE/BLEU/METEOR ricalcolati direttamente sulle sole righe della split test invece di essere
+derivati filtrando la corsa `full` — numericamente equivalente, ma più semplice da tenere in un
+unico ciclo uniforme sui 13 metodi. La configurazione storica di ciascun metodo (`config` nel
+JSON aggregato) viene preservata, non sovrascritta dal backfill.
+
 ## Parametri principali (cella di configurazione di ogni notebook)
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
@@ -257,6 +283,7 @@ results/
   sample/sample_{N}_seed{S}.tsv        # campione condiviso (row_id, split, document, summary) — solo input
   summaries/{metodo}_{scope}.tsv       # riassunti generati (row_id, generated_summary); scope = test o full
   metrics/{metodo}_{scope}_per_example.csv   # ROUGE-1/2/L (F1,P,R), BLEU, METEOR per esempio
+                                              # (+ BERTScore F1/P/R sulla split test, dopo 13_bertscore.ipynb)
   metrics/{metodo}_{scope}_aggregate.json    # medie complessive e per split + configurazione usata
 ```
 
@@ -291,9 +318,10 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | GPT-5-mini (12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
 | GPT-5-mini (12), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
+| BERTScore (13), tutti e 13 i metodi su `test` (5.610 righe ciascuno) | sconsigliata (`roberta-large`, migliaia di forward pass) | ~1 h totale (misurata: caricamento ~6 s/metodo + ~21 righe/s di scoring — vedi sezione dedicata) |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
-PEGASUS ~2,3 GB; PRIMERA ~1,8 GB).
+PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 13, ~1,4 GB).
 
 ## Esecuzione su Google Colab
 
