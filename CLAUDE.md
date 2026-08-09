@@ -234,9 +234,18 @@ respect:
     row's 13 methods), summary last. That is what makes Azure's prompt cache hit; the work unit
     is the *row* (its 13 judgments run sequentially in one thread), parallelism is *between*
     rows. Reordering costs roughly 3.5x on input tokens.
-  - Source truncated to 2,100 words; scope is 72,681 judgments (not 13x5,610 — coverage is
-    uneven). Cost ~$38 of input plus an output term dominated by unpredictable reasoning tokens
-    (~$84-182 total); **the 20-row pilot fixes the real number**, and `--budget` caps it.
+  - Source truncated to **3,500 words**, which leaves 91.5% of test-split clusters intact
+    (p90 = 3,244 words, max = 35,362). Scope is 72,681 judgments (not 13x5,610 — coverage is
+    uneven).
+  - **Cost is entirely input-bound.** Measured: `reasoning_effort='minimal'` emits **zero**
+    reasoning tokens, so output is ~30 tokens/judgment (~$10 total). Everything else rides on the
+    prompt-cache hit rate. Two things cap it, and neither is the truncation limit:
+    (a) Azure does not cache prefixes under **1,024 tokens**, so **14.8% of test rows (830/5,610)
+    never cache at all**; (b) even in cacheable rows, hit rate falls with concurrency because
+    GlobalStandard routes each request to any backend instance and the cache is per-instance —
+    measured **64.8% of calls at 2 threads vs 45.9% at 8**. Net: **~$87 at 2 threads (~12 h)
+    vs ~$107 at 8 threads (~3 h)**. Do NOT extrapolate from a single isolated row: one row run
+    alone hit 12/13 and suggests a ~$56 run, which is not reproducible at scale.
   - There is **no real-time Azure cost API** (Cost Management lags 8-24 h). Costing is done from
     each response's `usage`, with unit prices from the public Azure Retail Prices API. Note the
     pre-existing trap that `run_benchmark_test.py::deriva_metriche_test` recomputes textrank /

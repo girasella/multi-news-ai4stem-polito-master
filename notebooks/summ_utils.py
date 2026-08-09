@@ -425,11 +425,17 @@ SCHEMA_GEVAL = {
     'additionalProperties': False,
 }
 
-# Troncamento della sorgente: ~2.100 parole (~2.800 token) tengono il costo
-# prevedibile sui cluster enormi di Multi-News (il massimo e' 449.620 parole) e
-# restano ben sopra i 1.024 token sotto i quali la prompt cache di Azure non si
-# attiva. E' comunque piu' di quanto vedano BART/PEGASUS (1.024 token).
-MAX_PAROLE_SORGENTE_GEVAL = 2100
+# Troncamento della sorgente: 3.500 parole (~4.700 token) lasciano INTERO il
+# 91,5% dei cluster della split test (p90 = 3.244 parole, p95 = 4.499) tenendo
+# comunque un tetto sui casi estremi, che arrivano a 35.362 parole. Il costo
+# marginale rispetto a un tetto piu' basso e' contenuto perche' quasi tutte le
+# parole in piu' finiscono nel prefisso condiviso, pagato a tariffa cached:
+# alzarlo da 2.100 a 3.500 sposta la copertura dal 76% al 91,5% e costa ~$5 in
+# piu' sull'intera corsa. E' comunque molto piu' di quanto vedano BART/PEGASUS
+# (1.024 token). Nota: la prompt cache di Azure non si attiva sotto i 1.024
+# token di prefisso, quindi le righe con sorgente molto corta non ne beneficiano
+# comunque, tetto o non tetto.
+MAX_PAROLE_SORGENTE_GEVAL = 3500
 
 # Prezzi unitari ($ per 1M token) del giudice gpt-5.4-mini, SKU GlobalStandard,
 # verificati sulla Azure Retail Prices API. Usati come fallback quando la

@@ -311,11 +311,12 @@ riproducibilità è la cache JSONL committata.
 - **una chiamata per (metodo, riga)**, con tutte e quattro le dimensioni in un unico JSON
   (`response_format` con `json_schema` **strict**: il formato è garantito lato server; in strict
   non sono ammessi `minimum`/`maximum`, quindi la scala 1–5 è espressa con `enum`);
-- sorgente troncata a **2.100 parole** (`su.MAX_PAROLE_SORGENTE_GEVAL`): tiene il costo
-  prevedibile sui cluster enormi (il massimo della split test è 35.362 parole), resta sopra i
-  1.024 token sotto cui la prompt cache di Azure non si attiva ed è comunque più di quanto
-  vedano BART/PEGASUS. Nella split test la mediana è 1.288 parole e **il 24% delle righe viene
-  troncato**;
+- sorgente troncata a **3.500 parole** (`su.MAX_PAROLE_SORGENTE_GEVAL`): lascia **intero il
+  91,5%** dei cluster della split test (mediana 1.288 parole, p90 3.244, p95 4.499) mettendo
+  comunque un tetto ai casi estremi, che arrivano a 35.362 parole. È molto più di quanto vedano
+  BART/PEGASUS (1.024 token). Il costo marginale rispetto a un tetto di 2.100 parole (copertura
+  76%) è di circa **$5 sull'intera corsa**, perché quasi tutte le parole in più finiscono nel
+  prefisso condiviso, pagato a tariffa *cached*;
 - ambito: split `test` intera, **72.681 giudizi** (meno di 13 × 5.610 perché la copertura è
   disomogenea: firstk_psr e le varianti centroid hanno 5.588 righe, gpt5mini 5.471).
 
@@ -329,8 +330,37 @@ Di conseguenza `su.giudica_geval_concorrente` prende la **riga** come unità di 
 i suoi 13 giudizi **in sequenza dentro lo stesso thread**: il primo popola la prompt cache di
 Azure e gli altri dodici la riusano. Il parallelismo è **tra** righe diverse. Parallelizzare per
 singolo giudizio farebbe partire insieme le 13 chiamate della stessa riga, mancando la cache
-tutte quante — è la differenza fra ~$38 e ~$135 di soli token di input. Il collo di bottiglia
-reale non è il numero di thread ma la **quota TPM** del deployment.
+tutte quante.
+
+### ⚠️ La concorrenza degrada la cache (misurato)
+
+Il numero di thread **non** è un parametro innocuo di velocità: è un fattore di costo. Misurato
+confrontando le **sole righe cacheabili** delle due corse (il confronto sui totali grezzi
+sarebbe fuorviante, perché i due campioni hanno lunghezze di sorgente molto diverse):
+
+| thread | chiamate con hit, nelle righe cacheabili | hit rate complessivo | proiezione corsa completa |
+|---|---|---|---|
+| 8 | 45,9% | 36,1% | **~$107** (~3 h) |
+| 2 | **64,8%** | **51,1%** | **~$87** (~12 h) |
+
+La causa è il routing: un deployment **GlobalStandard** manda ogni richiesta a una qualunque
+istanza di backend e la prompt cache è **per istanza**. Con più righe in volo, le chiamate 2–13
+di una riga atterrano più spesso su istanze che non hanno mai visto quel prefisso.
+
+Quindi `--thread` basso costa meno e impiega di più: **~$19 di risparmio per ~9 ore in più**. Il
+collo di bottiglia non è la quota TPM del deployment (nessun 429 osservato) ma questo
+compromesso.
+
+### Il tetto strutturale: la soglia dei 1.024 token
+
+Azure non attiva la prompt cache sotto i **1.024 token di prefisso**, e i token in cache sono
+quantizzati a blocchi di 256. Sulla split test **il 14,8% delle righe (830 su 5.610) ha un
+prefisso troppo corto e non entra mai in cache**, indipendentemente da thread e troncamento: le
+loro 13 chiamate si pagano tutte a tariffa piena.
+
+Sommato al fatto che, anche nelle righe cacheabili, si arriva a ~65% di chiamate con hit e non
+al massimo teorico di 12/13 (92%), il tetto realistico complessivo è intorno al **51%** — non al
+75% che una singola riga isolata può far sembrare raggiungibile.
 
 ### Ripresa e gestione degli errori
 
@@ -376,10 +406,17 @@ Prezzi verificati sulla **Azure Retail Prices API** (GlobalStandard, $/1M token:
 input in cache **0,075**, output **4,50**); il notebook li rilegge a ogni avvio con
 `su.prezzi_retail_azure()`, con `su.PREZZI_GEVAL` come fallback.
 
-Sulla split test: ~36,5M token di input non in cache + ~143M in cache ⇒ **~$38 di input**,
-sostanzialmente fissi. Il termine dominante e imprevedibile è l'**output**, perché include i
-token di *reasoning*: a 100 token/giudizio il totale è ~$84, a 250 ~$133, a 400 ~$182. **Il
-numero vero lo fissa il pilota**, non una stima.
+**Misurato sul pilota (269 giudizi):** con `reasoning_effort='minimal'` il giudice emette
+**zero token di reasoning** — l'output è di ~30 token per giudizio, cioè **~$10 sull'intera
+corsa**. Il termine di output, che a priori sembrava dominante e imprevedibile, di fatto non
+conta.
+
+La corsa è quindi **interamente vincolata dall'input**, e la variabile che sposta il totale è
+l'**hit rate della prompt cache** (vedi la sezione sulla concorrenza): **~$87 a 2 thread, ~$107
+a 8**. Non è il modello, non è il prompt di sistema (che da solo costa $2,23 in tutto) e quasi
+non è nemmeno il troncamento: passare da 2.100 a 3.500 parole — cioè dal 76% al 91,5% di
+sorgenti intere — costa solo **~$7** in più, perché quasi tutte le parole aggiunte finiscono nel
+prefisso condiviso.
 
 **Non esiste un'API Azure che riporti il costo in tempo reale** (Cost Management ha 8–24 h di
 ritardo). La fonte di verità è l'oggetto `usage` di ogni risposta, che `su.ContatoreCosti` somma
@@ -468,8 +505,8 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | GPT-5-mini (12), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
 | BERTScore (13), tutti e 13 i metodi su `test` (5.610 righe ciascuno) | sconsigliata (`roberta-large`, migliaia di forward pass) | ~1 h totale (misurata: caricamento ~6 s/metodo + ~21 righe/s di scoring — vedi sezione dedicata) |
-| G-Eval (14), pilota 20 righe (260 giudizi) | pochi minuti (chiamate API, nessun calcolo locale) | — |
-| G-Eval (14), tutti e 13 i metodi su `test` (72.681 giudizi) | ore, **limitate dalla quota TPM del deployment** e non dalla CPU: a ~2.500 token/giudizio, 200K TPM ⇒ ~80 giudizi/min ⇒ ~15 h (riprendibile) | — |
+| G-Eval (14), pilota 20 righe (260 giudizi) | ~1 min (misurato, 8 thread) | — |
+| G-Eval (14), tutti e 13 i metodi su `test` (72.681 giudizi) | ~3 h a 8 thread (~6,7 giudizi/s misurati) ma **~$111**; ~12 h a 2 thread per **~$56** — il compromesso è costo/tempo, non CPU. Riprendibile in qualunque momento | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 13, ~1,4 GB).
