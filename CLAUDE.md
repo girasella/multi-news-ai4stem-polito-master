@@ -22,12 +22,13 @@ scripts/
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
   import_llm_results.py  # One-off importer of the archived LM Studio LLM runs (notebooks/llm/*.csv) into results/ — superseded by the ollama re-runs, kept for provenance
   run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs notebook 05
+  run_geval.py         # Unattended driver for the G-Eval backfill (notebook 14): staged --righe/--pilota/full run, --budget hard stop, --costo offline cost report, --solo-metriche re-derivation
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
   0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
-  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full); ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
+  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill; ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
                        # results, since replaced by local ollama runs) and docx report —
@@ -35,7 +36,9 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
 results/
   sample/              # Shared evaluation sample TSV (committed)
   summaries/           # Generated summaries per method, scope=test/full only (large but regenerable); scope=sample is a local smoke-test artifact, not committed
-  metrics/             # Per-example CSVs + aggregate JSONs (committed)
+  metrics/             # Per-example CSVs + aggregate JSONs (committed); plus the SEPARATE
+                       # G-Eval files `{method}_{scope}_geval_{per_example.csv,aggregate.json}`
+                       # and `geval_cache_{scope}.jsonl` (the paid judgment cache — commit it)
 data/
   README.md            # Detailed description of data/ file formats and content
   text/                # Canonical format — consumed by multi_news.py; kept as-released (dirty rows included)
@@ -205,6 +208,40 @@ respect:
   LexRank has one much milder case (row_id 55805, meteor -1.24 out of 5,588 rows), negligible
   effect on its mean. Documented as a caveat in notebook 05 and the README — no per-example CSV
   or aggregate JSON was altered to compensate for it.
+
+- **G-Eval / LLM-as-a-Judge (notebook 14 + `scripts/run_geval.py`)**: adds coherence /
+  consistency / fluency / relevance scores (1-5) for the test split — the only metric here not
+  anchored to the human reference. Judge is **`gpt-5.4-mini`** on Azure (its own GlobalStandard
+  deployment, `AZURE_GEVAL_DEPLOYMENT`, same `AZURE_OPENAI_*` credentials as notebook 12), chosen
+  because it is independent of all 13 benchmarked methods (no self-judging of `gpt5mini`) *and*
+  newer than every generator — which matters mainly for the consistency dimension. Verified live:
+  DeepSeek/Grok/Llama/Mistral are **not deployable** on this AIServices account, and
+  **`gpt-5.1-mini` does not exist**. `psr.g_eval()` is unusable (no `base_url` → can't reach
+  Azure; hardcoded `max_tokens=5`/`temperature=0.0`; reads the source from `self.full_txt`, which
+  breaks the `crea_valutatore()` shared-instance pattern; one call per dimension), so it is
+  reimplemented in `summ_utils.py` with the **rubrics kept verbatim** — `RUBRICHE_GEVAL` is
+  derived mechanically from `PROMPT_GEVAL_ORIGINALI`, don't hand-edit it. Being a reasoning
+  model, it follows notebook 12's rules (no `temperature`, `max_completion_tokens=1500`,
+  `reasoning_effort='minimal'`); runs are **not bitwise reproducible** — the committed
+  `geval_cache_{scope}.jsonl` is the reproducibility artifact and metrics re-derive from it for
+  free (`--solo-metriche`). Hard rules to respect:
+  - **Never merge G-Eval columns into the standard per-example CSV.** `valuta_e_salva`'s inner
+    mean sums *every* column over *every* row, and the judge leaves some rows uncovered (Azure
+    content filter, parse failures) → `KeyError`; restricting the evaluated rows instead would
+    rewrite the 13 committed CSVs and change already-published `n_esempi` and means. Notebook 05
+    attaches them with a LEFT merge and reports coverage as `n_geval`.
+  - **Message order is a contract**: constant `system`, then the truncated source (shared by a
+    row's 13 methods), summary last. That is what makes Azure's prompt cache hit; the work unit
+    is the *row* (its 13 judgments run sequentially in one thread), parallelism is *between*
+    rows. Reordering costs roughly 3.5x on input tokens.
+  - Source truncated to 2,100 words; scope is 72,681 judgments (not 13x5,610 — coverage is
+    uneven). Cost ~$38 of input plus an output term dominated by unpredictable reasoning tokens
+    (~$84-182 total); **the 20-row pilot fixes the real number**, and `--budget` caps it.
+  - There is **no real-time Azure cost API** (Cost Management lags 8-24 h). Costing is done from
+    each response's `usage`, with unit prices from the public Azure Retail Prices API. Note the
+    pre-existing trap that `run_benchmark_test.py::deriva_metriche_test` recomputes textrank /
+    lexrank aggregates using `COLONNE_METRICHE` only, so a driver re-run **drops their BERTScore
+    columns** — G-Eval is immune because its files are separate.
 
 ## Working with the data files
 

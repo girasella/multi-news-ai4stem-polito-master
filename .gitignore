@@ -4,3 +4,6 @@ __pycache__/
 
 # Log of scripts/run_benchmark_test.py — regenerable, append-only
 run_benchmark_test.log
+
+# Log of scripts/run_geval.py — regenerable, append-only
+run_geval.log
