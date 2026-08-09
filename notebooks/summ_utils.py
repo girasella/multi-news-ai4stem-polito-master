@@ -804,7 +804,7 @@ class ContatoreCosti:
 
 def giudica_geval_concorrente(righe, giudica_uno, cache, n_thread=8, etichetta='',
                               ogni=1500, prezzi=None, budget_massimo=None,
-                              propaga_content_filter=True):
+                              speso_precedente=0.0, propaga_content_filter=True):
     """Esegue i giudizi G-Eval con un pool di thread, saltando quelli gia' in cache.
 
     - `righe`: LISTA di (row_id, sorgente, [(metodo, riassunto), ...]), ordinata per
@@ -816,8 +816,13 @@ def giudica_geval_concorrente(righe, giudica_uno, cache, n_thread=8, etichetta='
     - `giudica_uno(sorgente, riassunto) -> (punteggi, uso)`: una chiamata API.
     - `cache`: CacheGiudizi aperta; ogni esito viene scritto e flushato subito.
     - `ogni`: ogni quanti giudizi pagati stampare il blocco costo/avanzamento.
-    - `budget_massimo`: se il costo effettivo lo supera, la corsa si ferma in modo
-      pulito (la cache e' gia' su disco: basta rilanciare con un tetto piu' alto).
+    - `budget_massimo`: tetto di spesa COMPLESSIVO in $, non per singola sessione.
+      Al superamento la corsa si ferma in modo pulito (la cache e' gia' su disco:
+      basta rilanciare con un tetto piu' alto).
+    - `speso_precedente`: quanto e' gia' costato quello che sta in cache. Va
+      sommato al costo di questa sessione prima di confrontarlo con
+      `budget_massimo`, altrimenti ogni rilancio ripartirebbe da zero e un tetto
+      di $38 diventerebbe $38 A CORSA invece che $38 in totale.
     - `propaga_content_filter`: la sorgente troncata e' identica per tutti i metodi
       di una riga, quindi se il filtro contenuti respinge il primo giudizio
       respingerebbe anche gli altri: li si marca subito invece di pagarli.
@@ -829,6 +834,25 @@ def giudica_geval_concorrente(righe, giudica_uno, cache, n_thread=8, etichetta='
     stato = {'fatti': 0, 'saltati': 0, 'errori': Counter(),
              'fermato': False, 'prossimo_report': ogni}
     lock = threading.Lock()
+
+    def controlla_budget():
+        """Ferma la corsa se il totale (cache + questa sessione) supera il tetto.
+
+        Va chiamata dopo OGNI giudizio, non a fine riga: altrimenti la granularita'
+        sarebbe di 13 chiamate per riga, moltiplicate per le righe in volo.
+        """
+        if budget_massimo is None or stato['fermato']:
+            return
+        speso = speso_precedente + contatore.riepilogo()['costo_totale']
+        if speso >= budget_massimo:
+            stato['fermato'] = True
+            print(f'{etichetta}BUDGET COMPLESSIVO di ${budget_massimo:.2f} raggiunto '
+                  f'(${speso_precedente:.2f} gia\' in cache + '
+                  f'${speso - speso_precedente:.2f} in questa sessione): arresto '
+                  f'pulito, nulla di pagato viene perso (rilanciare con un tetto '
+                  f'piu\' alto per riprendere).')
+
+    controlla_budget()   # gia' oltre il tetto? non spendere nemmeno una chiamata
 
     def lavora_riga(riga):
         row_id, sorgente, coppie = riga
@@ -844,6 +868,7 @@ def giudica_geval_concorrente(righe, giudica_uno, cache, n_thread=8, etichetta='
                 cache.scrivi(metodo, row_id, punteggi=punteggi, uso=uso)
                 contatore.aggiungi(uso)
                 locali['fatti'] += 1
+                controlla_budget()
             except Exception as exc:
                 etichetta_err = tipo_errore(exc)
                 locali['errori'][etichetta_err] += 1
@@ -868,12 +893,7 @@ def giudica_geval_concorrente(righe, giudica_uno, cache, n_thread=8, etichetta='
                 rimasti = totale_giudizi - stato['fatti'] - stato['saltati']
                 contatore.stampa(stato['fatti'], stato['saltati'], rimasti,
                                  stato['errori'], prefisso=etichetta)
-            if (budget_massimo is not None and not stato['fermato']
-                    and contatore.riepilogo()['costo_totale'] >= budget_massimo):
-                stato['fermato'] = True
-                print(f'{etichetta}BUDGET di ${budget_massimo:.2f} raggiunto: '
-                      f'arresto pulito, la cache e\' gia\' su disco (rilanciare '
-                      f'con un tetto piu\' alto per riprendere).')
+        controlla_budget()
 
     with ThreadPoolExecutor(max_workers=n_thread) as pool:
         iteratore = iter(righe)

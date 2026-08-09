@@ -256,8 +256,16 @@ def main():
                         help='Thread concorrenti (default: 8). Il collo di bottiglia vero '
                              'e\' la quota TPM del deployment, non questo numero.')
     parser.add_argument('--budget', type=float, default=None,
-                        help='Tetto di spesa in $: al superamento la corsa si ferma in modo '
-                             'pulito (la cache e\' gia\' su disco, basta rilanciare).')
+                        help='Tetto di spesa COMPLESSIVO in $, non per sessione: include '
+                             'quanto e\' gia\' costato cio\' che sta in cache. Al superamento '
+                             'la corsa si ferma in modo pulito (basta rilanciare con un '
+                             'tetto piu\' alto per riprendere).')
+    parser.add_argument('--casuale', action='store_true',
+                        help='Ordina le righe casualmente (seed 42) invece che per row_id. '
+                             'Da usare SEMPRE insieme a --budget: se il tetto ferma la corsa '
+                             'a meta\', quello che si e\' riusciti a giudicare e\' un campione '
+                             'casuale della split test invece del suo primo tratto, quindi le '
+                             'medie restano stime non distorte.')
     parser.add_argument('--ogni', type=int, default=None,
                         help='Ogni quanti giudizi stampare il blocco costo (default: 1500).')
     parser.add_argument('--solo-metriche', action='store_true',
@@ -298,6 +306,8 @@ def main():
         env['GEVAL_BUDGET'] = str(args.budget)
     if args.ogni is not None:
         env['GEVAL_OGNI'] = str(args.ogni)
+    if args.casuale:
+        env['GEVAL_ORDINE'] = 'casuale'
     if args.riprova_errori:
         env['GEVAL_RIPROVA_ERRORI'] = '1'
     if args.solo_metriche:
