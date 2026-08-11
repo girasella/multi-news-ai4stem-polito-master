@@ -440,7 +440,17 @@ MAX_PAROLE_SORGENTE_GEVAL = 3500
 # Prezzi unitari ($ per 1M token) del giudice gpt-5.4-mini, SKU GlobalStandard,
 # verificati sulla Azure Retail Prices API. Usati come fallback quando la
 # chiamata a `prezzi_retail_azure()` non riesce (rete assente, meter rinominati).
+#
+# ATTENZIONE VALUTA: la Retail Prices API, senza `currencyCode`, ritorna prezzi
+# in USD — ma NON e' detto che la sottoscrizione Azure fatturi in USD. Verificato
+# su questo account (fatturazione EUR): il listino EUR non e' una conversione al
+# cambio del momento, e' un listino fisso, ~0,8776x il numero USD su OGNI meter
+# (input/cached/output). La prima corsa completa e' stata tracciata in "$" con
+# il listino USD (PREZZI_GEVAL sotto), ma il consumo REALE di credito, verificato
+# sulla sottoscrizione 24h dopo, e' stato in EUR: usare `valuta='EUR'` in
+# `prezzi_retail_azure()` per un tracciamento accurato da qui in avanti.
 PREZZI_GEVAL = {'input': 0.75, 'cached': 0.075, 'output': 4.50}
+PREZZI_GEVAL_EUR = {'input': 0.6582, 'cached': 0.0658, 'output': 3.9491}
 
 
 def tronca_parole(testo, max_parole=MAX_PAROLE_SORGENTE_GEVAL):
@@ -540,22 +550,32 @@ def costo_da_token(totali, prezzi=None):
     }
 
 
-def prezzi_retail_azure(modello='5.4 mini', regione_meter='Gl', timeout=15):
-    """Prezzi unitari ($/1M token) dalla Azure Retail Prices API (pubblica, senza auth).
+def prezzi_retail_azure(modello='5.4 mini', regione_meter='Gl', valuta='USD', timeout=15):
+    """Prezzi unitari (1M token, nella VALUTA scelta) dalla Azure Retail Prices API
+    (pubblica, senza auth).
+
+    `valuta` va fatta corrispondere alla valuta di fatturazione della propria
+    sottoscrizione, non lasciata al default USD: il listino EUR di Azure NON e'
+    una conversione al cambio del momento del listino USD, e' un listino fisso
+    a se stante (verificato: ~0,8776x il numero USD su ogni meter). Usare la
+    valuta sbagliata non altera il conteggio dei token ma fa leggere un importo
+    che non e' quello davvero addebitato sulla sottoscrizione.
 
     I meter hanno nomi molto abbreviati ('5.4 mini Inp Gl 1M Tokens',
     '5.4 mini cd Inp Gl 1M Tokens', '5.4 mini Opt Gl 1M Tokens') e convivono con
     un tier `pp` (priority) piu' caro e con i meter Batch e fine-tuning, che qui
-    vanno esclusi. In caso di errore ritorna PREZZI_GEVAL: una corsa da ore non
-    puo' dipendere da un listino.
+    vanno esclusi. In caso di errore ritorna il fallback fisso nella valuta
+    richiesta (PREZZI_GEVAL per USD, PREZZI_GEVAL_EUR per EUR): una corsa da ore
+    non puo' dipendere dalla raggiungibilita' di un listino esterno.
     """
     import urllib.parse
     import urllib.request
 
+    fallback = PREZZI_GEVAL_EUR if valuta.upper() == 'EUR' else PREZZI_GEVAL
     filtro = (f"contains(productName,'Azure OpenAI') and "
               f"contains(meterName,'{modello}')")
     url = ('https://prices.azure.com/api/retail/prices?'
-           + urllib.parse.urlencode({'$filter': filtro}))
+           + urllib.parse.urlencode({'$filter': filtro, 'currencyCode': valuta.upper()}))
     attesi = {
         'input':  f'{modello} Inp {regione_meter} 1M Tokens',
         'cached': f'{modello} cd Inp {regione_meter} 1M Tokens',
@@ -570,12 +590,12 @@ def prezzi_retail_azure(modello='5.4 mini', regione_meter='Gl', timeout=15):
             if len(candidati) != 1:
                 raise ValueError(f'meter {nome!r}: {len(candidati)} prezzi distinti')
             prezzi[chiave] = float(candidati.pop())
-        print(f'Prezzi da Azure Retail Prices API ($/1M token): {prezzi}')
+        print(f'Prezzi da Azure Retail Prices API ({valuta.upper()}/1M token): {prezzi}')
         return prezzi
     except Exception as exc:  # rete, meter rinominati, formato cambiato
         print(f'Listino Azure non raggiungibile ({exc!r}); uso i prezzi fissati '
-              f'in PREZZI_GEVAL: {PREZZI_GEVAL}')
-        return dict(PREZZI_GEVAL)
+              f'({valuta.upper()}): {fallback}')
+        return dict(fallback)
 
 
 def errore_permanente(exc):

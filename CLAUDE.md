@@ -251,6 +251,13 @@ respect:
     pre-existing trap that `run_benchmark_test.py::deriva_metriche_test` recomputes textrank /
     lexrank aggregates using `COLONNE_METRICHE` only, so a driver re-run **drops their BERTScore
     columns** — G-Eval is immune because its files are separate.
+  - **Currency is not cosmetic.** The Retail Prices API defaults to USD; a subscription billing
+    in another currency gets a genuinely different, non-FX price list from Azure (verified: the
+    EUR list here is a flat ~0.8776x the USD number on every meter, not a live exchange rate).
+    A run tracked at $36.00 (USD default) corresponded to €31.59 of actual EUR credit consumed —
+    a 12% gap from currency, not from Cost Management's reporting lag. `su.prezzi_retail_azure`
+    and `scripts/run_geval.py` take `valuta`/`--valuta`; it must match the subscription's real
+    billing currency, or the token accounting stays exact but the printed figure won't.
 
 ## Working with the data files
 

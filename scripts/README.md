@@ -115,8 +115,19 @@ and unit prices come from the public, unauthenticated **Azure Retail Prices API*
 During a run the notebook prints a cost block every 1,500 judgments (rate, observed TPM, ETA,
 cached-input share, reasoning-token share, cost split by line item, and the **projected total**).
 Because the counts are also in the cache, `--costo` recomputes the same figures offline — run it
-**from a second terminal while the long run is in progress**. `--budget` is a hard ceiling: the
-run stops cleanly and resumes on the next launch.
+**from a second terminal while the long run is in progress**. `--budget` is a hard ceiling
+(cumulative across sessions, not per-launch: it adds up whatever is already in the cache before
+comparing to the cap) and stops cleanly, resuming on the next launch.
+
+**`--valuta` must match your subscription's billing currency — this is not a cosmetic default.**
+The Azure Retail Prices API defaults to USD, but Azure's per-currency price lists are **not**
+live FX conversions of each other: verified on this account (EUR billing), the EUR list is a
+flat **~0.8776×** the USD number on every meter (input, cached, output alike), not whatever
+today's EUR/USD rate is. Running with the wrong `--valuta` doesn't change the token accounting —
+it's still exact — but the dollar/euro figure printed and compared against `--budget` will not
+match what the subscription is actually charged. First discovered when a run tracked at $36.00
+turned out, 24 h later against the actual EUR credit balance, to correspond to €31.59 — a 12%
+gap explained entirely by this fixed EUR discount, not by Cost Management's reporting lag.
 
 For next-day reconciliation against actual billing:
 

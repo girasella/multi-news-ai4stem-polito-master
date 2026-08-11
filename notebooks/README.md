@@ -423,8 +423,21 @@ ritardo). La fonte di verità è l'oggetto `usage` di ogni risposta, che `su.Con
 e stampa ogni 1.500 giudizi con ritmo, TPM osservato, ETA, quota di input in cache, quota di
 reasoning, costo per voce e **proiezione a fine corsa**. Gli stessi conteggi sono nella cache,
 quindi la stima si rilegge **da un secondo terminale a corsa in corso** con
-`python scripts/run_geval.py --costo`. `--budget` è un tetto duro: al superamento la corsa si
-ferma in modo pulito e basta rilanciare.
+`python scripts/run_geval.py --costo`. `--budget` è un tetto **complessivo** (somma quanto è
+già in cache, non riparte da zero a ogni rilancio): al superamento la corsa si ferma in modo
+pulito e basta rilanciare con un tetto più alto.
+
+⚠️ **La valuta del listino non è cosmetica.** La Azure Retail Prices API, senza parametro,
+ritorna prezzi in **USD** — ma la sottoscrizione potrebbe fatturare in un'altra valuta, e il
+listino di Azure per quella valuta **non è una conversione al cambio del momento**: è un
+listino a sé, verificato qui a **~0,8776× il numero USD su ogni meter** (input, cache, output
+identicamente). La prima corsa completa è stata tracciata come "$36,00" con il listino USD di
+default; il credito Azure realmente consumato, verificato 24 h dopo (tempo sufficiente perché
+il ritardo di Cost Management si esaurisca), corrispondeva a **€31,59** — un divario del 12%
+dovuto **non** al ritardo di rendicontazione ma alla valuta sbagliata nel calcolo. Usare
+`su.prezzi_retail_azure(valuta='EUR')` (o `--valuta EUR` da riga di comando) quando la
+sottoscrizione fattura in euro; il numero di token contati resta comunque esatto in entrambi
+i casi, cambia solo la cifra.
 
 ### Avvertenze
 

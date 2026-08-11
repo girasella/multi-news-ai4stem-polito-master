@@ -13,7 +13,12 @@ Usage (from the repo root or anywhere — paths are resolved relative to this sc
 
     python scripts/run_geval.py --righe 1        # smoke: 13 calls, proves the prompt cache
     python scripts/run_geval.py --pilota 20      # pilot: ~260 judgments, measures cost/judgment
-    python scripts/run_geval.py --budget 120     # full run, hard stop once $120 is spent
+    python scripts/run_geval.py --budget 120                # hard stop once $120 is spent
+    python scripts/run_geval.py --budget 7 --valuta EUR      # hard stop once EUR 7 is spent —
+                                                              # --valuta MUST match the billing
+                                                              # currency of your subscription,
+                                                              # Azure's EUR price list is not a
+                                                              # live FX conversion of the USD one
     python scripts/run_geval.py --righe 500 --thread 12
     python scripts/run_geval.py --solo-metriche  # rewrite CSV/JSON from the cache, ZERO calls
     python scripts/run_geval.py --costo          # cost report from the cache, ZERO calls
@@ -168,18 +173,24 @@ def preflight(scope, deployment, con_api=True):
 # Report di costo (offline, nessuna chiamata API)
 # ---------------------------------------------------------------------------
 
-def rapporto_costo(scope, prezzi=None):
+def rapporto_costo(scope, prezzi=None, valuta='USD'):
     """Spesa a oggi e proiezione, ricalcolate dai soli conteggi salvati in cache.
 
     Non tocca l'API: si puo' lanciare da un secondo terminale mentre la corsa
     lunga e' in esecuzione. Azure non espone il costo in tempo reale (Cost
-    Management ha 8-24 h di ritardo), quindi questa e' la fonte di verita'.
+    Management ha 8-24 h di ritardo), quindi questa e' la fonte di verita' PER
+    I TOKEN — ma la CIFRA dipende dal listino usato. `valuta` va fatta
+    corrispondere alla valuta di fatturazione reale: il listino EUR di Azure
+    non e' una conversione al cambio, e' un listino a se stante (verificato,
+    ~0,8776x il numero USD su ogni meter). Con la valuta sbagliata i token
+    contati restano esatti ma l'importo in cifra no.
     """
     path = percorso_cache(scope)
     if not path.exists():
         log(f'Nessuna cache in {path}: niente da riportare.')
         return
-    prezzi = prezzi or su.PREZZI_GEVAL
+    simbolo = {'EUR': '€', 'USD': '$'}.get(valuta.upper(), valuta.upper() + ' ')
+    prezzi = prezzi or su.prezzi_retail_azure(valuta=valuta)
     cache = su.CacheGiudizi(path)
     totali = cache.totali_token()
     errori = cache.errori()
@@ -199,14 +210,14 @@ def rapporto_costo(scope, prezzi=None):
         f'({totali["cached_tokens"] / max(totali["prompt_tokens"], 1):.0%} in cache)')
     log(f'  token output     : {totali["completion_tokens"]:,} '
         f'({totali["reasoning_tokens"] / max(totali["completion_tokens"], 1):.0%} reasoning)')
-    log(f'  SPESA A OGGI     : ${totale:.2f}  '
-        f'(input ${costi["input"]:.2f} + cached ${costi["cached"]:.2f} + '
-        f'output ${costi["output"]:.2f})')
-    log(f'  costo/giudizio   : ${totale / n_pagati:.5f}')
+    log(f'  SPESA A OGGI     : {simbolo}{totale:.2f}  '
+        f'(input {simbolo}{costi["input"]:.2f} + cached {simbolo}{costi["cached"]:.2f} + '
+        f'output {simbolo}{costi["output"]:.2f})')
+    log(f'  costo/giudizio   : {simbolo}{totale / n_pagati:.5f}')
     if rimanenti:
         log(f'  giudizi rimasti  : ~{rimanenti:,}')
-        log(f'  PROIEZIONE finale: ~${totale + totale / n_pagati * rimanenti:.2f}')
-    log(f'  prezzi usati ($/1M token): {prezzi}')
+        log(f'  PROIEZIONE finale: ~{simbolo}{totale + totale / n_pagati * rimanenti:.2f}')
+    log(f'  prezzi usati ({valuta.upper()}/1M token): {prezzi}')
 
 
 # ---------------------------------------------------------------------------
@@ -256,10 +267,16 @@ def main():
                         help='Thread concorrenti (default: 8). Il collo di bottiglia vero '
                              'e\' la quota TPM del deployment, non questo numero.')
     parser.add_argument('--budget', type=float, default=None,
-                        help='Tetto di spesa COMPLESSIVO in $, non per sessione: include '
-                             'quanto e\' gia\' costato cio\' che sta in cache. Al superamento '
-                             'la corsa si ferma in modo pulito (basta rilanciare con un '
-                             'tetto piu\' alto per riprendere).')
+                        help='Tetto di spesa COMPLESSIVO (nella valuta di --valuta), non per '
+                             'sessione: include quanto e\' gia\' costato cio\' che sta in '
+                             'cache. Al superamento la corsa si ferma in modo pulito (basta '
+                             'rilanciare con un tetto piu\' alto per riprendere).')
+    parser.add_argument('--valuta', default=os.environ.get('GEVAL_VALUTA', 'USD'),
+                        help='Valuta di --budget e dei report di costo: deve corrispondere '
+                             'alla valuta di FATTURAZIONE della sottoscrizione, non e\' un '
+                             'default innocuo — il listino EUR di Azure non e\' una '
+                             'conversione al cambio del listino USD (default: USD, o '
+                             'GEVAL_VALUTA se impostata).')
     parser.add_argument('--casuale', action='store_true',
                         help='Ordina le righe casualmente (seed 42) invece che per row_id. '
                              'Da usare SEMPRE insieme a --budget: se il tetto ferma la corsa '
@@ -280,14 +297,14 @@ def main():
     args = parser.parse_args()
 
     if args.costo:
-        rapporto_costo(args.scope)
+        rapporto_costo(args.scope, valuta=args.valuta)
         return
 
     deployment = os.environ.get('AZURE_GEVAL_DEPLOYMENT', 'gpt-5.4-mini')
     con_api = not args.solo_metriche
 
     log(f'--- Avvio G-Eval (scope={args.scope}, giudice={deployment}, '
-        f'pilota={args.pilota}, righe={args.righe}, budget={args.budget}) ---')
+        f'pilota={args.pilota}, righe={args.righe}, budget={args.budget} {args.valuta}) ---')
     if not preflight(args.scope, deployment, con_api=con_api):
         log('Interruzione: risolvere i problemi sopra prima di rilanciare.')
         sys.exit(1)
@@ -295,7 +312,8 @@ def main():
     prima = conta_cache(args.scope)
     log(f'Giudizi gia\' in cache: {prima:,}')
 
-    env = {'GEVAL_SCOPE': args.scope, 'AZURE_GEVAL_DEPLOYMENT': deployment}
+    env = {'GEVAL_SCOPE': args.scope, 'AZURE_GEVAL_DEPLOYMENT': deployment,
+          'GEVAL_VALUTA': args.valuta}
     if args.righe is not None:
         env['GEVAL_RIGHE'] = str(args.righe)
     if args.pilota is not None:
@@ -317,7 +335,7 @@ def main():
 
     dopo = conta_cache(args.scope)
     log(f'Giudizi in cache: {prima:,} -> {dopo:,} (+{dopo - prima:,})')
-    rapporto_costo(args.scope)
+    rapporto_costo(args.scope, valuta=args.valuta)
 
     if ok and not args.no_05 and args.pilota is None:
         log('--- Riesecuzione notebook 05 (viste di confronto aggiornate) ---')
