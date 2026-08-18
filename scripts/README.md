@@ -59,6 +59,92 @@ Disable Windows sleep (`powercfg /change standby-timeout-ac 0`), make sure `olla
 running with the required tags (`ollama list`), and expect the machine to be busy for several
 days — the script does not throttle GPU/CPU usage.
 
+## `run_geval.py`
+
+Unattended driver for the **G-Eval (LLM-as-a-Judge)** backfill — notebook 14. Judges every
+generated summary on the test split with `gpt-5.4-mini` on Azure, scoring coherence,
+consistency, fluency and relevance on a 1–5 scale. **72,681 judgments**, hours of paid API
+calls; see the *G-Eval* section of `notebooks/README.md` for the methodology.
+
+### Usage
+
+```
+python scripts/run_geval.py --righe 1        # smoke: 13 calls, proves the prompt cache works
+python scripts/run_geval.py --pilota 20      # pilot: ~260 judgments, measures cost/judgment
+python scripts/run_geval.py --budget 120     # full run, hard stop once $120 has been spent
+python scripts/run_geval.py --righe 500 --thread 12
+python scripts/run_geval.py --solo-metriche  # rewrite CSV/JSON from the cache, ZERO API calls
+python scripts/run_geval.py --costo          # cost report from the cache, ZERO API calls
+python scripts/run_geval.py --riprova-errori # drop cached failures so they get retried
+python scripts/run_geval.py --no-05          # skip re-running notebook 05 at the end
+```
+
+Run them in that order: `--righe 1`, then `--pilota 20`, then the full run. The pilot is what
+turns the cost estimate into a measured number.
+
+### What it does
+
+Executes `notebooks/14_geval.ipynb` in place via `nbconvert`, passing the `GEVAL_*` environment
+variables (`GEVAL_SCOPE`, `GEVAL_RIGHE`, `GEVAL_PILOTA`, `GEVAL_THREAD`, `GEVAL_BUDGET`,
+`GEVAL_OGNI`, `GEVAL_RIPROVA_ERRORI`, `GEVAL_SOLO_METRICHE`) — the notebook stays the single
+source of truth and the documentary artifact. Preflight fails fast on: missing
+`AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY`, a **1-token ping on the judge deployment** (so a
+wrong deployment name costs seconds, not hours), a missing `complete.tab`, missing summary TSVs
+for any of the 13 methods, and an unavailable `nbconvert`. Notebook 05 is re-executed at the end
+unless `--pilota` or `--no-05`.
+
+`run_benchmark_test.py` is untouched — G-Eval is not on the generation path.
+
+### Output
+
+- `results/metrics/geval_cache_test.jsonl` — one JSON line per `(method, row_id)` with the four
+  scores (or the error) **and the token counts**. This is the paid artifact: it is committed, and
+  the metric files are re-derived from it for free.
+- `results/metrics/{method}_test_geval_{per_example.csv,aggregate.json}` for the 13 methods —
+  deliberately **separate** from the standard metric files (see `notebooks/README.md` for why
+  merging them would break `valuta_e_salva`).
+- `run_geval.log` in the repo root (gitignored) — append-only, timestamped.
+
+### Cost monitoring
+
+**Azure has no real-time cost API.** Cost Management lags 8–24 h, so it is useless mid-run. The
+source of truth is the `usage` object on every response: token counts are exact and immediate,
+and unit prices come from the public, unauthenticated **Azure Retail Prices API**
+(`su.prezzi_retail_azure()`, with `su.PREZZI_GEVAL` pinned as fallback).
+
+During a run the notebook prints a cost block every 1,500 judgments (rate, observed TPM, ETA,
+cached-input share, reasoning-token share, cost split by line item, and the **projected total**).
+Because the counts are also in the cache, `--costo` recomputes the same figures offline — run it
+**from a second terminal while the long run is in progress**. `--budget` is a hard ceiling
+(cumulative across sessions, not per-launch: it adds up whatever is already in the cache before
+comparing to the cap) and stops cleanly, resuming on the next launch.
+
+**`--valuta` must match your subscription's billing currency — this is not a cosmetic default.**
+The Azure Retail Prices API defaults to USD, but Azure's per-currency price lists are **not**
+live FX conversions of each other: verified on this account (EUR billing), the EUR list is a
+flat **~0.8776×** the USD number on every meter (input, cached, output alike), not whatever
+today's EUR/USD rate is. Running with the wrong `--valuta` doesn't change the token accounting —
+it's still exact — but the dollar/euro figure printed and compared against `--budget` will not
+match what the subscription is actually charged. First discovered when a run tracked at $36.00
+turned out, 24 h later against the actual EUR credit balance, to correspond to €31.59 — a 12%
+gap explained entirely by this fixed EUR discount, not by Cost Management's reporting lag.
+
+For next-day reconciliation against actual billing:
+
+```
+az costmanagement query --type ActualCost --timeframe MonthToDate \
+  --scope "/subscriptions/<sub-id>/resourceGroups/rg-antonio.girasella-0716"
+```
+
+Note this needs `az login --tenant <tenant-id>` first: the CLI may be signed in to a different
+tenant than the subscription owning the AI Foundry resource.
+
+### Before a long run
+
+Disable Windows sleep (`powercfg /change standby-timeout-ac 0`), check the deployment's **TPM
+quota** in the Azure portal (it, not `--thread`, is the real bottleneck), and remember this
+spends real money — watch the printed cost counter and set `--budget`.
+
 ## `import_llm_results.py`
 
 One-off importer of Federica's local-LLM benchmark results (LM Studio runs, archived in

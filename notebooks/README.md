@@ -55,6 +55,7 @@ automaticamente e la usano se disponibile.
 | 11 | [11_centroid_mmr.ipynb](11_centroid_mmr.ipynb) | Centroid-based (MEAD) + MMR (estrattivo nativo MDS, implementazione *custom* scikit-learn: centroide + selezione greedy MMR con parametro `λ`). Genera **due varianti** — `centroid_mmr` (vettorizzazione TF-IDF) e `centroid_mmr_bert` (embeddings BERT `all-MiniLM-L6-v2`) — che differiscono solo per il vettorizzatore. Ambiti `sample`, `test` e `full`. |
 | 12 | [12_azure_gpt.ipynb](12_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
 | 13 | [13_bertscore.ipynb](13_bertscore.ipynb) | BERTScore (`roberta-large`, backfill separato). Aggiunge `bertscore_f1/p/r` alle metriche `test` già calcolate dai 13 metodi, senza rieseguire i notebook 01–04/06–12. |
+| 14 | [14_geval.ipynb](14_geval.ipynb) | G-Eval (LLM-as-a-Judge, giudice GPT-5.4-mini su Azure; backfill separato). Assegna a ogni riassunto della split `test` quattro punteggi 1–5 — coherence, consistency, fluency, relevance — scritti in **file dedicati** (`*_geval_*`), non uniti alle metriche standard. Guidato da [`scripts/run_geval.py`](../scripts/run_geval.py). |
 
 I notebook dei metodi (01–04 e 06–12) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
@@ -257,6 +258,200 @@ derivati filtrando la corsa `full` — numericamente equivalente, ma più sempli
 unico ciclo uniforme sui 13 metodi. La configurazione storica di ciascun metodo (`config` nel
 JSON aggregato) viene preservata, non sovrascritta dal backfill.
 
+## G-Eval — LLM-as-a-Judge (notebook 14, backfill)
+
+Aggiunge una metrica **LLM-as-a-Judge** (G-Eval, Liu et al., 2023): un modello giudice assegna
+a ogni riassunto quattro punteggi in scala **1–5** — *coherence*, *consistency* (fedeltà
+fattuale), *fluency*, *relevance*. È l'unica metrica del benchmark che **non passa dal
+riferimento umano**: ROUGE/BLEU/METEOR misurano sovrapposizione lessicale con il `summary` di
+riferimento e il BERTScore similarità semantica con lo stesso, ma nessuna delle due dice se un
+riassunto è coerente o se ha inventato dei fatti.
+
+### Perché non `psr.g_eval()`
+
+`pyAutoSummarizer` espone già un G-Eval, ma il suo codice (v1.2.0) lo rende inutilizzabile qui
+per **quattro** motivi: (1) costruisce `openai.OpenAI(api_key=...)` **senza `base_url`**, quindi
+parla solo con OpenAI e non con Azure; (2) ha `max_tokens=5` e `temperature=0.0` **cablati**,
+entrambi fatali per un modello *reasoning*; (3) legge la sorgente da `self.full_txt`, cioè
+servirebbe una `psr.summarization(sorgente)` nuova e pesante per **ogni** esempio — il pattern a
+istanza fittizia condivisa di `su.crea_valutatore()` non regge; (4) fa **una chiamata API per
+dimensione**, quadruplicando il costo.
+
+La funzione è quindi reimplementata in `summ_utils.py`, ma le **rubriche restano verbatim**:
+`su.RUBRICHE_GEVAL` è derivato *meccanicamente* da `su.PROMPT_GEVAL_ORIGINALI` (copia letterale
+dei template della libreria) tagliando la coda `"Reply with a single digit only."`, qui
+sostituita dalla richiesta di un unico oggetto JSON. La metrica resta così difendibile come *il
+G-Eval di pyAutoSummarizer, reimplementato per un endpoint non-OpenAI*.
+
+### Scelta del giudice: `gpt-5.4-mini`
+
+Deployment **GlobalStandard** dedicato su Azure AI Foundry (swedencentral), distinto da quello
+del notebook 12. Due proprietà lo motivano:
+
+1. **Indipendente da tutti e 13 i metodi valutati**: nessun self-judging. Usare `gpt-5-mini` (il
+   modello del notebook 12, presente nel benchmark come metodo `gpt5mini`) significherebbe
+   fargli giudicare i propri output, con il noto bias di auto-preferenza.
+2. **Più recente di ogni generatore del benchmark** (`gpt-5-mini` è 2025-08-07, `gpt-5.4-mini`
+   è 2026-03-17). Conta soprattutto per **consistency**: individuare un'allucinazione sottile
+   dentro un cluster multi-documento è un compito di ragionamento, e la correlazione
+   giudice–umano scala con la capacità del giudice proprio su quella dimensione.
+
+Verificato dal vivo sulla sottoscrizione: DeepSeek/Grok/Llama/Mistral **non sono deployabili**
+su questo account AIServices (stessa ragione per cui i notebook Claude Haiku e DeepSeek furono
+abbandonati), e **`gpt-5.1-mini` non esiste** — la linea 5.1 è `gpt-5.1` / `-chat` / `-codex*`.
+
+Essendo un modello *reasoning* valgono le regole del notebook 12: **niente `temperature`**,
+`max_completion_tokens=1500` (non 200: i token di ragionamento consumano il budget **prima**
+dell'output visibile — stesso modo di fallire di gemma e gpt-5-mini) e
+`reasoning_effort='minimal'`. Le corse **non sono riproducibili bit-a-bit**: l'artefatto di
+riproducibilità è la cache JSONL committata.
+
+### Protocollo
+
+- **una chiamata per (metodo, riga)**, con tutte e quattro le dimensioni in un unico JSON
+  (`response_format` con `json_schema` **strict**: il formato è garantito lato server; in strict
+  non sono ammessi `minimum`/`maximum`, quindi la scala 1–5 è espressa con `enum`);
+- sorgente troncata a **3.500 parole** (`su.MAX_PAROLE_SORGENTE_GEVAL`): lascia **intero il
+  91,5%** dei cluster della split test (mediana 1.288 parole, p90 3.244, p95 4.499) mettendo
+  comunque un tetto ai casi estremi, che arrivano a 35.362 parole. È molto più di quanto vedano
+  BART/PEGASUS (1.024 token). Il costo marginale rispetto a un tetto di 2.100 parole (copertura
+  76%) è di circa **$5 sull'intera corsa**, perché quasi tutte le parole in più finiscono nel
+  prefisso condiviso, pagato a tariffa *cached*;
+- ambito: split `test` intera, **72.681 giudizi** (meno di 13 × 5.610 perché la copertura è
+  disomogenea: firstk_psr e le varianti centroid hanno 5.588 righe, gpt5mini 5.471).
+
+### Concorrenza e prompt cache
+
+L'ordine dei messaggi è un **contratto, non uno stile**: il `system` (rubriche + formato JSON) è
+identico su tutte le chiamate e il `user` comincia con la **sorgente troncata** — la stessa per
+tutti e 13 i metodi di una riga — mettendo in fondo il **riassunto**, unica parte che cambia.
+
+Di conseguenza `su.giudica_geval_concorrente` prende la **riga** come unità di lavoro ed esegue
+i suoi 13 giudizi **in sequenza dentro lo stesso thread**: il primo popola la prompt cache di
+Azure e gli altri dodici la riusano. Il parallelismo è **tra** righe diverse. Parallelizzare per
+singolo giudizio farebbe partire insieme le 13 chiamate della stessa riga, mancando la cache
+tutte quante.
+
+### ⚠️ La concorrenza degrada la cache (misurato)
+
+Il numero di thread **non** è un parametro innocuo di velocità: è un fattore di costo. Misurato
+confrontando le **sole righe cacheabili** delle due corse (il confronto sui totali grezzi
+sarebbe fuorviante, perché i due campioni hanno lunghezze di sorgente molto diverse):
+
+| thread | chiamate con hit, nelle righe cacheabili | hit rate complessivo | proiezione corsa completa |
+|---|---|---|---|
+| 8 | 45,9% | 36,1% | **~$107** (~3 h) |
+| 2 | **64,8%** | **51,1%** | **~$87** (~12 h) |
+
+La causa è il routing: un deployment **GlobalStandard** manda ogni richiesta a una qualunque
+istanza di backend e la prompt cache è **per istanza**. Con più righe in volo, le chiamate 2–13
+di una riga atterrano più spesso su istanze che non hanno mai visto quel prefisso.
+
+Quindi `--thread` basso costa meno e impiega di più: **~$19 di risparmio per ~9 ore in più**. Il
+collo di bottiglia non è la quota TPM del deployment (nessun 429 osservato) ma questo
+compromesso.
+
+### Il tetto strutturale: la soglia dei 1.024 token
+
+Azure non attiva la prompt cache sotto i **1.024 token di prefisso**, e i token in cache sono
+quantizzati a blocchi di 256. Sulla split test **il 14,8% delle righe (830 su 5.610) ha un
+prefisso troppo corto e non entra mai in cache**, indipendentemente da thread e troncamento: le
+loro 13 chiamate si pagano tutte a tariffa piena.
+
+Sommato al fatto che, anche nelle righe cacheabili, si arriva a ~65% di chiamate con hit e non
+al massimo teorico di 12/13 (92%), il tetto realistico complessivo è intorno al **51%** — non al
+75% che una singola riga isolata può far sembrare raggiungibile.
+
+### Ripresa e gestione degli errori
+
+Ogni giudizio è scritto e flushato subito su `results/metrics/geval_cache_{scope}.jsonl` (una
+riga JSON per coppia `(metodo, row_id)`, con anche i conteggi di token) e un rilancio salta le
+coppie già presenti: Ctrl-C non perde nulla di pagato. Gli errori **permanenti** (content filter
+di Azure, 400/401/403) vengono scritti in cache con il campo `errore`, così una riesecuzione non
+li ripaga; quelli **transitori** (429, 5xx, timeout) non vengono scritti affatto e passano per
+`su.chiama_con_backoff` (backoff esponenziale + jitter, rispetta `Retry-After`).
+
+Poiché la sorgente troncata è identica per tutti i metodi di una riga, un `content_filter` sul
+primo giudizio viene **propagato** agli altri dodici senza pagarli. `--riprova-errori` li rimette
+in gioco (utile solo dopo aver attaccato al deployment un filtro contenuti *high-only*).
+
+### Perché file separati dalle metriche standard
+
+I punteggi finiscono in `{metodo}_{scope}_geval_per_example.csv` e `..._geval_aggregate.json`,
+**mai** uniti al CSV per-esempio standard. Il motivo è in `su.valuta_e_salva`, la cui media
+interna somma **ogni** colonna su **ogni** riga: il giudice lascia scoperte alcune righe e la
+media esploderebbe con un `KeyError`; e restringere le righe valutate riscriverebbe i 13 CSV già
+committati, cambiando medie e `n_esempi` di ROUGE/BLEU/METEOR/BERTScore. Il notebook 05 aggancia
+le colonne con un merge **LEFT** (che non cambia il numero di righe) e riporta la copertura
+effettiva nella colonna `n_geval`.
+
+Effetto collaterale utile: G-Eval è immune al fatto che
+`scripts/run_benchmark_test.py::deriva_metriche_test` ricalcoli le medie di textrank/lexrank
+usando solo `su.COLONNE_METRICHE` — un rilancio del driver **fa cadere le colonne BERTScore**
+dagli aggregati di quei due metodi (problema preesistente, non introdotto qui; il notebook 13
+lo aggira ricalcolandoli direttamente).
+
+### Configurazione di Azure (una tantum, nel portale)
+
+Creare un deployment **GlobalStandard** di `gpt-5.4-mini` (versione 2026-03-17) sulla risorsa
+AI Foundry e annotarne la quota TPM. Le credenziali arrivano **solo** da variabili d'ambiente,
+le stesse del notebook 12 (`AZURE_OPENAI_ENDPOINT`, la radice della risorsa senza path, e
+`AZURE_OPENAI_API_KEY`); il nome del deployment si sovrascrive con `AZURE_GEVAL_DEPLOYMENT` se
+diverso da `gpt-5.4-mini`. `scripts/run_geval.py` verifica il deployment con un ping da 1 token
+**prima** di iniziare, così un nome sbagliato costa secondi e non ore.
+
+### Costi e monitoraggio
+
+Prezzi verificati sulla **Azure Retail Prices API** (GlobalStandard, $/1M token: input **0,75**,
+input in cache **0,075**, output **4,50**); il notebook li rilegge a ogni avvio con
+`su.prezzi_retail_azure()`, con `su.PREZZI_GEVAL` come fallback.
+
+**Misurato sul pilota (269 giudizi):** con `reasoning_effort='minimal'` il giudice emette
+**zero token di reasoning** — l'output è di ~30 token per giudizio, cioè **~$10 sull'intera
+corsa**. Il termine di output, che a priori sembrava dominante e imprevedibile, di fatto non
+conta.
+
+La corsa è quindi **interamente vincolata dall'input**, e la variabile che sposta il totale è
+l'**hit rate della prompt cache** (vedi la sezione sulla concorrenza): **~$87 a 2 thread, ~$107
+a 8**. Non è il modello, non è il prompt di sistema (che da solo costa $2,23 in tutto) e quasi
+non è nemmeno il troncamento: passare da 2.100 a 3.500 parole — cioè dal 76% al 91,5% di
+sorgenti intere — costa solo **~$7** in più, perché quasi tutte le parole aggiunte finiscono nel
+prefisso condiviso.
+
+**Non esiste un'API Azure che riporti il costo in tempo reale** (Cost Management ha 8–24 h di
+ritardo). La fonte di verità è l'oggetto `usage` di ogni risposta, che `su.ContatoreCosti` somma
+e stampa ogni 1.500 giudizi con ritmo, TPM osservato, ETA, quota di input in cache, quota di
+reasoning, costo per voce e **proiezione a fine corsa**. Gli stessi conteggi sono nella cache,
+quindi la stima si rilegge **da un secondo terminale a corsa in corso** con
+`python scripts/run_geval.py --costo`. `--budget` è un tetto **complessivo** (somma quanto è
+già in cache, non riparte da zero a ogni rilancio): al superamento la corsa si ferma in modo
+pulito e basta rilanciare con un tetto più alto.
+
+⚠️ **La valuta del listino non è cosmetica.** La Azure Retail Prices API, senza parametro,
+ritorna prezzi in **USD** — ma la sottoscrizione potrebbe fatturare in un'altra valuta, e il
+listino di Azure per quella valuta **non è una conversione al cambio del momento**: è un
+listino a sé, verificato qui a **~0,8776× il numero USD su ogni meter** (input, cache, output
+identicamente). La prima corsa completa è stata tracciata come "$36,00" con il listino USD di
+default; il credito Azure realmente consumato, verificato 24 h dopo (tempo sufficiente perché
+il ritardo di Cost Management si esaurisca), corrispondeva a **€31,59** — un divario del 12%
+dovuto **non** al ritardo di rendicontazione ma alla valuta sbagliata nel calcolo. Usare
+`su.prezzi_retail_azure(valuta='EUR')` (o `--valuta EUR` da riga di comando) quando la
+sottoscrizione fattura in euro; il numero di token contati resta comunque esatto in entrambi
+i casi, cambia solo la cifra.
+
+### Avvertenze
+
+- **Copertura parziale**: alcune righe vengono respinte dal content filter di Azure (le stesse
+  che mancano a `gpt5mini`) o producono risposte non conformi. Le medie vanno lette insieme a
+  `n_geval`, che può essere minore di `n_esempi`.
+- **Bias del giudice**: un LLM giudice tende a premiare i testi **più lunghi** e quelli generati
+  da altri LLM. Il confronto fra metodi estrattivi (che qui producono 216–450 parole) e
+  astrattivi (55–210) su questa metrica va preso con cautela.
+- **Non riproducibile bit-a-bit** (modello reasoning, `temperature` non impostabile): riprodurre
+  i numeri significa ripartire dalla cache committata, non rilanciare le chiamate.
+- Cambiare deployment, rubriche o troncamento **dopo** aver popolato la cache mescolerebbe corse
+  diverse: in quel caso cancellare prima `geval_cache_{scope}.jsonl`.
+
 ## Parametri principali (cella di configurazione di ogni notebook)
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
@@ -285,6 +480,10 @@ results/
   metrics/{metodo}_{scope}_per_example.csv   # ROUGE-1/2/L (F1,P,R), BLEU, METEOR per esempio
                                               # (+ BERTScore F1/P/R sulla split test, dopo 13_bertscore.ipynb)
   metrics/{metodo}_{scope}_aggregate.json    # medie complessive e per split + configurazione usata
+  metrics/{metodo}_{scope}_geval_per_example.csv  # G-Eval 1-5 per esempio (14_geval.ipynb), file
+  metrics/{metodo}_{scope}_geval_aggregate.json   # SEPARATI: vedi la sezione G-Eval per il perché
+  metrics/geval_cache_{scope}.jsonl          # cache dei giudizi (una riga per metodo+row_id, con i
+                                              # conteggi di token): è l'artefatto PAGATO, va committato
 ```
 
 I riassunti sono la parte costosa: vengono scritti **incrementalmente** (una riga per esempio,
@@ -319,6 +518,8 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | GPT-5-mini (12), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
 | BERTScore (13), tutti e 13 i metodi su `test` (5.610 righe ciascuno) | sconsigliata (`roberta-large`, migliaia di forward pass) | ~1 h totale (misurata: caricamento ~6 s/metodo + ~21 righe/s di scoring — vedi sezione dedicata) |
+| G-Eval (14), pilota 20 righe (260 giudizi) | ~1 min (misurato, 8 thread) | — |
+| G-Eval (14), tutti e 13 i metodi su `test` (72.681 giudizi) | ~3 h a 8 thread (~6,7 giudizi/s misurati) ma **~$111**; ~12 h a 2 thread per **~$56** — il compromesso è costo/tempo, non CPU. Riprendibile in qualunque momento | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 13, ~1,4 GB).
@@ -353,6 +554,13 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   le liste di frasi possono disallinearsi). Il ciclo registra l'errore e prosegue: la riga manca
   dal file dei riassunti di quel metodo. Il notebook 05 confronta i metodi sull'**intersezione**
   dei `row_id` valutati da tutti, quindi le medie restano eque.
+- **G-Eval, bias del giudice e copertura**: il G-Eval del notebook 14 è l'unica metrica non
+  ancorata al riferimento umano, ma un LLM giudice ha bias noti — premia i testi **più lunghi** e
+  quelli generati da altri LLM — quindi il confronto estrattivi vs astrattivi su questa metrica
+  va preso con cautela. La copertura è inoltre **parziale** (content filter di Azure, risposte
+  non conformi): le medie vanno lette insieme alla colonna `n_geval` del notebook 05, che può
+  essere minore di `n_esempi`. Il giudice è comunque **indipendente da tutti e 13 i metodi**
+  valutati, quindi non c'è self-judging.
 - **METEOR non affidabile per output degeneri**: la formula `meteor()` di pyAutoSummarizer
   (`meteor = fmean * (1 - penalty**3)`) non è limitata a [0,1]. Nella corsa `test`, PEGASUS
   produce due riassunti patologici (un loop di ripetizione del beam search e un probabile
