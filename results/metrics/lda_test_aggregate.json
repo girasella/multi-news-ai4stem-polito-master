@@ -1,0 +1,46 @@
+{
+  "metodo": "lda",
+  "scope": "test",
+  "config": {
+    "n_topics": 5,
+    "n_sentences": 11,
+    "segmentazione": "psr.summarization",
+    "vettorizzazione": "sklearn CountVectorizer (stop_words=english)",
+    "modello": "sklearn LatentDirichletAllocation",
+    "selezione": "allocazione proporzionale ai pesi dei topic",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0"
+  },
+  "timestamp": "2026-08-24T19:22:34+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.3509846233862047,
+    "rouge1_p": 0.2798595432870667,
+    "rouge1_r": 0.4985803958745332,
+    "rouge2_f1": 0.12977363029462377,
+    "rouge2_p": 0.10054190362027153,
+    "rouge2_r": 0.19773255842034027,
+    "rougeL_f1": 0.17130052382986646,
+    "rougeL_p": 0.1292862591041241,
+    "rougeL_r": 0.2770117992950252,
+    "bleu": 0.08064305692905456,
+    "meteor": 0.5111659057612757,
+    "parole_generate": 477.2406943450251
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.3509846233862047,
+      "rouge1_p": 0.2798595432870667,
+      "rouge1_r": 0.4985803958745332,
+      "rouge2_f1": 0.12977363029462377,
+      "rouge2_p": 0.10054190362027153,
+      "rouge2_r": 0.19773255842034027,
+      "rougeL_f1": 0.17130052382986646,
+      "rougeL_p": 0.1292862591041241,
+      "rougeL_r": 0.2770117992950252,
+      "bleu": 0.08064305692905456,
+      "meteor": 0.5111659057612757,
+      "parole_generate": 477.2406943450251
+    }
+  }
+}

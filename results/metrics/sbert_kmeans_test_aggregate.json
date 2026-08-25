@@ -1,0 +1,47 @@
+{
+  "metodo": "sbert_kmeans",
+  "scope": "test",
+  "config": {
+    "n_cluster": 11,
+    "n_sentences": 11,
+    "segmentazione": "psr.summarization",
+    "encoder": "sentence-transformers all-MiniLM-L6-v2 (embedding L2-normalizzati)",
+    "clustering": "sklearn KMeans (euclidea)",
+    "selezione": "medoide di ogni cluster (frase piu' vicina al centroide)",
+    "device": "cpu",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0"
+  },
+  "timestamp": "2026-08-25T17:44:42+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.35922459954465974,
+    "rouge1_p": 0.3372833531108235,
+    "rouge1_r": 0.4038043545353214,
+    "rouge2_f1": 0.12534852377535788,
+    "rouge2_p": 0.11721117696387323,
+    "rouge2_r": 0.1443975238643826,
+    "rougeL_f1": 0.18299637362820562,
+    "rougeL_p": 0.17099753132197115,
+    "rougeL_r": 0.21262302274784534,
+    "bleu": 0.09527534574495115,
+    "meteor": 0.4427445816921692,
+    "parole_generate": 263.5608446671439
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.35922459954465974,
+      "rouge1_p": 0.3372833531108235,
+      "rouge1_r": 0.4038043545353214,
+      "rouge2_f1": 0.12534852377535788,
+      "rouge2_p": 0.11721117696387323,
+      "rouge2_r": 0.1443975238643826,
+      "rougeL_f1": 0.18299637362820562,
+      "rougeL_p": 0.17099753132197115,
+      "rougeL_r": 0.21262302274784534,
+      "bleu": 0.09527534574495115,
+      "meteor": 0.4427445816921692,
+      "parole_generate": 263.5608446671439
+    }
+  }
+}
