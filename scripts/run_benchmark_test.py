@@ -1,7 +1,8 @@
 """Unattended driver for the SCOPE='test' benchmark stint.
 
-Executes notebooks 10 (First-k), 11 (Centroid+MMR), 03 (BART), 04 (PEGASUS), 07 (Qwen),
-09 (Mistral), 08 (Gemma) and 06 (PRIMERA) — in that fastest-to-slowest order — with
+Executes notebooks 10 (First-k), 17 (LDA), 15 (LSA), 16 (SBERT clustering),
+11 (Centroid+MMR), 03 (BART), 04 (PEGASUS), 07 (Qwen), 09 (Mistral), 08 (Gemma) and
+06 (PRIMERA) — in that fastest-to-slowest order — with
 SUMM_SCOPE=test, so each generates summaries and metrics for the full clean test split
 (5,610 rows) without any manual babysitting between notebooks. TextRank/LexRank test-split
 metrics are derived by filtering their already-committed SCOPE='full' per-example CSVs (no
@@ -52,6 +53,9 @@ import summ_utils as su  # noqa: E402  (needs NOTEBOOKS_DIR on sys.path first)
 # the three local models (see notebooks/README.md for per-method duration estimates).
 NOTEBOOKS = [
     '10_firstk.ipynb',
+    '17_lda.ipynb',
+    '15_lsa.ipynb',
+    '16_sbert_clustering.ipynb',
     '11_centroid_mmr.ipynb',
     '03_bart.ipynb',
     '04_pegasus.ipynb',
@@ -66,10 +70,15 @@ NOTEBOOKS = [
 METODI_PER_NOTEBOOK = {
     '10_firstk.ipynb': ['firstk_psr', 'firstk_nltk'],
     '11_centroid_mmr.ipynb': ['centroid_mmr', 'centroid_mmr_bert'],
+    '15_lsa.ipynb': ['lsa', 'lsa_steinberger'],
+    '16_sbert_clustering.ipynb': ['sbert_kmeans', 'sbert_agglom'],
 }
 
 # Notebooks that need ollama serving / a CUDA GPU: preflight checks only apply when at
 # least one selected notebook requires them (11's BERT variant encodes on the GPU).
+# 16 also encodes with MiniLM but stays out of NOTEBOOKS_GPU on purpose: it detects the
+# device via su.rileva_device() and the committed test-split run was done on CPU, so
+# requiring CUDA would block a run that demonstrably works without it.
 NOTEBOOKS_OLLAMA = {'07_qwen.ipynb', '08_gemma.ipynb', '09_mistral.ipynb'}
 NOTEBOOKS_GPU = {'03_bart.ipynb', '04_pegasus.ipynb', '06_primera.ipynb',
                  '11_centroid_mmr.ipynb'}

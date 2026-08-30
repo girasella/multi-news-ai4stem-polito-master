@@ -1,0 +1,46 @@
+{
+  "metodo": "lsa",
+  "scope": "test",
+  "config": {
+    "k_latente": 11,
+    "n_sentences": 11,
+    "segmentazione": "psr.summarization",
+    "vettorizzazione": "sklearn TfidfVectorizer (stop_words=english)",
+    "modello": "sklearn TruncatedSVD (LSA)",
+    "selezione": "top-k per norma latente (Gong & Liu, come sumy)",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0"
+  },
+  "timestamp": "2026-08-24T19:28:03+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.35120333112982766,
+    "rouge1_p": 0.3839934373729118,
+    "rouge1_r": 0.35662404281553073,
+    "rouge2_f1": 0.12722237065864744,
+    "rouge2_p": 0.13640278062273362,
+    "rouge2_r": 0.1352111378228191,
+    "rougeL_f1": 0.18330694998236455,
+    "rougeL_p": 0.17927975463819126,
+    "rougeL_r": 0.2098001774581518,
+    "bleu": 0.0909587453393057,
+    "meteor": 0.4002680967425159,
+    "parole_generate": 248.57605583392984
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.35120333112982766,
+      "rouge1_p": 0.3839934373729118,
+      "rouge1_r": 0.35662404281553073,
+      "rouge2_f1": 0.12722237065864744,
+      "rouge2_p": 0.13640278062273362,
+      "rouge2_r": 0.1352111378228191,
+      "rougeL_f1": 0.18330694998236455,
+      "rougeL_p": 0.17927975463819126,
+      "rougeL_r": 0.2098001774581518,
+      "bleu": 0.0909587453393057,
+      "meteor": 0.4002680967425159,
+      "parole_generate": 248.57605583392984
+    }
+  }
+}

@@ -19,16 +19,18 @@ Tecniche_MDS_non_LLM_MultiNews.md  # Annotated survey of non-LLM MDS techniques 
 multi_news_dashboard.html  # Self-contained EDA dashboard (Italian) — see "EDA dashboard" section below
 scripts/
   README.md            # Documentation for the scripts (usage, inputs/outputs, cleaning criteria)
+  analyze_dataset.py   # Streaming corpus-wide EDA over data/text/ — writes dataset_stats.json, the figures multi_news_dashboard.html embeds
+  dataset_stats.json   # Its output: one aggregated JSON over train+val+test (committed)
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
   import_llm_results.py  # One-off importer of the archived LM Studio LLM runs (notebooks/llm/*.csv) into results/ — superseded by the ollama re-runs, kept for provenance
-  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs notebook 05
+  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11/15-17 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs notebook 05
   run_geval.py         # Unattended driver for the G-Eval backfill (notebook 14): staged --righe/--pilota/full run, --budget hard stop, --costo offline cost report, --solo-metriche re-derivation
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
   0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
-  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill; ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
+  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill, 15 LSA (2 variants), 16 SBERT clustering (2 variants), 17 LDA; ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
                        # results, since replaced by local ollama runs) and docx report —
@@ -39,6 +41,8 @@ results/
   metrics/             # Per-example CSVs + aggregate JSONs (committed); plus the SEPARATE
                        # G-Eval files `{method}_{scope}_geval_{per_example.csv,aggregate.json}`
                        # and `geval_cache_{scope}.jsonl` (the paid judgment cache — commit it)
+  figures/{method}/    # PNGs from the "how it works" explanatory sections of notebooks 11 and
+                       # 15-17 (written only when SALVA_FIGURE is on); illustrative, no metric reads them
 data/
   README.md            # Detailed description of data/ file formats and content
   text/                # Canonical format — consumed by multi_news.py; kept as-released (dirty rows included)
@@ -93,20 +97,28 @@ get or change the stats. Key facts it establishes (details in `data/README.md`):
 - Extreme source-length outliers (top one: `train:22256`, 449,620 words) are source/summary
   **mismatches** from upstream scraping errors, not just long text — the summary is unrelated to
   the source. Filtering/truncating by length alone doesn't fix them.
-- Its footer says it's regenerable via `python scripts/analyze_dataset.py`, but that script is
-  **not present in the repo** — only `scripts/convert_to_tab.py` exists. Treat the dashboard's
-  embedded JSON as the current source of truth for these stats.
+- It is regenerable via `python scripts/analyze_dataset.py`, which streams `data/text/` in a
+  single pass and writes `scripts/dataset_stats.json` — the aggregated JSON the dashboard's
+  `const D` is built from (verified to match: 56,216 examples, 154,530 articles, vocab 494,577).
+  The script deliberately omits the heavy metrics (novel n-grams, extractive fragment
+  coverage/density, language detection); those appear in the dashboard only as static reference
+  values from the paper. Editing the dashboard's numbers by hand means editing `const D`.
 
 ## Summarization benchmark (`notebooks/` + `results/`)
 
-Eleven method slugs: the First-k / Lead positional baseline in two sentence-segmentation
+Eighteen method slugs: the First-k / Lead positional baseline in two sentence-segmentation
 variants (notebook 10, slugs `firstk_psr`/`firstk_nltk`); TextRank, LexRank (extractive) plus
 a custom scikit-learn Centroid-based (MEAD) + MMR in two vectorization variants (notebook 11,
 slugs `centroid_mmr` TF-IDF / `centroid_mmr_bert` BERT); BART `facebook/bart-large-cnn`,
 PEGASUS `google/pegasus-multi_news`, PRIMERA `allenai/PRIMERA-multinews` (specialized
 abstractive); three local general-purpose LLMs — Qwen2.5-7B-Instruct, Gemma 4 E4B,
-Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`); plus
-one cloud LLM on Azure AI Foundry — GPT-5-mini (notebook 12, slug `gpt5mini`). TextRank/LexRank
+Mistral-7B-Instruct-v0.3 (notebooks 07/08/09, method slugs `qwen`/`gemma`/`mistral`); one
+cloud LLM on Azure AI Foundry — GPT-5-mini (notebook 12, slug `gpt5mini`); plus five
+unsupervised extractives built on scikit-learn — LSA/TruncatedSVD in two selection variants
+(notebook 15, slugs `lsa` top-k by latent norm / `lsa_steinberger` greedy with deflation),
+clustering over MiniLM sentence embeddings with medoid selection in two variants (notebook 16,
+slugs `sbert_kmeans` / `sbert_agglom`), and LDA topic modeling with topic-proportional sentence
+allocation (notebook 17, slug `lda`). TextRank/LexRank
 and BART/PEGASUS
 run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the local LLMs via
 the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`),
@@ -116,10 +128,10 @@ ROUGE-1/2/L, BLEU, METEOR implementations. Two more Azure notebooks (Claude Haik
 DeepSeek-V3.2, slugs `haiku`/`deepseek`, formerly numbered 11/12) were removed because their
 Foundry deployments could not be created; recover them from git history if retried (the
 numbers were since reused: 10/11 are now the First-k and Centroid+MMR baselines, 12 the Azure
-GPT-5-mini notebook). Baseline notebooks 10/11 support all three scopes
-(`sample`/`test`/`full`, `SUMM_SCOPE`/`SUMM_LIMIT` env overrides like 03-04/06-09) and are
-driven by `run_benchmark_test.py`, listed first as the fastest methods; each generates its two
-variant slugs in one execution. Conventions to
+GPT-5-mini notebook). Baseline notebooks 10/11 and the unsupervised extractives 15-17 support
+all three scopes (`sample`/`test`/`full`, `SUMM_SCOPE`/`SUMM_LIMIT` env overrides like
+03-04/06-09) and are driven by `run_benchmark_test.py`, listed first as the fastest methods;
+15/16 (like 10/11) generate their two variant slugs in one execution. Conventions to
 respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
@@ -130,12 +142,13 @@ respect:
   to `results/` (superseded by the `test`-scope run below, which now covers every method); the
   sample TSV itself stays versioned since notebooks still read it whenever `SCOPE='sample'`.
   Extractive notebooks (01/02) also support `SCOPE='full'` (all 56,101 rows, streamed).
-  Notebooks 03-04 and 06-11 (BART/PEGASUS/PRIMERA/Qwen/Gemma/Mistral/First-k/Centroid+MMR)
+  Notebooks 03-04, 06-11 and 15-17 (BART/PEGASUS/PRIMERA/Qwen/Gemma/Mistral/First-k/
+  Centroid+MMR/LSA/SBERT-clustering/LDA)
   also support `SCOPE='test'` (the full clean test split, 5,610 rows = 5,622 − 12 dirty,
-  streamed via `summ_utils.itera_split`; 10/11 support `'full'` too) — read from
+  streamed via `summ_utils.itera_split`; 10/11 and 15-17 support `'full'` too) — read from
   `os.environ.get('SUMM_SCOPE', 'sample')` so opening
   them by hand in Jupyter is unaffected; `LIMIT` is similarly overridable via `SUMM_LIMIT`.
-  `scripts/run_benchmark_test.py` drives all eight unattended, fastest-to-slowest (10/11
+  `scripts/run_benchmark_test.py` drives all eleven unattended, fastest-to-slowest (10/17/15/16
   first), setting those
   env vars per subprocess (`jupyter nbconvert --execute --inplace`); `--only 10,11` restricts
   the run to the listed notebook numbers (preflight checks shrink to match) — see its
@@ -161,6 +174,17 @@ respect:
   `prepara_documento`; the library reloads HF models per call and ignores CUDA, so notebooks
   03/04/06 load the model once themselves and notebook 01 injects a shared SentenceTransformer
   into `loaded_models`.
+- **The five slugs of notebooks 15-17 have no BERTScore and no G-Eval**: both backfills (13, 14)
+  ran before those methods existed, so their per-example CSVs carry only the lexical metrics.
+  Notebook 05 handles this by charting BERTScore/G-Eval over the *subset* of methods that have
+  the column (naming the excluded ones) instead of requiring it from all — don't "fix" that back
+  into an `all(...)` gate. Re-running notebook 13 would close the BERTScore gap for free; 14
+  costs Azure credit, so the gap is deliberate.
+- **LDA summary length**: notebooks 15/16/17 share `N_SENTENCES = 11`, but LDA's
+  topic-proportional allocation picks much longer sentences — 477 words per summary vs 216-264
+  for the other four. Its ROUGE-1 *recall* (0.499) and METEOR (0.511) lead the group for that
+  reason alone, while its F1 (0.351) only ties `lsa` and trails `lsa_steinberger` (0.376).
+  Compare these five on F1, not recall.
 - **LLM results provenance (`qwen`/`gemma`/`mistral`), historical**: this describes the
   retired `sample`-scope validation, not the currently-committed `test`-scope results. The
   first (sample-scope) summaries/metrics came from local ollama runs of notebooks 07-09

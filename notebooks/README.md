@@ -6,8 +6,11 @@ la baseline posizionale First-k / Lead (notebook 10, in due varianti di segmenta
 estrattivi (TextRank, LexRank e Centroid-based + MMR *custom* in due varianti di vettorizzazione,
 TF-IDF e BERT — notebook 11), tre abstractive specializzati (BART, PEGASUS, PRIMERA), tre
 LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral-7B — notebook
-07–09, via [ollama](https://ollama.com)) e un LLM cloud su **Azure AI Foundry**
-(GPT-5-mini — notebook 12), usando la libreria
+07–09, via [ollama](https://ollama.com)), un LLM cloud su **Azure AI Foundry**
+(GPT-5-mini — notebook 12) e cinque estrattivi **non supervisionati** basati su riduzione di
+dimensionalità, clustering e topic modeling (LSA in due varianti di selezione — notebook 15;
+clustering su sentence embeddings SBERT in due varianti — notebook 16; LDA — notebook 17),
+usando la libreria
 [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA usa direttamente
 `transformers`, gli LLM il client `openai`; le metriche sono comunque quelle di
 pyAutoSummarizer per tutti i metodi). Due ulteriori notebook Azure (Claude Haiku 4.5 e
@@ -56,8 +59,11 @@ automaticamente e la usano se disponibile.
 | 12 | [12_azure_gpt.ipynb](12_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
 | 13 | [13_bertscore.ipynb](13_bertscore.ipynb) | BERTScore (`roberta-large`, backfill separato). Aggiunge `bertscore_f1/p/r` alle metriche `test` già calcolate dai 13 metodi, senza rieseguire i notebook 01–04/06–12. |
 | 14 | [14_geval.ipynb](14_geval.ipynb) | G-Eval (LLM-as-a-Judge, giudice GPT-5.4-mini su Azure; backfill separato). Assegna a ogni riassunto della split `test` quattro punteggi 1–5 — coherence, consistency, fluency, relevance — scritti in **file dedicati** (`*_geval_*`), non uniti alle metriche standard. Guidato da [`scripts/run_geval.py`](../scripts/run_geval.py). |
+| 15 | [15_lsa.ipynb](15_lsa.ipynb) | LSA / SVD (estrattivo non supervisionato: TF-IDF + `TruncatedSVD`). Genera **due varianti** — `lsa` (top-k per norma latente, come `sumy`) e `lsa_steinberger` (greedy con deflazione, anti-ridondanza MDS) — che differiscono solo per la regola di selezione. Ambiti `sample`, `test` e `full`. |
+| 16 | [16_sbert_clustering.ipynb](16_sbert_clustering.ipynb) | Clustering su sentence embeddings SBERT (`all-MiniLM-L6-v2`) con selezione del **medoide** di ogni cluster. Genera **due varianti** — `sbert_kmeans` (KMeans, distanza euclidea su embedding L2-normalizzati) e `sbert_agglom` (Agglomerative, cosine + average linkage) — che differiscono solo per l'algoritmo di clustering. Ambiti `sample`, `test` e `full`. |
+| 17 | [17_lda.ipynb](17_lda.ipynb) | Topic modeling con LDA (`CountVectorizer` + `LatentDirichletAllocation`): le frasi vengono allocate ai topic in proporzione al peso di ciascuno. Slug `lda`. Ambiti `sample`, `test` e `full`. |
 
-I notebook dei metodi (01–04 e 06–12) sono indipendenti tra loro e condividono le routine di
+I notebook dei metodi (01–04, 06–12 e 15–17) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
 
 ## Baseline First-k (notebook 10)
@@ -110,6 +116,82 @@ in `results/figures/centroid_mmr/`. La sezione è puramente illustrativa: `anali
 gli artefatti intermedi) è la stessa funzione usata in produzione da `make_genera`, quindi le figure
 riflettono esattamente ciò che il metodo calcola.
 
+## LSA / SVD (notebook 15)
+
+Estrattivo non supervisionato classico (§3.5 del [documento-guida](../Tecniche_MDS_non_LLM_MultiNews.md)):
+le frasi del cluster, vettorizzate TF-IDF, vengono proiettate in uno spazio **latente** da una
+`TruncatedSVD`; i "concetti" latenti sostituiscono le parole, e una frase è saliente se ha una
+forte componente sui concetti principali. Segmentazione via `psr.summarization`, la stessa degli
+altri estrattivi, quindi il pool di candidati è identico.
+
+Parametri della corsa committata: `N_SENTENCES = 11` (mediana del corpus, come 01/02/11) e
+`K_LATENTE = 11`. Il default `K_LATENTE = N_SENTENCES` segue la convenzione di Gong & Liu (una
+dimensione per frase estratta) ed è anche un **vincolo** della variante con deflazione: dopo
+`K_LATENTE` sottrazioni lo spazio residuo si annulla. Viene comunque cappato al rango della
+matrice del singolo cluster.
+
+**Due varianti** che condividono la stessa SVD e differiscono solo per la regola di selezione:
+
+- **`lsa`** — le `N_SENTENCES` frasi con vettore latente più lungo (‖z‖). È la regola di
+  Gong & Liu senza update, la stessa di `sumy.LsaSummarizer`: nessuna memoria di ciò che è già
+  stato scelto, quindi nessuna difesa dalla ridondanza tra fonti.
+- **`lsa_steinberger`** — greedy con **deflazione**: a ogni passo si prende la frase col residuo
+  più lungo e si sottrae la sua direzione da tutte le altre (proiezione ortogonale), così una
+  frase che ripete la precedente vale ~0 e non viene riscelta. È l'anti-ridondanza della variante
+  multi-documento di Steinberger, assente in `sumy`.
+
+Sulla split test la variante con deflazione è la migliore dei cinque metodi non supervisionati
+(ROUGE-1 F1 0,376 contro 0,351 di `lsa`): la conferma che, su MDS, gestire esplicitamente la
+ridondanza tra fonti paga.
+
+Come i notebook 11/16/17, include una sezione **"Come funziona, passo per passo"** che apre la
+pipeline su un documento-esempio (`RIGA_DEMO`), con figure salvate in `results/figures/lsa/`
+quando `SALVA_FIGURE` è attivo. Le figure usano `analizza_lsa`, la stessa funzione della
+produzione, quindi riflettono esattamente ciò che il metodo calcola.
+
+## Clustering su sentence embeddings SBERT (notebook 16)
+
+§3.7 del [documento-guida](../Tecniche_MDS_non_LLM_MultiNews.md). Le frasi del cluster vengono
+codificate con **`all-MiniLM-L6-v2`** (lo stesso encoder di TextRank
+e di `centroid_mmr_bert`), con embedding **L2-normalizzati**, e poi raggruppate in
+`N_CLUSTER = 11` gruppi; da ogni gruppo si estrae il **medoide** — la frase più vicina al
+centroide, quindi sempre testo originale e mai un centroide sintetico. L'idea è che i cluster
+corrispondano ai sottotemi ricorrenti fra le fonti, così il riassunto ne copre uno per gruppo
+invece di ripetere il più frequente.
+
+**Due varianti** che differiscono solo per l'algoritmo di clustering:
+
+- **`sbert_kmeans`** — `sklearn.KMeans` (distanza euclidea; su embedding L2-normalizzati è
+  monotona rispetto alla cosine).
+- **`sbert_agglom`** — `sklearn.AgglomerativeClustering` (metrica cosine, average linkage):
+  nessuna assunzione di cluster sferici.
+
+Su questa corsa KMeans è nettamente avanti (ROUGE-1 F1 0,359 contro 0,329), e produce riassunti
+più lunghi (264 parole contro 216): la figura sulle taglie dei cluster nella sezione esplicativa
+mostra il comportamento dei due algoritmi sullo stesso documento.
+
+L'encoding è l'unico passo pesante: il notebook rileva il device con `su.rileva_device()` e la
+corsa committata è stata fatta **su CPU**, quindi il metodo non richiede GPU.
+Figure della sezione esplicativa in `results/figures/sbert_clustering/`.
+
+## Topic modeling con LDA (notebook 17)
+
+§3.6 del [documento-guida](../Tecniche_MDS_non_LLM_MultiNews.md). Le frasi vengono vettorizzate
+con `CountVectorizer(stop_words='english')` e date in pasto a una
+`LatentDirichletAllocation` con `N_TOPICS = 5` (cappato al numero di frasi disponibili):
+`theta` dà la distribuzione sui topic di ogni frase e la loro somma il **peso** di ogni topic nel
+cluster. Il budget di `N_SENTENCES = 11` frasi viene poi **allocato in proporzione a quei pesi**
+(arrotondamento con correzione del residuo, così la somma delle quote torna esatta), e dentro
+ogni topic si prendono le frasi con appartenenza più alta. Se i duplicati impediscono di
+raggiungere il budget, si completa con le frasi più salienti.
+
+⚠️ **Attenzione alla lunghezza** (vedi anche «Avvertenze metodologiche»): a parità di budget
+nominale, le frasi che questa allocazione seleziona sono molto più lunghe, e il riassunto medio
+arriva a **477 parole** contro 216–264 degli altri quattro metodi non supervisionati. Va tenuto
+presente leggendo le metriche sensibili alla lunghezza.
+
+Figure della sezione esplicativa in `results/figures/lda/`.
+
 ## LLM locali (notebook 07–09)
 
 > Nota storica: le informazioni sotto descrivono la validazione originale sull'ambito `sample`
@@ -150,10 +232,11 @@ all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
   presente nei CSV di Federica non è stato portato in `results/` (la pipeline condivisa non
   lo calcola).
 
-## Corsa completa sulla split test (notebook 03-04, 06-11)
+## Corsa completa sulla split test (notebook 03-04, 06-11, 15-17)
 
-`scripts/run_benchmark_test.py` esegue in **un'unica sessione non presidiata** gli otto notebook
-dei metodi non coperti dalla derivazione da `full` (10 First-k, 11 Centroid+MMR, 03 BART, 04
+`scripts/run_benchmark_test.py` esegue in **un'unica sessione non presidiata** gli undici notebook
+dei metodi non coperti dalla derivazione da `full` (10 First-k, 17 LDA, 15 LSA, 16 SBERT
+clustering, 11 Centroid+MMR, 03 BART, 04
 PEGASUS, 07 Qwen, 09 Mistral, 08 Gemma, 06 PRIMERA) con `SCOPE='test'` — l'intera split test
 pulita, 5.610 righe — dal più veloce al più lento, senza bisogno di riaprire i notebook uno per
 uno tra una corsa e l'altra:
@@ -456,15 +539,23 @@ i casi, cambia solo la cifra.
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
 - `SCOPE` — `'sample'` = campione condiviso (tutti i metodi); `'full'` = intero `complete.tab`,
-  56.101 esempi in streaming (01/02, 10/11 e 12); `'test'` = intera split test, 5.610 esempi in
-  streaming (03-04, 06-11 e 12; nei notebook 03-04 e 06-11 letto dalla variabile d'ambiente
-  `SUMM_SCOPE`, impostata da `scripts/run_benchmark_test.py` — default `'sample'` se assente).
+  56.101 esempi in streaming (01/02, 10/11, 12 e 15-17); `'test'` = intera split test, 5.610
+  esempi in streaming (03-04, 06-11, 12 e 15-17; nei notebook 03-04, 06-11 e 15-17 letto dalla
+  variabile d'ambiente `SUMM_SCOPE`, impostata da `scripts/run_benchmark_test.py` — default
+  `'sample'` se assente).
 - `LIMIT` — `None` per la corsa completa; un intero piccolo (es. `3`) per uno smoke test. Nei
-  notebook 03-04 e 06-11 letto anche dalla variabile d'ambiente `SUMM_LIMIT` (usata da
+  notebook 03-04, 06-11 e 15-17 letto anche dalla variabile d'ambiente `SUMM_LIMIT` (usata da
   `run_benchmark_test.py --limit N`).
-- `N_SENTENCES` (01/02 e 11) — frasi estratte per riassunto (default 11, la mediana di frasi
-  per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei riferimenti,
-  perché le frasi di cronaca sono più lunghe di quelle dei digest).
+- `N_SENTENCES` (01/02, 11 e 15-17) — frasi estratte per riassunto (default 11, la mediana di
+  frasi per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei
+  riferimenti, perché le frasi di cronaca sono più lunghe di quelle dei digest). Attenzione: a
+  parità di questo parametro la lunghezza in **parole** varia molto tra metodi — vedi
+  l'avvertenza su LDA in fondo.
+- `K_LATENTE` (15), `N_CLUSTER` (16), `N_TOPICS` (17) — dimensioni latenti della SVD, numero di
+  cluster e numero di topic; i primi due valgono `N_SENTENCES` per costruzione, il terzo è
+  indipendente (default 5, cappato al numero di frasi disponibili).
+- `RIGA_DEMO`, `SALVA_FIGURE` (11 e 15-17) — riga usata dalla sezione esplicativa «Come funziona,
+  passo per passo» e salvataggio delle sue figure in `results/figures/{metodo}/`.
 - `MODELLO`, `OLLAMA_URL`, `MAX_TOKENS`, `TEMPERATURE` (solo 07–09) — tag del modello ollama
   (verificare con `ollama list`), endpoint e parametri di generazione.
 - `DEPLOYMENT`, endpoint da variabili d'ambiente (solo 12) — nome del deployment Azure e
@@ -484,6 +575,8 @@ results/
   metrics/{metodo}_{scope}_geval_aggregate.json   # SEPARATI: vedi la sezione G-Eval per il perché
   metrics/geval_cache_{scope}.jsonl          # cache dei giudizi (una riga per metodo+row_id, con i
                                               # conteggi di token): è l'artefatto PAGATO, va committato
+  figures/{metodo}/*.png                     # figure della sezione esplicativa dei notebook 11 e 15-17
+                                              # (solo con SALVA_FIGURE; illustrative, non usate dalle metriche)
 ```
 
 I riassunti sono la parte costosa: vengono scritti **incrementalmente** (una riga per esempio,
@@ -514,6 +607,8 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | PRIMERA, `test` (5.610) | sconsigliata | ~28-56 h — **richiede la GPU** |
 | First-k, `test` (5.610, **entrambe le varianti**) | ~3 min | ~3 min (nessun modello) |
 | Centroid+MMR, `test` (5.610, **entrambe le varianti**) | non misurata (TF-IDF rapida, BERT lenta senza GPU) | ~8 min (corsa reale 2026-07-25, encoding BERT su GPU) |
+| LSA (15) e LDA (17), `test` (5.610) | durata non registrata; solo scikit-learn, nessun modello da caricare | — (non serve la GPU) |
+| SBERT clustering (16), `test` (5.610, **entrambe le varianti**) | durata non registrata; corsa committata fatta **su CPU** (encoding MiniLM) | — (la GPU accelera solo l'encoding) |
 | GPT-5-mini (12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
 | GPT-5-mini (12), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
@@ -561,6 +656,22 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   non conformi): le medie vanno lette insieme alla colonna `n_geval` del notebook 05, che può
   essere minore di `n_esempi`. Il giudice è comunque **indipendente da tutti e 13 i metodi**
   valutati, quindi non c'è self-judging.
+- **Lunghezza dei riassunti LDA**: i notebook 15/16/17 condividono lo stesso budget nominale
+  (`N_SENTENCES = 11`), ma le frasi che l'allocazione proporzionale ai topic di LDA seleziona
+  sono in media molto più lunghe: **477 parole** per riassunto contro 249 (`lsa`), 257
+  (`lsa_steinberger`), 264 (`sbert_kmeans`) e 216 (`sbert_agglom`). È questo divario, più che la
+  qualità della selezione, a spingere in alto le metriche sensibili alla lunghezza: LDA ha il
+  ROUGE-1 **recall** più alto del gruppo (0,499 contro 0,357 di `lsa`) e il METEOR più alto
+  (0,511), ma in **F1** resta alla pari con `lsa` (0,351) e sotto `lsa_steinberger` (0,376). Su
+  questi cinque metodi conviene quindi leggere l'F1, non il recall; la colonna `parole_generate`
+  del notebook 05 rende il confronto esplicito. Per un confronto a lunghezza davvero pari
+  servirebbe un budget in parole, non in frasi — non è stato fatto.
+- **BERTScore e G-Eval assenti sui metodi dei notebook 15–17**: i due backfill (13 e 14) sono
+  stati eseguiti quando quei metodi non esistevano, quindi `lsa`, `lsa_steinberger`,
+  `sbert_kmeans`, `sbert_agglom` e `lda` hanno **solo** le metriche lessicali. Il notebook 05 li
+  esclude dai grafici BERTScore/G-Eval elencandoli in un avviso, e lascia le due colonne vuote in
+  tabella. Rieseguire il notebook 13 li aggiunge a costo zero (solo tempo di calcolo); il
+  notebook 14 comporta invece un costo Azure, quindi la scelta è deliberata.
 - **METEOR non affidabile per output degeneri**: la formula `meteor()` di pyAutoSummarizer
   (`meteor = fmean * (1 - penalty**3)`) non è limitata a [0,1]. Nella corsa `test`, PEGASUS
   produce due riassunti patologici (un loop di ripetizione del beam search e un probabile

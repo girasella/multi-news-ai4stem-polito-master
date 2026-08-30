@@ -1,0 +1,46 @@
+{
+  "metodo": "lsa_steinberger",
+  "scope": "test",
+  "config": {
+    "k_latente": 11,
+    "n_sentences": 11,
+    "segmentazione": "psr.summarization",
+    "vettorizzazione": "sklearn TfidfVectorizer (stop_words=english)",
+    "modello": "sklearn TruncatedSVD (LSA)",
+    "selezione": "greedy con deflazione della matrice residua (Steinberger, MDS)",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0"
+  },
+  "timestamp": "2026-08-24T19:29:41+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.3757272425034112,
+    "rouge1_p": 0.35782951916031347,
+    "rouge1_r": 0.41850210446047326,
+    "rouge2_f1": 0.1373903266845237,
+    "rouge2_p": 0.129812890631525,
+    "rouge2_r": 0.1574665566674342,
+    "rougeL_f1": 0.18832925118392016,
+    "rougeL_p": 0.17830520604867206,
+    "rougeL_r": 0.2174428715439502,
+    "bleu": 0.10277433066169515,
+    "meteor": 0.45161554239449586,
+    "parole_generate": 257.22709377236936
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.3757272425034112,
+      "rouge1_p": 0.35782951916031347,
+      "rouge1_r": 0.41850210446047326,
+      "rouge2_f1": 0.1373903266845237,
+      "rouge2_p": 0.129812890631525,
+      "rouge2_r": 0.1574665566674342,
+      "rougeL_f1": 0.18832925118392016,
+      "rougeL_p": 0.17830520604867206,
+      "rougeL_r": 0.2174428715439502,
+      "bleu": 0.10277433066169515,
+      "meteor": 0.45161554239449586,
+      "parole_generate": 257.22709377236936
+    }
+  }
+}
