@@ -2,12 +2,13 @@
 
 ## `run_benchmark_test.py`
 
-Unattended driver for the `SCOPE='test'` benchmark stint: runs notebooks 10 (First-k), 11
-(Centroid+MMR), 03 (BART), 04 (PEGASUS), 07 (Qwen), 09 (Mistral), 08 (Gemma) and 06 (PRIMERA)
+Unattended driver for the `SCOPE='test'` benchmark stint: runs notebooks 10 (First-k), 17 (LDA),
+15 (LSA), 16 (SBERT clustering), 11 (Centroid+MMR), 03 (BART), 04 (PEGASUS), 07 (Qwen),
+09 (Mistral), 08 (Gemma) and 06 (PRIMERA)
 — in that fastest-to-slowest order — against the full clean test split (5,610 rows), one after
-another, without needing to reopen and re-run each notebook by hand. Notebooks 10 and 11 each
-generate two method variants (`firstk_psr`/`firstk_nltk` and
-`centroid_mmr`/`centroid_mmr_bert`).
+another, without needing to reopen and re-run each notebook by hand. Notebooks 10, 11, 15 and 16
+each generate two method variants (`firstk_psr`/`firstk_nltk`,
+`centroid_mmr`/`centroid_mmr_bert`, `lsa`/`lsa_steinberger` and `sbert_kmeans`/`sbert_agglom`).
 
 ### Usage
 
@@ -48,8 +49,8 @@ notebook dependencies (`pip install -r requirements-notebooks.txt`) plus `jupyte
 ### Output
 
 - `results/summaries/{method}_test.tsv` and `results/metrics/{method}_test_{per_example.csv,aggregate.json}`
-  for the ten generated method slugs (six single-method notebooks + the two variants each of
-  notebooks 10/11), plus the two derived ones (`textrank`, `lexrank`).
+  for the fifteen generated method slugs (seven single-method notebooks + the two variants each
+  of notebooks 10/11/15/16), plus the two derived ones (`textrank`, `lexrank`).
 - `run_benchmark_test.log` in the repo root (gitignored) — append-only, timestamped, one line
   per notebook start/end plus a final summary.
 
@@ -266,3 +267,61 @@ Everything is streamed line by line; no file is loaded into memory wholesale.
 `data/tab/` files are derived, never hand-edited. Rerun the script whenever `data/text/` changes
 or the cleaning criteria are adjusted, and update the row counts/sizes in
 [`data/README.md`](../data/README.md) if they change.
+
+## `analyze_dataset.py`
+
+Corpus-wide EDA over the **whole** Multi-News dataset (train+val+test aggregated, no per-split
+breakdown): the script behind the figures embedded in
+[`multi_news_dashboard.html`](../multi_news_dashboard.html).
+
+### Usage
+
+```
+python scripts/analyze_dataset.py
+```
+
+Run from the repo root. Only third-party dependency is `numpy` (percentiles/histograms);
+everything else is the standard library. Expect a few minutes: it streams ~680 MB of source text
+once.
+
+### Inputs
+
+The six canonical files in [`data/text/`](../data/README.md), read line by line and never
+modified — the same files, and the same `NEWLINE_CHAR` / `|||||` handling, that
+`multi_news.py::_generate_examples` uses. Note this is the **uncleaned** canonical data, so the
+dirty rows that `convert_to_tab.py` drops are still counted here (that is the point: the
+dashboard reports them).
+
+### Output
+
+`scripts/dataset_stats.json` — one aggregated JSON object (committed), with top-level keys
+`meta`, `structure`, `sources`, `lengths`, `hist`, `paper_reference`, `correlations` and
+`quality`. The dashboard's inline `const D = {...}` literal is built from this file; editing the
+dashboard's numbers by hand means editing that literal.
+
+### What it does
+
+A single streaming pass per split, computing only what is cheap:
+
+- **Structure** — empty sources/targets, exact duplicates (SHA-1 over whitespace-normalized
+  lowercase text) and near-duplicates (fingerprint of the first 15 normalized words), article
+  counts per example.
+- **Lengths** — word counts (tokenizer-free `str.split()`, with `NEWLINE_CHAR` restored and the
+  `|||||` separator excluded), heuristic sentence counts (`[.!?]+`), compression ratios,
+  percentiles and histograms, plus a global vocabulary set (`[a-z0-9']+`).
+- **Quality** — counts against the anomaly thresholds declared at the top of the script
+  (`SUM_MIN=20`, `SUM_MAX=600`, `SRC_MIN=50` words) and the extreme outlier rows, referenced as
+  0-based `split:line`.
+
+**Deliberately omitted** (agreed scope, stated in the module docstring): the heavy metrics —
+novel n-gram percentages, extractive fragment coverage/density, and language detection. The
+dashboard shows those only as static reference values from the paper, never as recomputed
+figures. Expect systematic offsets from the paper's own table for anything tokenizer-dependent
+(e.g. vocabulary 494,577 here vs 666,515 in Fabbri et al.) — different tokenization, not a bug.
+
+### When to rerun
+
+Whenever `data/text/` changes. After rerunning, port the new values into the dashboard's
+`const D` literal and update the figures quoted in
+[`data/README.md`](../data/README.md) and [`CLAUDE.md`](../CLAUDE.md) — nothing does that
+automatically.

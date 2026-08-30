@@ -225,10 +225,9 @@ splits aggregated: 56,216 examples, 154,530 source articles. Methodology: word c
 tokenizer-free (`str.split()`, with `NEWLINE_CHAR` restored and `` ||||| `` excluded before
 counting); sentence counts are heuristic (split on `[.!?]+`, so abbreviations slightly inflate
 them); duplicates detected via SHA-1 on normalized text, near-duplicates via a fingerprint of the
-first 15 words; row references use 0-based `split:line` indices. Note: the dashboard's footer
-mentions a `scripts/analyze_dataset.py` for regeneration, but that script is not currently in the
-repo — the dashboard's embedded JSON (`const D` in its inline script) is the source of truth for
-these figures.
+first 15 words; row references use 0-based `split:line` indices. These figures are regenerable
+with `python scripts/analyze_dataset.py`, which writes `scripts/dataset_stats.json`; the
+dashboard's embedded JSON (`const D` in its inline script) is built from that file and matches it.
 
 | metric              |   mean | median |  min |     max |    p05 |   p95 |
 |---------------------|-------:|-------:|-----:|--------:|-------:|------:|

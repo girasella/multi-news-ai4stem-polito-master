@@ -14,6 +14,6 @@ pandas
 matplotlib
 openai          # client for the local ollama OpenAI-compatible endpoint (notebooks 07-09) and Azure OpenAI (notebook 12)
 nltk            # Punkt sentence tokenizer for the firstk_nltk variant (notebook 10)
-scikit-learn    # TF-IDF, cosine similarity, PCA for Centroid+MMR (notebook 11)
-sentence-transformers  # MiniLM sentence embeddings (notebooks 01 and 11)
+scikit-learn    # TF-IDF, cosine similarity, PCA for Centroid+MMR (notebook 11); TruncatedSVD (15), KMeans/Agglomerative (16), LatentDirichletAllocation (17)
+sentence-transformers  # MiniLM sentence embeddings (notebooks 01, 11 and 16)
 bert-score      # BERTScore against roberta-large (notebook 13, backfill)

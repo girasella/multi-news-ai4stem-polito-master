@@ -7,6 +7,3 @@ run_benchmark_test.log
 
 # Log of scripts/run_geval.py — regenerable, append-only
 run_geval.log
-
-# Log di run_lsa_sbert_lda_test — rigenerabile, append-only
-run_lsa_sbert_lda_test.log
