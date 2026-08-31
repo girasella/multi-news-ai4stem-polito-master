@@ -10,7 +10,7 @@
     "selezione": "greedy con deflazione della matrice residua (Steinberger, MDS)",
     "libreria_valutazione": "pyAutoSummarizer 1.2.0"
   },
-  "timestamp": "2026-08-24T19:29:41+00:00",
+  "timestamp": "2026-08-31T07:58:29+00:00",
   "n_esempi": 5588,
   "overall": {
     "rouge1_f1": 0.3757272425034112,
@@ -24,7 +24,10 @@
     "rougeL_r": 0.2174428715439502,
     "bleu": 0.10277433066169515,
     "meteor": 0.45161554239449586,
-    "parole_generate": 257.22709377236936
+    "parole_generate": 257.22709377236936,
+    "bertscore_f1": 0.842104988720644,
+    "bertscore_p": 0.8313615164781522,
+    "bertscore_r": 0.8533818940968708
   },
   "per_split": {
     "test": {
@@ -40,7 +43,10 @@
       "rougeL_r": 0.2174428715439502,
       "bleu": 0.10277433066169515,
       "meteor": 0.45161554239449586,
-      "parole_generate": 257.22709377236936
+      "parole_generate": 257.22709377236936,
+      "bertscore_f1": 0.842104988720644,
+      "bertscore_p": 0.8313615164781522,
+      "bertscore_r": 0.8533818940968708
     }
   }
 }

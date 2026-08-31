@@ -57,7 +57,7 @@ automaticamente e la usano se disponibile.
 | 10 | [10_firstk.ipynb](10_firstk.ipynb) | First-k / Lead (baseline posizionale, prime k frasi per articolo). Genera **due varianti** confrontabili — `firstk_psr` e `firstk_nltk` — che differiscono solo per il segmentatore di frasi. Ambiti `sample`, `test` e `full`. |
 | 11 | [11_centroid_mmr.ipynb](11_centroid_mmr.ipynb) | Centroid-based (MEAD) + MMR (estrattivo nativo MDS, implementazione *custom* scikit-learn: centroide + selezione greedy MMR con parametro `λ`). Genera **due varianti** — `centroid_mmr` (vettorizzazione TF-IDF) e `centroid_mmr_bert` (embeddings BERT `all-MiniLM-L6-v2`) — che differiscono solo per il vettorizzatore. Ambiti `sample`, `test` e `full`. |
 | 12 | [12_azure_gpt.ipynb](12_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
-| 13 | [13_bertscore.ipynb](13_bertscore.ipynb) | BERTScore (`roberta-large`, backfill separato). Aggiunge `bertscore_f1/p/r` alle metriche `test` già calcolate dai 13 metodi, senza rieseguire i notebook 01–04/06–12. |
+| 13 | [13_bertscore.ipynb](13_bertscore.ipynb) | BERTScore (`roberta-large`, backfill separato). Aggiunge `bertscore_f1/p/r` alle metriche `test` già calcolate dai 18 metodi, senza rieseguire i notebook 01–04/06–12 e 15–17. |
 | 14 | [14_geval.ipynb](14_geval.ipynb) | G-Eval (LLM-as-a-Judge, giudice GPT-5.4-mini su Azure; backfill separato). Assegna a ogni riassunto della split `test` quattro punteggi 1–5 — coherence, consistency, fluency, relevance — scritti in **file dedicati** (`*_geval_*`), non uniti alle metriche standard. Guidato da [`scripts/run_geval.py`](../scripts/run_geval.py). |
 | 15 | [15_lsa.ipynb](15_lsa.ipynb) | LSA / SVD (estrattivo non supervisionato: TF-IDF + `TruncatedSVD`). Genera **due varianti** — `lsa` (top-k per norma latente, come `sumy`) e `lsa_steinberger` (greedy con deflazione, anti-ridondanza MDS) — che differiscono solo per la regola di selezione. Ambiti `sample`, `test` e `full`. |
 | 16 | [16_sbert_clustering.ipynb](16_sbert_clustering.ipynb) | Clustering su sentence embeddings SBERT (`all-MiniLM-L6-v2`) con selezione del **medoide** di ogni cluster. Genera **due varianti** — `sbert_kmeans` (KMeans, distanza euclidea su embedding L2-normalizzati) e `sbert_agglom` (Agglomerative, cosine + average linkage) — che differiscono solo per l'algoritmo di clustering. Ambiti `sample`, `test` e `full`. |
@@ -319,9 +319,15 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
 ## BERTScore (notebook 13, backfill)
 
 Aggiunge il **BERTScore** (Zhang et al., 2020 — similarità semantica su embedding contestuali
-BERT, `roberta-large`) alle metriche `test` di tutti e 13 i metodi, come **backfill una tantum**
-sui riassunti già generati: non tocca i notebook 01–04/06–12 né il loro ciclo di
+BERT, `roberta-large`) alle metriche `test` di tutti e 18 i metodi, come **backfill**
+sui riassunti già generati: non tocca i notebook 01–04/06–12 e 15–17 né il loro ciclo di
 generazione/valutazione dal vivo.
+
+Il notebook è **incrementale**: salta i metodi che hanno già le colonne `bertscore_*` nel CSV
+per-esempio, perché `su.valuta_e_salva` riscrive CSV e JSON del metodo e ricalcolarli
+rigenererebbe file già pubblicati a parità di valori. È così che i cinque metodi dei notebook
+15–17 sono stati aggiunti senza toccare i tredici preesistenti (verificato: metriche lessicali e
+`config` invariate). Per un ricalcolo integrale si imposta `BERTSCORE_FORZA=1`.
 
 `pyAutoSummarizer` espone un wrapper di comodo `bert_score()`, ma questo ricarica
 `roberta-large` da zero a **ogni chiamata** (nessuna cache tra chiamate nella libreria
@@ -332,13 +338,13 @@ tutte le coppie candidato/riferimento valutate in un'unica chiamata batched
 (`su.calcola_bertscore_batch`, `batch_size=64`).
 
 Stima (misurata su questa macchina, GPU RTX PRO 2000 Blackwell Laptop, su un sottoinsieme di
-300 righe di `firstk_psr`): caricamento del modello ~6 s (una tantum per metodo, quindi ~13
-volte in tutta la corsa) e ~21 righe/s di scoring puro — **circa 1 ora di calcolo GPU in
-totale** per tutti e 13 i metodi sulla split test (~5.600 righe ciascuno). TextRank
+300 righe di `firstk_psr`): caricamento del modello ~6 s (una tantum per metodo) e ~21 righe/s
+di scoring puro — **circa 1 ora di calcolo GPU in totale** per tredici metodi sulla split test
+(~5.600 righe ciascuno), e 24 minuti misurati per i cinque del backfill successivo. TextRank
 e LexRank (che hanno solo una corsa `_full.tsv`, non `_test.tsv` dedicata) vedono anche
 ROUGE/BLEU/METEOR ricalcolati direttamente sulle sole righe della split test invece di essere
 derivati filtrando la corsa `full` — numericamente equivalente, ma più semplice da tenere in un
-unico ciclo uniforme sui 13 metodi. La configurazione storica di ciascun metodo (`config` nel
+unico ciclo uniforme su tutti i metodi. La configurazione storica di ciascun metodo (`config` nel
 JSON aggregato) viene preservata, non sovrascritta dal backfill.
 
 ## G-Eval — LLM-as-a-Judge (notebook 14, backfill)
@@ -371,7 +377,7 @@ G-Eval di pyAutoSummarizer, reimplementato per un endpoint non-OpenAI*.
 Deployment **GlobalStandard** dedicato su Azure AI Foundry (swedencentral), distinto da quello
 del notebook 12. Due proprietà lo motivano:
 
-1. **Indipendente da tutti e 13 i metodi valutati**: nessun self-judging. Usare `gpt-5-mini` (il
+1. **Indipendente da tutti e 18 i metodi valutati**: nessun self-judging. Usare `gpt-5-mini` (il
    modello del notebook 12, presente nel benchmark come metodo `gpt5mini`) significherebbe
    fargli giudicare i propri output, con il noto bias di auto-preferenza.
 2. **Più recente di ogni generatore del benchmark** (`gpt-5-mini` è 2025-08-07, `gpt-5.4-mini`
@@ -400,20 +406,25 @@ riproducibilità è la cache JSONL committata.
   BART/PEGASUS (1.024 token). Il costo marginale rispetto a un tetto di 2.100 parole (copertura
   76%) è di circa **$5 sull'intera corsa**, perché quasi tutte le parole in più finiscono nel
   prefisso condiviso, pagato a tariffa *cached*;
-- ambito: split `test` intera, **72.681 giudizi** (meno di 13 × 5.610 perché la copertura è
-  disomogenea: firstk_psr e le varianti centroid hanno 5.588 righe, gpt5mini 5.471).
+- ambito: split `test` intera, **100.621 giudizi** (meno di 18 × 5.610 perché la copertura è
+  disomogenea: firstk_psr, le varianti centroid e i cinque metodi dei notebook 15–17 hanno 5.588
+  righe, gpt5mini 5.471), tutti eseguiti: i 72.681 dei tredici metodi originali (2026-08-17) più
+  i 27.940 dei cinque aggiunti col backfill dell'issue #12 (2026-08-31).
 
 ### Concorrenza e prompt cache
 
 L'ordine dei messaggi è un **contratto, non uno stile**: il `system` (rubriche + formato JSON) è
 identico su tutte le chiamate e il `user` comincia con la **sorgente troncata** — la stessa per
-tutti e 13 i metodi di una riga — mettendo in fondo il **riassunto**, unica parte che cambia.
+tutti i metodi di una riga — mettendo in fondo il **riassunto**, unica parte che cambia.
 
 Di conseguenza `su.giudica_geval_concorrente` prende la **riga** come unità di lavoro ed esegue
-i suoi 13 giudizi **in sequenza dentro lo stesso thread**: il primo popola la prompt cache di
-Azure e gli altri dodici la riusano. Il parallelismo è **tra** righe diverse. Parallelizzare per
-singolo giudizio farebbe partire insieme le 13 chiamate della stessa riga, mancando la cache
-tutte quante.
+i giudizi di quella riga **in sequenza dentro lo stesso thread**: il primo popola la prompt cache
+di Azure e i successivi la riusano. Il parallelismo è **tra** righe diverse. Parallelizzare per
+singolo giudizio farebbe partire insieme tutte le chiamate della stessa riga, mancando la cache
+tutte quante. Nota che l'ammortamento peggiora quando i metodi da giudicare per riga sono pochi:
+nel backfill dei cinque metodi dei notebook 15–17 la chiamata che paga il prefisso intero si
+divide su 5 giudizi invece che su 13, e la quota di input in cache scende (56% cumulativo contro
+il 59% della prima corsa).
 
 ### ⚠️ La concorrenza degrada la cache (misurato)
 
@@ -463,8 +474,9 @@ in gioco (utile solo dopo aver attaccato al deployment un filtro contenuti *high
 I punteggi finiscono in `{metodo}_{scope}_geval_per_example.csv` e `..._geval_aggregate.json`,
 **mai** uniti al CSV per-esempio standard. Il motivo è in `su.valuta_e_salva`, la cui media
 interna somma **ogni** colonna su **ogni** riga: il giudice lascia scoperte alcune righe e la
-media esploderebbe con un `KeyError`; e restringere le righe valutate riscriverebbe i 13 CSV già
-committati, cambiando medie e `n_esempi` di ROUGE/BLEU/METEOR/BERTScore. Il notebook 05 aggancia
+media esploderebbe con un `KeyError`; e restringere le righe valutate riscriverebbe i CSV già
+committati, cambiando medie e `n_esempi` di ROUGE/BLEU/METEOR/BERTScore — in modo drastico per i
+cinque metodi dei notebook 15–17, giudicati solo al ~60%. Il notebook 05 aggancia
 le colonne con un merge **LEFT** (che non cambia il numero di righe) e riporta la copertura
 effettiva nella colonna `n_geval`.
 
@@ -524,9 +536,12 @@ i casi, cambia solo la cifra.
 
 ### Avvertenze
 
-- **Copertura parziale**: alcune righe vengono respinte dal content filter di Azure (le stesse
-  che mancano a `gpt5mini`) o producono risposte non conformi. Le medie vanno lette insieme a
-  `n_geval`, che può essere minore di `n_esempi`.
+- **Copertura parziale**: alcune righe vengono respinte dal content filter di Azure o producono
+  risposte non conformi — 5.855 giudizi su 100.621 (5,8%), per una copertura per metodo fra
+  93,5% e 96,7%. Le medie vanno lette insieme a `n_geval`, che può essere minore di `n_esempi`.
+  **Le righe respinte non sono le stesse in corse diverse** (vedi l'avvertenza dedicata più
+  sotto): la copertura più alta dei cinque metodi dei notebook 15–17 dipende dal filtro, non dai
+  metodi.
 - **Bias del giudice**: un LLM giudice tende a premiare i testi **più lunghi** e quelli generati
   da altri LLM. Il confronto fra metodi estrattivi (che qui producono 216–450 parole) e
   astrattivi (55–210) su questa metrica va preso con cautela.
@@ -612,9 +627,10 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | GPT-5-mini (12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
 | GPT-5-mini (12), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
-| BERTScore (13), tutti e 13 i metodi su `test` (5.610 righe ciascuno) | sconsigliata (`roberta-large`, migliaia di forward pass) | ~1 h totale (misurata: caricamento ~6 s/metodo + ~21 righe/s di scoring — vedi sezione dedicata) |
+| BERTScore (13), tutti e 18 i metodi su `test` (5.610 righe ciascuno) | sconsigliata (`roberta-large`, migliaia di forward pass) | ~1 h per tredici metodi + 24 min per i cinque dei notebook 15–17 (misurato: caricamento ~6 s/metodo + ~19-21 righe/s di scoring — vedi sezione dedicata) |
 | G-Eval (14), pilota 20 righe (260 giudizi) | ~1 min (misurato, 8 thread) | — |
-| G-Eval (14), tutti e 13 i metodi su `test` (72.681 giudizi) | ~3 h a 8 thread (~6,7 giudizi/s misurati) ma **~$111**; ~12 h a 2 thread per **~$56** — il compromesso è costo/tempo, non CPU. Riprendibile in qualunque momento | — |
+| G-Eval (14), i tredici metodi originali su `test` (72.681 giudizi) | ~3 h a 8 thread (~6,7 giudizi/s misurati) ma **~$111**; ~12 h a 2 thread per **~$56** — il compromesso è costo/tempo, non CPU. Riprendibile in qualunque momento | — |
+| G-Eval (14), backfill dei cinque metodi 15–17 su `test` (27.940 giudizi) | **€32** in ~5 h a 2 thread, in due sessioni (la prima fermata dal tetto `--budget` al ~60%) | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 13, ~1,4 GB).
@@ -654,7 +670,7 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   quelli generati da altri LLM — quindi il confronto estrattivi vs astrattivi su questa metrica
   va preso con cautela. La copertura è inoltre **parziale** (content filter di Azure, risposte
   non conformi): le medie vanno lette insieme alla colonna `n_geval` del notebook 05, che può
-  essere minore di `n_esempi`. Il giudice è comunque **indipendente da tutti e 13 i metodi**
+  essere minore di `n_esempi`. Il giudice è comunque **indipendente da tutti e 18 i metodi**
   valutati, quindi non c'è self-judging.
 - **Lunghezza dei riassunti LDA**: i notebook 15/16/17 condividono lo stesso budget nominale
   (`N_SENTENCES = 11`), ma le frasi che l'allocazione proporzionale ai topic di LDA seleziona
@@ -666,12 +682,25 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   questi cinque metodi conviene quindi leggere l'F1, non il recall; la colonna `parole_generate`
   del notebook 05 rende il confronto esplicito. Per un confronto a lunghezza davvero pari
   servirebbe un budget in parole, non in frasi — non è stato fatto.
-- **BERTScore e G-Eval assenti sui metodi dei notebook 15–17**: i due backfill (13 e 14) sono
-  stati eseguiti quando quei metodi non esistevano, quindi `lsa`, `lsa_steinberger`,
-  `sbert_kmeans`, `sbert_agglom` e `lda` hanno **solo** le metriche lessicali. Il notebook 05 li
-  esclude dai grafici BERTScore/G-Eval elencandoli in un avviso, e lascia le due colonne vuote in
-  tabella. Rieseguire il notebook 13 li aggiunge a costo zero (solo tempo di calcolo); il
-  notebook 14 comporta invece un costo Azure, quindi la scelta è deliberata.
+- **Il content filter di Azure non è stabile nel tempo**: BERTScore e G-Eval ci sono ora per
+  tutti e 18 i metodi, ma i due backfill sono stati eseguiti in due momenti diversi (i tredici
+  metodi il 2026-08-17, i cinque dei notebook 15–17 il 2026-08-31) e le righe che Azure respinge
+  sono cambiate nel frattempo. Nella prima corsa il rifiuto era di fatto **determinato dalla
+  sorgente** (unione 366 righe respinte sui tredici metodi, intersezione 358: quasi le stesse per
+  ognuno, come ci si aspetta da un filtro che scatta sul testo condiviso). Nella seconda, 155 di
+  quelle righe passano, 91 nuove vengono respinte, e fra i cinque metodi l'insieme dei rifiuti
+  varia molto di più (unione 294, intersezione 187). Di qui la copertura **più alta** dei cinque
+  (94,7–96,7%) rispetto ai tredici (93,5–93,6%): è una proprietà del filtro al momento della
+  corsa, non dei metodi. L'effetto sul confronto è trascurabile — restringendo ogni media alle
+  **5.091 righe giudicate per tutti e 18** i metodi nessuna si sposta di più di **0,010**, contro
+  un IC 95% di ±0,03 — ma va tenuto presente prima di leggere le differenze di `n_geval` come se
+  dicessero qualcosa sui metodi. Riallineare i tredici alla nuova versione del filtro
+  costerebbe una nuova corsa completa (~€70) e cambierebbe numeri già pubblicati: non è stato
+  fatto.
+- **La logica «sottoinsieme» del notebook 05 va lasciata com'è**: ogni grafico BERTScore/G-Eval
+  disegna i metodi che hanno quella metrica, elencando gli esclusi in un avviso, invece di
+  pretenderla da tutti. Adesso che tutti e 18 le hanno l'avviso non compare mai, ma è ciò che
+  evita di far sparire i grafici la prossima volta che si aggiunge un metodo prima del backfill.
 - **METEOR non affidabile per output degeneri**: la formula `meteor()` di pyAutoSummarizer
   (`meteor = fmean * (1 - penalty**3)`) non è limitata a [0,1]. Nella corsa `test`, PEGASUS
   produce due riassunti patologici (un loop di ripetizione del beam search e un probabile

@@ -10,7 +10,7 @@
     "selezione": "allocazione proporzionale ai pesi dei topic",
     "libreria_valutazione": "pyAutoSummarizer 1.2.0"
   },
-  "timestamp": "2026-08-24T19:22:34+00:00",
+  "timestamp": "2026-08-31T08:17:37+00:00",
   "n_esempi": 5588,
   "overall": {
     "rouge1_f1": 0.3509846233862047,
@@ -24,7 +24,10 @@
     "rougeL_r": 0.2770117992950252,
     "bleu": 0.08064305692905456,
     "meteor": 0.5111659057612757,
-    "parole_generate": 477.2406943450251
+    "parole_generate": 477.2406943450251,
+    "bertscore_f1": 0.8346962493896997,
+    "bertscore_p": 0.8163184043694669,
+    "bertscore_r": 0.8541218750525477
   },
   "per_split": {
     "test": {
@@ -40,7 +43,10 @@
       "rougeL_r": 0.2770117992950252,
       "bleu": 0.08064305692905456,
       "meteor": 0.5111659057612757,
-      "parole_generate": 477.2406943450251
+      "parole_generate": 477.2406943450251,
+      "bertscore_f1": 0.8346962493896997,
+      "bertscore_p": 0.8163184043694669,
+      "bertscore_r": 0.8541218750525477
     }
   }
 }
