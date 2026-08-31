@@ -135,7 +135,13 @@ all three scopes (`sample`/`test`/`full`, `SUMM_SCOPE`/`SUMM_LIMIT` env override
 respect:
 
 - **All notebook documentation, comments and printed labels are in Italian** (consistent with the
-  EDA dashboard). `README.md`, `CLAUDE.md`, `data/README.md` etc. stay in English.
+  EDA dashboard). **So is every `.md` in the repo**: `README.md`, `data/README.md`,
+  `scripts/README.md` and `notebooks/README.md` were translated to Italian, matching the language
+  of the project work itself — keep new documentation in Italian. Two exceptions, both
+  deliberate: **this file** (`CLAUDE.md`, agent-facing) stays in English, and
+  `Multi-News_paper.md` stays in English because it is a verbatim copy of the published paper,
+  cited as a primary source — never translate it. `LICENSE` likewise stays in its original
+  English as the binding text; `README.md` carries only an Italian courtesy summary of it.
 - All method notebooks default to the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
   default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept)
   as a **local smoke-test convenience only** — `SCOPE='sample'` results are no longer committed
