@@ -174,12 +174,21 @@ respect:
   `prepara_documento`; the library reloads HF models per call and ignores CUDA, so notebooks
   03/04/06 load the model once themselves and notebook 01 injects a shared SentenceTransformer
   into `loaded_models`.
-- **The five slugs of notebooks 15-17 have no BERTScore and no G-Eval**: both backfills (13, 14)
-  ran before those methods existed, so their per-example CSVs carry only the lexical metrics.
-  Notebook 05 handles this by charting BERTScore/G-Eval over the *subset* of methods that have
-  the column (naming the excluded ones) instead of requiring it from all — don't "fix" that back
-  into an `all(...)` gate. Re-running notebook 13 would close the BERTScore gap for free; 14
-  costs Azure credit, so the gap is deliberate.
+- **The five slugs of notebooks 15-17 have full BERTScore but only ~60% G-Eval coverage**: both
+  backfills (13, 14) first ran before those methods existed and were extended afterwards (issue
+  #12). BERTScore is complete for all 18. The G-Eval run stopped on its `--budget` cap when the
+  Azure credit ran out, at ~3,400 of 5,588 rows per method — but with `--casuale` (fixed-seed
+  shuffle), so those rows are a *random* sample, not a prefix: judged vs unjudged rows match on
+  ROUGE-1 (0.3502 vs 0.3528), BERTScore (0.8326 vs 0.8334) and length (248 vs 250 words) for
+  `lsa`. The means are therefore unbiased, with a 95% CI of ±0.04 instead of ±0.031. Finishing
+  costs ~€10 (~10,400 judgments) and just needs a relaunch with a higher cap — the cache makes it
+  resumable. Notebook 05 charts BERTScore/G-Eval over the *subset* of methods that have the
+  column (naming the excluded ones) instead of requiring it from all — keep that even now that
+  all 18 have both; don't "fix" it into an `all(...)` gate.
+- **Notebook 13 is incremental**: it lists all 18 slugs and skips any method whose per-example
+  CSV already has the `bertscore_*` columns, because `valuta_e_salva` rewrites that method's CSV
+  and JSON wholesale. `BERTSCORE_FORZA=1` forces a full recompute. This is what let the five new
+  slugs be backfilled without regenerating the 13 published files.
 - **LDA summary length**: notebooks 15/16/17 share `N_SENTENCES = 11`, but LDA's
   topic-proportional allocation picks much longer sentences — 477 words per summary vs 216-264
   for the other four. Its ROUGE-1 *recall* (0.499) and METEOR (0.511) lead the group for that
@@ -237,7 +246,7 @@ respect:
   consistency / fluency / relevance scores (1-5) for the test split — the only metric here not
   anchored to the human reference. Judge is **`gpt-5.4-mini`** on Azure (its own GlobalStandard
   deployment, `AZURE_GEVAL_DEPLOYMENT`, same `AZURE_OPENAI_*` credentials as notebook 12), chosen
-  because it is independent of all 13 benchmarked methods (no self-judging of `gpt5mini`) *and*
+  because it is independent of all 18 benchmarked methods (no self-judging of `gpt5mini`) *and*
   newer than every generator — which matters mainly for the consistency dimension. Verified live:
   DeepSeek/Grok/Llama/Mistral are **not deployable** on this AIServices account, and
   **`gpt-5.1-mini` does not exist**. `psr.g_eval()` is unusable (no `base_url` → can't reach
@@ -252,15 +261,18 @@ respect:
   - **Never merge G-Eval columns into the standard per-example CSV.** `valuta_e_salva`'s inner
     mean sums *every* column over *every* row, and the judge leaves some rows uncovered (Azure
     content filter, parse failures) → `KeyError`; restricting the evaluated rows instead would
-    rewrite the 13 committed CSVs and change already-published `n_esempi` and means. Notebook 05
+    rewrite the committed CSVs and change already-published `n_esempi` and means — drastically so
+    for the five notebook 15-17 methods, whose G-Eval coverage is only ~60%. Notebook 05
     attaches them with a LEFT merge and reports coverage as `n_geval`.
   - **Message order is a contract**: constant `system`, then the truncated source (shared by a
-    row's 13 methods), summary last. That is what makes Azure's prompt cache hit; the work unit
-    is the *row* (its 13 judgments run sequentially in one thread), parallelism is *between*
-    rows. Reordering costs roughly 3.5x on input tokens.
+    row's methods), summary last. That is what makes Azure's prompt cache hit; the work unit
+    is the *row* (its judgments run sequentially in one thread), parallelism is *between*
+    rows. Reordering costs roughly 3.5x on input tokens. The amortization weakens when a row has
+    few methods to judge: the 15-17 backfill pays the full prefix once per 5 judgments instead of
+    once per 13, and the cached-input share fell from 59% to 56% cumulative.
   - Source truncated to **3,500 words**, which leaves 91.5% of test-split clusters intact
-    (p90 = 3,244 words, max = 35,362). Scope is 72,681 judgments (not 13x5,610 — coverage is
-    uneven).
+    (p90 = 3,244 words, max = 35,362). Scope is 100,621 judgments (not 18x5,610 — coverage is
+    uneven), of which 90,233 have been run for €83.
   - **Cost is entirely input-bound.** Measured: `reasoning_effort='minimal'` emits **zero**
     reasoning tokens, so output is ~30 tokens/judgment (~$10 total). Everything else rides on the
     prompt-cache hit rate. Two things cap it, and neither is the truncation limit:

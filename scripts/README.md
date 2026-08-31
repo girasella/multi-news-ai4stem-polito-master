@@ -64,14 +64,17 @@ days — the script does not throttle GPU/CPU usage.
 
 Unattended driver for the **G-Eval (LLM-as-a-Judge)** backfill — notebook 14. Judges every
 generated summary on the test split with `gpt-5.4-mini` on Azure, scoring coherence,
-consistency, fluency and relevance on a 1–5 scale. **72,681 judgments**, hours of paid API
-calls; see the *G-Eval* section of `notebooks/README.md` for the methodology.
+consistency, fluency and relevance on a 1–5 scale. **100,621 judgments** across the 18 methods,
+hours of paid API calls; see the *G-Eval* section of `notebooks/README.md` for the methodology.
+90,233 of them are in the committed cache (the 13 original methods in full, the five notebook
+15-17 methods at ~60% — the Azure credit ran out); a relaunch judges only what is missing.
 
 ### Usage
 
 ```
-python scripts/run_geval.py --righe 1        # smoke: 13 calls, proves the prompt cache works
-python scripts/run_geval.py --pilota 20      # pilot: ~260 judgments, measures cost/judgment
+python scripts/run_geval.py --righe 1        # smoke: one call per not-yet-cached method, proves
+                                             # the prompt cache works
+python scripts/run_geval.py --pilota 20      # pilot: 20 rows, measures cost/judgment
 python scripts/run_geval.py --budget 120     # full run, hard stop once $120 has been spent
 python scripts/run_geval.py --righe 500 --thread 12
 python scripts/run_geval.py --solo-metriche  # rewrite CSV/JSON from the cache, ZERO API calls
@@ -91,7 +94,7 @@ variables (`GEVAL_SCOPE`, `GEVAL_RIGHE`, `GEVAL_PILOTA`, `GEVAL_THREAD`, `GEVAL_
 source of truth and the documentary artifact. Preflight fails fast on: missing
 `AZURE_OPENAI_ENDPOINT`/`AZURE_OPENAI_API_KEY`, a **1-token ping on the judge deployment** (so a
 wrong deployment name costs seconds, not hours), a missing `complete.tab`, missing summary TSVs
-for any of the 13 methods, and an unavailable `nbconvert`. Notebook 05 is re-executed at the end
+for any of the 18 methods, and an unavailable `nbconvert`. Notebook 05 is re-executed at the end
 unless `--pilota` or `--no-05`.
 
 `run_benchmark_test.py` is untouched — G-Eval is not on the generation path.
@@ -101,7 +104,7 @@ unless `--pilota` or `--no-05`.
 - `results/metrics/geval_cache_test.jsonl` — one JSON line per `(method, row_id)` with the four
   scores (or the error) **and the token counts**. This is the paid artifact: it is committed, and
   the metric files are re-derived from it for free.
-- `results/metrics/{method}_test_geval_{per_example.csv,aggregate.json}` for the 13 methods —
+- `results/metrics/{method}_test_geval_{per_example.csv,aggregate.json}` for the 18 methods —
   deliberately **separate** from the standard metric files (see `notebooks/README.md` for why
   merging them would break `valuta_e_salva`).
 - `run_geval.log` in the repo root (gitignored) — append-only, timestamped.

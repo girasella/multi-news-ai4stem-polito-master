@@ -15,13 +15,13 @@
     "n_thread": 2,
     "valuta": "EUR",
     "prezzi_per_1M_token": {
-      "input": 0.6582,
-      "cached": 0.0658,
-      "output": 3.9491
+      "input": 0.659,
+      "cached": 0.0659,
+      "output": 3.9538
     },
     "nota": "punteggi 1-5 su coherence/consistency/fluency/relevance; il giudice e' indipendente da tutti i metodi valutati e piu' recente di ogni generatore del benchmark"
   },
-  "timestamp": "2026-08-17T13:28:21+00:00",
+  "timestamp": "2026-08-31T11:53:01+00:00",
   "n_esempi": 5244,
   "overall": {
     "geval_coherence": 4.814263920671244,
