@@ -10,7 +10,7 @@
     "selezione": "top-k per norma latente (Gong & Liu, come sumy)",
     "libreria_valutazione": "pyAutoSummarizer 1.2.0"
   },
-  "timestamp": "2026-08-24T19:28:03+00:00",
+  "timestamp": "2026-08-31T07:52:46+00:00",
   "n_esempi": 5588,
   "overall": {
     "rouge1_f1": 0.35120333112982766,
@@ -24,7 +24,10 @@
     "rougeL_r": 0.2098001774581518,
     "bleu": 0.0909587453393057,
     "meteor": 0.4002680967425159,
-    "parole_generate": 248.57605583392984
+    "parole_generate": 248.57605583392984,
+    "bertscore_f1": 0.8328991441766791,
+    "bertscore_p": 0.8244528277225809,
+    "bertscore_r": 0.8418525860044217
   },
   "per_split": {
     "test": {
@@ -40,7 +43,10 @@
       "rougeL_r": 0.2098001774581518,
       "bleu": 0.0909587453393057,
       "meteor": 0.4002680967425159,
-      "parole_generate": 248.57605583392984
+      "parole_generate": 248.57605583392984,
+      "bertscore_f1": 0.8328991441766791,
+      "bertscore_p": 0.8244528277225809,
+      "bertscore_r": 0.8418525860044217
     }
   }
 }

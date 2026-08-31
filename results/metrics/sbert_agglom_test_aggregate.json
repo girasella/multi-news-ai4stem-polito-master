@@ -11,7 +11,7 @@
     "device": "cpu",
     "libreria_valutazione": "pyAutoSummarizer 1.2.0"
   },
-  "timestamp": "2026-08-25T17:46:08+00:00",
+  "timestamp": "2026-08-31T08:09:49+00:00",
   "n_esempi": 5588,
   "overall": {
     "rouge1_f1": 0.3284718236048147,
@@ -25,7 +25,10 @@
     "rougeL_r": 0.18255936613908152,
     "bleu": 0.08452279998140483,
     "meteor": 0.3776344620902114,
-    "parole_generate": 215.61471009305654
+    "parole_generate": 215.61471009305654,
+    "bertscore_f1": 0.8325074047767527,
+    "bertscore_p": 0.822555555250701,
+    "bertscore_r": 0.8429540433602923
   },
   "per_split": {
     "test": {
@@ -41,7 +44,10 @@
       "rougeL_r": 0.18255936613908152,
       "bleu": 0.08452279998140483,
       "meteor": 0.3776344620902114,
-      "parole_generate": 215.61471009305654
+      "parole_generate": 215.61471009305654,
+      "bertscore_f1": 0.8325074047767527,
+      "bertscore_p": 0.822555555250701,
+      "bertscore_r": 0.8429540433602923
     }
   }
 }

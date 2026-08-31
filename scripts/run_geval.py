@@ -4,15 +4,18 @@ Executes notebooks/14_geval.ipynb via nbconvert with the GEVAL_* environment var
 so the notebook stays the single source of truth (and the documentary artifact) while this
 script handles preflight, staged runs, cost reporting and logging.
 
-Scope: the full test split judged by gpt-5.4-mini on Azure — 72,681 judgments over 5,610 rows
-(under 13x5,610 because coverage is uneven: firstk_psr and the centroid variants cover 5,588
-rows, gpt5mini 5,471 after Azure's content filter). This costs real money and runs for hours,
-so the intended order is: --righe 1 (smoke), then --pilota 20, then the full run.
+Scope: the full test split judged by gpt-5.4-mini on Azure — ~100,600 judgments over 5,610 rows
+(under 18x5,610 because coverage is uneven: firstk_psr, the centroid variants and the five
+notebook 15-17 methods cover 5,588 rows, gpt5mini 5,471 after Azure's content filter). The
+first 72,681 (the 13 original methods) are already in the committed cache; a relaunch judges
+only what is missing. This costs real money and runs for hours, so the intended order is:
+--righe 1 (smoke), then --pilota 20, then the full run.
 
 Usage (from the repo root or anywhere — paths are resolved relative to this script):
 
-    python scripts/run_geval.py --righe 1        # smoke: 13 calls, proves the prompt cache
-    python scripts/run_geval.py --pilota 20      # pilot: ~260 judgments, measures cost/judgment
+    python scripts/run_geval.py --righe 1        # smoke: one call per not-yet-cached method
+                                                 # on row 1, proves the prompt cache
+    python scripts/run_geval.py --pilota 20      # pilot: 20 rows, measures cost/judgment
     python scripts/run_geval.py --budget 120                # hard stop once $120 is spent
     python scripts/run_geval.py --budget 7 --valuta EUR      # hard stop once EUR 7 is spent —
                                                               # --valuta MUST match the billing
@@ -56,10 +59,13 @@ import summ_utils as su  # noqa: E402  (needs NOTEBOOKS_DIR on sys.path first)
 NOTEBOOK = '14_geval.ipynb'
 NOTEBOOK_CONFRONTO = '05_confronto.ipynb'
 
-# Gli stessi 13 slug del notebook 05 (Vista 2), 13 e 14
+# Gli stessi 18 slug del notebook 05 (Vista 2), 13 e 14. Gli ultimi cinque (notebook
+# 15-17) sono stati aggiunti col backfill dell'issue #12: la cache e' per (metodo,
+# row_id), quindi allargare la lista fa giudicare SOLO i nuovi, senza ripagare i 13.
 METODI = ['firstk_psr', 'firstk_nltk', 'centroid_mmr', 'centroid_mmr_bert',
           'textrank', 'lexrank', 'bart', 'pegasus', 'primera',
-          'qwen', 'gemma', 'mistral', 'gpt5mini']
+          'qwen', 'gemma', 'mistral', 'gpt5mini',
+          'lsa', 'lsa_steinberger', 'sbert_kmeans', 'sbert_agglom', 'lda']
 
 
 def log(message):
