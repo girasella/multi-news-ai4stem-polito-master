@@ -21,13 +21,37 @@ Il progetto esplora Multi-News come corpus di text mining e summarization:
   Data Mining, con un passo di pulizia che rimuove le righe con problemi noti di qualità della
   sorgente (scraping fallito, duplicati esatti, disallineamenti sorgente/riassunto) individuati
   dall'analisi esplorativa.
-- **Esperimenti di summarization** — un benchmark di cinque metodi di summarization (TextRank,
-  LexRank, BART, PEGASUS, PRIMERA) sul corpus curato, tramite la libreria
-  [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA direttamente via
-  `transformers`, valutato con le stesse metriche): un notebook per metodo in
-  [notebooks/](notebooks/) (documentati in italiano), con i riassunti generati e le metriche
-  ROUGE/BLEU/METEOR salvati sotto [results/](results/), così che la valutazione possa essere
-  rieseguita senza rigenerare i riassunti.
+- **Esperimenti di summarization** — un benchmark di **18 metodi** sul corpus curato, valutati
+  sull'intera split test pulita (5.610 esempi):
+  - due baseline posizionali First-k / Lead (notebook 10);
+  - sette estrattivi non supervisionati — TextRank, LexRank, Centroid-based (MEAD) + MMR in due
+    varianti, LSA in due varianti, clustering su embedding SBERT in due varianti, LDA (notebook
+    01/02, 11, 15–17);
+  - tre abstractive specializzati — BART, PEGASUS, PRIMERA (notebook 03/04/06);
+  - tre LLM generalisti eseguiti in locale via [ollama](https://ollama.com) — Qwen2.5-7B,
+    Gemma 4 E4B, Mistral-7B (notebook 07–09);
+  - un LLM cloud su Azure AI Foundry — GPT-5-mini (notebook 12).
+
+  Un notebook per metodo in [notebooks/](notebooks/) (documentati in italiano), con i riassunti
+  generati e le metriche salvati sotto [results/](results/), così che la valutazione possa essere
+  rieseguita senza rigenerare i riassunti. Le metriche sono quelle di
+  [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) — ROUGE-1/2/L, BLEU, METEOR —
+  più due aggiunte in backfill separati: il **BERTScore** (`roberta-large`, notebook 13) e il
+  **G-Eval** (LLM-as-a-Judge con giudice GPT-5.4-mini su Azure, notebook 14), l'unica metrica del
+  benchmark che non passa dal riassunto di riferimento umano.
+
+### Il risultato principale
+
+Le due famiglie di metriche danno classifiche **opposte**, ed è il risultato più interessante del
+benchmark. Sulle metriche ancorate al riferimento umano vincono gli abstractive specializzati,
+addestrati proprio su Multi-News: PRIMERA ha il ROUGE-1 F1 più alto (0,444) e il BERTScore più
+alto (0,874), seguito da PEGASUS (0,423 / 0,871). Sul G-Eval, che valuta coerenza, fedeltà
+fattuale, fluidità e pertinenza **senza** guardare il riferimento, l'ordine si ribalta e passano
+davanti gli LLM generalisti: GPT-5-mini 4,89 su 5, Gemma 4,78, Mistral 4,72, contro 4,28 di
+PRIMERA e 4,04 di PEGASUS. In altre parole i modelli addestrati sul dataset riproducono bene lo
+*stile* dei riassunti di riferimento, che è ciò che ROUGE misura, mentre un giudice indipendente
+trova più leggibili e fedeli i riassunti degli LLM generalisti. Tabelle, grafici e avvertenze
+metodologiche sono in [notebooks/05_confronto.ipynb](notebooks/05_confronto.ipynb).
 
 ## Contenuto del repository
 
@@ -38,8 +62,10 @@ Il progetto esplora Multi-News come corpus di text mining e summarization:
 | [data/tab/](data/) | Copie Orange `.tab` **pulite**: una per split più `complete.tab` (tutte le split unite, con una colonna `split`) ed `excluded_rows.tsv` (elenco delle 115 righe scartate) |
 | [scripts/convert_to_tab.py](scripts/convert_to_tab.py) | Rigenera `data/tab/` a partire da `data/text/` applicando i criteri di pulizia — documentato in [scripts/README.md](scripts/README.md) |
 | [multi_news_dashboard.html](multi_news_dashboard.html) | Dashboard EDA autoconsistente — si apre direttamente nel browser (testo del report in italiano) |
-| [notebooks/](notebooks/) | Notebook del benchmark di summarization (TextRank, LexRank, BART, PEGASUS, PRIMERA + confronto), in italiano — vedi [notebooks/README.md](notebooks/README.md) |
-| [results/](results/) | Output del benchmark: campione di valutazione condiviso, riassunti generati, metriche per esempio e aggregate |
+| [notebooks/](notebooks/) | Notebook del benchmark di summarization: uno per metodo (18 slug), più il confronto (05) e i due backfill di metrica (13 BERTScore, 14 G-Eval), in italiano — vedi [notebooks/README.md](notebooks/README.md) |
+| [scripts/run_benchmark_test.py](scripts/run_benchmark_test.py) | Driver non presidiato della corsa `test`: esegue in sequenza i notebook dei metodi, dal più veloce al più lento — documentato in [scripts/README.md](scripts/README.md) |
+| [scripts/run_geval.py](scripts/run_geval.py) | Driver non presidiato del backfill G-Eval, con controllo di spesa e report di costo offline — documentato in [scripts/README.md](scripts/README.md) |
+| [results/](results/) | Output del benchmark: campione di valutazione condiviso, riassunti generati, metriche per esempio e aggregate (comprese quelle G-Eval, in file dedicati, e la cache dei giudizi) |
 | [requirements-notebooks.txt](requirements-notebooks.txt) | Dipendenze Python dei notebook del benchmark |
 | [Multi-News_paper.md](Multi-News_paper.md) | Il paper originale (Fabbri et al., 2019), come riferimento — lasciato in inglese perché copia verbatim della pubblicazione |
 | [data/README.md](data/README.md) | Documentazione dettagliata di formati dei file, statistiche e criteri di pulizia |
