@@ -406,11 +406,10 @@ riproducibilità è la cache JSONL committata.
   BART/PEGASUS (1.024 token). Il costo marginale rispetto a un tetto di 2.100 parole (copertura
   76%) è di circa **$5 sull'intera corsa**, perché quasi tutte le parole in più finiscono nel
   prefisso condiviso, pagato a tariffa *cached*;
-- ambito: split `test` intera, **100.621 giudizi previsti** (meno di 18 × 5.610 perché la
-  copertura è disomogenea: firstk_psr, le varianti centroid e i cinque metodi dei notebook 15–17
-  hanno 5.588 righe, gpt5mini 5.471). Ne sono stati eseguiti **90.233**: i 72.681 dei tredici
-  metodi originali più ~17.550 dei cinque aggiunti dopo, fermati al ~60% dall'esaurimento del
-  credito Azure (vedi «Copertura» sotto).
+- ambito: split `test` intera, **100.621 giudizi** (meno di 18 × 5.610 perché la copertura è
+  disomogenea: firstk_psr, le varianti centroid e i cinque metodi dei notebook 15–17 hanno 5.588
+  righe, gpt5mini 5.471), tutti eseguiti: i 72.681 dei tredici metodi originali (2026-08-17) più
+  i 27.940 dei cinque aggiunti col backfill dell'issue #12 (2026-08-31).
 
 ### Concorrenza e prompt cache
 
@@ -537,9 +536,12 @@ i casi, cambia solo la cifra.
 
 ### Avvertenze
 
-- **Copertura parziale**: alcune righe vengono respinte dal content filter di Azure (le stesse
-  che mancano a `gpt5mini`) o producono risposte non conformi. Le medie vanno lette insieme a
-  `n_geval`, che può essere minore di `n_esempi`.
+- **Copertura parziale**: alcune righe vengono respinte dal content filter di Azure o producono
+  risposte non conformi — 5.855 giudizi su 100.621 (5,8%), per una copertura per metodo fra
+  93,5% e 96,7%. Le medie vanno lette insieme a `n_geval`, che può essere minore di `n_esempi`.
+  **Le righe respinte non sono le stesse in corse diverse** (vedi l'avvertenza dedicata più
+  sotto): la copertura più alta dei cinque metodi dei notebook 15–17 dipende dal filtro, non dai
+  metodi.
 - **Bias del giudice**: un LLM giudice tende a premiare i testi **più lunghi** e quelli generati
   da altri LLM. Il confronto fra metodi estrattivi (che qui producono 216–450 parole) e
   astrattivi (55–210) su questa metrica va preso con cautela.
@@ -628,7 +630,7 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | BERTScore (13), tutti e 18 i metodi su `test` (5.610 righe ciascuno) | sconsigliata (`roberta-large`, migliaia di forward pass) | ~1 h per tredici metodi + 24 min per i cinque dei notebook 15–17 (misurato: caricamento ~6 s/metodo + ~19-21 righe/s di scoring — vedi sezione dedicata) |
 | G-Eval (14), pilota 20 righe (260 giudizi) | ~1 min (misurato, 8 thread) | — |
 | G-Eval (14), i tredici metodi originali su `test` (72.681 giudizi) | ~3 h a 8 thread (~6,7 giudizi/s misurati) ma **~$111**; ~12 h a 2 thread per **~$56** — il compromesso è costo/tempo, non CPU. Riprendibile in qualunque momento | — |
-| G-Eval (14), backfill dei cinque metodi 15–17 su `test` (27.940 giudizi previsti) | ~€26-31 stimati; corsa reale fermata dal budget a ~17.550 giudizi (~60%) per **€20** in ~3 h a 2 thread | — |
+| G-Eval (14), backfill dei cinque metodi 15–17 su `test` (27.940 giudizi) | **€32** in ~5 h a 2 thread, in due sessioni (la prima fermata dal tetto `--budget` al ~60%) | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 13, ~1,4 GB).
@@ -680,20 +682,25 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   questi cinque metodi conviene quindi leggere l'F1, non il recall; la colonna `parole_generate`
   del notebook 05 rende il confronto esplicito. Per un confronto a lunghezza davvero pari
   servirebbe un budget in parole, non in frasi — non è stato fatto.
-- **G-Eval parziale sui metodi dei notebook 15–17**: i due backfill (13 e 14) sono stati eseguiti
-  la prima volta quando quei metodi non esistevano, e poi estesi. Il **BERTScore c'è per tutti e
-  18** i metodi; il **G-Eval** di `lsa`, `lsa_steinberger`, `sbert_kmeans`, `sbert_agglom` e
-  `lda` copre invece **~60% delle righe** (≈3.300 contro ≈5.180 degli altri tredici), perché il
-  credito Azure si è esaurito e la corsa si è fermata sul tetto di `--budget`. Le righe giudicate
-  sono un **campione casuale** (`run_geval.py --casuale`, seed fisso), non il primo tratto del
-  corpus: verificato su `lsa`, righe giudicate e non giudicate hanno ROUGE-1 medio 0,3502 vs
-  0,3528, BERTScore 0,8326 vs 0,8334 e lunghezza 248 vs 250 parole. Le medie restano quindi stime
-  non distorte, con un intervallo di confidenza al 95% di ±0,04 invece di ±0,031. Completare la
-  copertura costa ~€10 (≈10.400 giudizi) e basta rilanciare `run_geval.py` con un tetto più alto:
-  la corsa è riprendibile. La logica del notebook 05 che disegna ogni grafico sul **sottoinsieme**
-  di metodi che hanno quella metrica va lasciata com'è anche adesso che tutti e 18 le hanno — è
-  ciò che evita di far sparire i grafici la prossima volta che si aggiunge un metodo prima del
-  backfill.
+- **Il content filter di Azure non è stabile nel tempo**: BERTScore e G-Eval ci sono ora per
+  tutti e 18 i metodi, ma i due backfill sono stati eseguiti in due momenti diversi (i tredici
+  metodi il 2026-08-17, i cinque dei notebook 15–17 il 2026-08-31) e le righe che Azure respinge
+  sono cambiate nel frattempo. Nella prima corsa il rifiuto era di fatto **determinato dalla
+  sorgente** (unione 366 righe respinte sui tredici metodi, intersezione 358: quasi le stesse per
+  ognuno, come ci si aspetta da un filtro che scatta sul testo condiviso). Nella seconda, 155 di
+  quelle righe passano, 91 nuove vengono respinte, e fra i cinque metodi l'insieme dei rifiuti
+  varia molto di più (unione 294, intersezione 187). Di qui la copertura **più alta** dei cinque
+  (94,7–96,7%) rispetto ai tredici (93,5–93,6%): è una proprietà del filtro al momento della
+  corsa, non dei metodi. L'effetto sul confronto è trascurabile — restringendo ogni media alle
+  **5.091 righe giudicate per tutti e 18** i metodi nessuna si sposta di più di **0,010**, contro
+  un IC 95% di ±0,03 — ma va tenuto presente prima di leggere le differenze di `n_geval` come se
+  dicessero qualcosa sui metodi. Riallineare i tredici alla nuova versione del filtro
+  costerebbe una nuova corsa completa (~€70) e cambierebbe numeri già pubblicati: non è stato
+  fatto.
+- **La logica «sottoinsieme» del notebook 05 va lasciata com'è**: ogni grafico BERTScore/G-Eval
+  disegna i metodi che hanno quella metrica, elencando gli esclusi in un avviso, invece di
+  pretenderla da tutti. Adesso che tutti e 18 le hanno l'avviso non compare mai, ma è ciò che
+  evita di far sparire i grafici la prossima volta che si aggiunge un metodo prima del backfill.
 - **METEOR non affidabile per output degeneri**: la formula `meteor()` di pyAutoSummarizer
   (`meteor = fmean * (1 - penalty**3)`) non è limitata a [0,1]. Nella corsa `test`, PEGASUS
   produce due riassunti patologici (un loop di ripetizione del beam search e un probabile

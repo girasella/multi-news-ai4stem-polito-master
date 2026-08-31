@@ -174,17 +174,22 @@ respect:
   `prepara_documento`; the library reloads HF models per call and ignores CUDA, so notebooks
   03/04/06 load the model once themselves and notebook 01 injects a shared SentenceTransformer
   into `loaded_models`.
-- **The five slugs of notebooks 15-17 have full BERTScore but only ~60% G-Eval coverage**: both
-  backfills (13, 14) first ran before those methods existed and were extended afterwards (issue
-  #12). BERTScore is complete for all 18. The G-Eval run stopped on its `--budget` cap when the
-  Azure credit ran out, at ~3,400 of 5,588 rows per method — but with `--casuale` (fixed-seed
-  shuffle), so those rows are a *random* sample, not a prefix: judged vs unjudged rows match on
-  ROUGE-1 (0.3502 vs 0.3528), BERTScore (0.8326 vs 0.8334) and length (248 vs 250 words) for
-  `lsa`. The means are therefore unbiased, with a 95% CI of ±0.04 instead of ±0.031. Finishing
-  costs ~€10 (~10,400 judgments) and just needs a relaunch with a higher cap — the cache makes it
-  resumable. Notebook 05 charts BERTScore/G-Eval over the *subset* of methods that have the
-  column (naming the excluded ones) instead of requiring it from all — keep that even now that
-  all 18 have both; don't "fix" it into an `all(...)` gate.
+- **Azure's content filter is not stable across runs, and `n_geval` shows it.** All 18 methods
+  now have BERTScore and G-Eval (issue #12), but the two backfills ran two weeks apart — the 13
+  original methods on 2026-08-17, the five notebook 15-17 methods on 2026-08-31 — and the rows
+  Azure rejects changed in between. *Within* the first run rejection was effectively
+  source-determined (union 366 rejected rows across the 13, intersection 358 — nearly the same
+  rows for every method). *Across* runs it is not: 155 of those rows now pass for all five new
+  methods, 91 new ones are rejected, and among the five the rejected set varies far more (union
+  294, intersection 187). Hence coverage of 94.7-96.7% for the five vs 93.5-93.6% for the
+  thirteen — a property of the filter at run time, not of the methods. Impact on the comparison
+  is negligible: restricted to the 5,091 rows judged for all 18, no mean moves by more than
+  0.010 (95% CI is ±0.03). Do not read `n_geval` differences as saying anything about the
+  methods, and do not "fix" it by re-judging the 13 — that is a fresh ~€70 run that would change
+  published numbers.
+- Notebook 05 charts BERTScore/G-Eval over the *subset* of methods that have the column (naming
+  the excluded ones) instead of requiring it from all — keep that even now that all 18 have both;
+  don't "fix" it into an `all(...)` gate.
 - **Notebook 13 is incremental**: it lists all 18 slugs and skips any method whose per-example
   CSV already has the `bertscore_*` columns, because `valuta_e_salva` rewrites that method's CSV
   and JSON wholesale. `BERTSCORE_FORZA=1` forces a full recompute. This is what let the five new
@@ -272,7 +277,7 @@ respect:
     once per 13, and the cached-input share fell from 59% to 56% cumulative.
   - Source truncated to **3,500 words**, which leaves 91.5% of test-split clusters intact
     (p90 = 3,244 words, max = 35,362). Scope is 100,621 judgments (not 18x5,610 — coverage is
-    uneven), of which 90,233 have been run for €83.
+    uneven), all of them run, for €95.19 total (94,766 succeeded, 5,855 hit the content filter).
   - **Cost is entirely input-bound.** Measured: `reasoning_effort='minimal'` emits **zero**
     reasoning tokens, so output is ~30 tokens/judgment (~$10 total). Everything else rides on the
     prompt-cache hit rate. Two things cap it, and neither is the truncation limit:

@@ -66,8 +66,9 @@ Unattended driver for the **G-Eval (LLM-as-a-Judge)** backfill — notebook 14. 
 generated summary on the test split with `gpt-5.4-mini` on Azure, scoring coherence,
 consistency, fluency and relevance on a 1–5 scale. **100,621 judgments** across the 18 methods,
 hours of paid API calls; see the *G-Eval* section of `notebooks/README.md` for the methodology.
-90,233 of them are in the committed cache (the 13 original methods in full, the five notebook
-15-17 methods at ~60% — the Azure credit ran out); a relaunch judges only what is missing.
+The run is complete and the whole cache is committed (€95.19, 94.2% of judgments successful —
+the rest hit Azure's content filter); a relaunch judges only what is missing, so it costs nothing
+unless methods or rows are added.
 
 ### Usage
 

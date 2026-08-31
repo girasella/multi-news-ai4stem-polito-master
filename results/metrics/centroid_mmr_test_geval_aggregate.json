@@ -21,7 +21,7 @@
     },
     "nota": "punteggi 1-5 su coherence/consistency/fluency/relevance; il giudice e' indipendente da tutti i metodi valutati e piu' recente di ogni generatore del benchmark"
   },
-  "timestamp": "2026-08-31T11:53:00+00:00",
+  "timestamp": "2026-08-31T13:45:05+00:00",
   "n_esempi": 5230,
   "overall": {
     "geval_coherence": 2.55697896749522,

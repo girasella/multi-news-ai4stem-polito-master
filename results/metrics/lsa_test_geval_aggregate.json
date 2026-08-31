@@ -21,19 +21,19 @@
     },
     "nota": "punteggi 1-5 su coherence/consistency/fluency/relevance; il giudice e' indipendente da tutti i metodi valutati e piu' recente di ogni generatore del benchmark"
   },
-  "timestamp": "2026-08-31T11:53:01+00:00",
-  "n_esempi": 3455,
+  "timestamp": "2026-08-31T13:45:06+00:00",
+  "n_esempi": 5401,
   "overall": {
-    "geval_coherence": 2.332561505065123,
-    "geval_consistency": 2.5230101302460204,
-    "geval_fluency": 2.0645441389290884,
-    "geval_relevance": 3.0769898697539797,
-    "geval_media": 2.499276410998553
+    "geval_coherence": 2.342899463062396,
+    "geval_consistency": 2.544528790964636,
+    "geval_fluency": 2.067765228661359,
+    "geval_relevance": 3.1057211627476393,
+    "geval_media": 2.5152286613590076
   },
   "diagnostica": {
-    "n_giudizi_riusciti": 3455,
+    "n_giudizi_riusciti": 5401,
     "n_richiesti": 5588,
-    "n_errori": 56,
-    "copertura": 0.6183
+    "n_errori": 187,
+    "copertura": 0.9665
   }
 }
