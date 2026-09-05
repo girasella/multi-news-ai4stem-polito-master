@@ -24,8 +24,8 @@ Il progetto esplora Multi-News come corpus di text mining e summarization:
 - **Esperimenti di summarization** — un benchmark di **18 metodi** sul corpus curato, valutati
   sull'intera split test pulita (5.610 esempi):
   - due baseline posizionali First-k / Lead (notebook 10);
-  - sette estrattivi non supervisionati — TextRank, LexRank, Centroid-based (MEAD) + MMR in due
-    varianti, LSA in due varianti, clustering su embedding SBERT in due varianti, LDA (notebook
+  - nove estrattivi non supervisionati — TextRank e LexRank, Centroid-based (MEAD) + MMR in due
+    varianti, LSA in due varianti, clustering su embedding SBERT in due varianti e LDA (notebook
     01/02, 11, 15–17);
   - tre abstractive specializzati — BART, PEGASUS, PRIMERA (notebook 03/04/06);
   - tre LLM generalisti eseguiti in locale via [ollama](https://ollama.com) — Qwen2.5-7B,
@@ -68,6 +68,7 @@ metodologiche sono in [notebooks/05_confronto.ipynb](notebooks/05_confronto.ipyn
 | [results/](results/) | Output del benchmark: campione di valutazione condiviso, riassunti generati, metriche per esempio e aggregate (comprese quelle G-Eval, in file dedicati, e la cache dei giudizi) |
 | [requirements-notebooks.txt](requirements-notebooks.txt) | Dipendenze Python dei notebook del benchmark |
 | [Multi-News_paper.md](Multi-News_paper.md) | Il paper originale (Fabbri et al., 2019), come riferimento — lasciato in inglese perché copia verbatim della pubblicazione |
+| [Tecniche_MDS_non_LLM_MultiNews.md](Tecniche_MDS_non_LLM_MultiNews.md) | Rassegna ragionata delle tecniche di summarization multi-documento non-LLM rispetto alla lezione del PoliTO — il «documento-guida» citato dai notebook 11 e 15–17 |
 | [data/README.md](data/README.md) | Documentazione dettagliata di formati dei file, statistiche e criteri di pulizia |
 
 ## Il dataset
@@ -125,8 +126,9 @@ dataset = load_dataset("path/to/multi_news.py")
 **Dashboard EDA** — aprire [multi_news_dashboard.html](multi_news_dashboard.html) in un browser
 qualsiasi; è completamente autoconsistente (non servono né server né rete).
 
-Nota: i file di dati sono grandi (~1,3 GB in totale per le sorgenti); nello scrivere strumenti
-che li usano conviene preferire letture in streaming, riga per riga.
+Nota: i file di dati sono grandi (~750 MB in totale in `data/text/`, di cui ~520 MB il solo file
+sorgente di train; ~1,3 GB la copia Orange in `data/tab/`); nello scrivere strumenti che li usano
+conviene preferire letture in streaming, riga per riga.
 
 ## Attribuzione, licenza e citazione
 
