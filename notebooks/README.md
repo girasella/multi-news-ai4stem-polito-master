@@ -62,6 +62,7 @@ automaticamente e la usano se disponibile.
 | 15 | [15_lsa.ipynb](15_lsa.ipynb) | LSA / SVD (estrattivo non supervisionato: TF-IDF + `TruncatedSVD`). Genera **due varianti** — `lsa` (top-k per norma latente, come `sumy`) e `lsa_steinberger` (greedy con deflazione, anti-ridondanza MDS) — che differiscono solo per la regola di selezione. Ambiti `sample`, `test` e `full`. |
 | 16 | [16_sbert_clustering.ipynb](16_sbert_clustering.ipynb) | Clustering su sentence embeddings SBERT (`all-MiniLM-L6-v2`) con selezione del **medoide** di ogni cluster. Genera **due varianti** — `sbert_kmeans` (KMeans, distanza euclidea su embedding L2-normalizzati) e `sbert_agglom` (Agglomerative, cosine + average linkage) — che differiscono solo per l'algoritmo di clustering. Ambiti `sample`, `test` e `full`. |
 | 17 | [17_lda.ipynb](17_lda.ipynb) | Topic modeling con LDA (`CountVectorizer` + `LatentDirichletAllocation`): le frasi vengono allocate ai topic in proporzione al peso di ciascuno. Slug `lda`. Ambiti `sample`, `test` e `full`. |
+| 18 | [18_analisi_lunghezze.ipynb](18_analisi_lunghezze.ipynb) | Analisi **per cluster** delle lunghezze dei riassunti generati dai 18 metodi (issue #15): non genera nulla, legge le metriche `test` già salvate e la mediana del riferimento per numero di articoli. |
 
 I notebook dei metodi (01–04, 06–12 e 15–17) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
@@ -550,6 +551,48 @@ i casi, cambia solo la cifra.
 - Cambiare deployment, rubriche o troncamento **dopo** aver popolato la cache mescolerebbe corse
   diverse: in quel caso cancellare prima `geval_cache_{scope}.jsonl`.
 
+## Analisi per cluster delle lunghezze (notebook 18)
+
+Non genera né rigenera nulla: legge la colonna `parole_generate` già presente nei CSV
+per-esempio committati e la incrocia, in un'unica scansione in streaming di
+`data/tab/complete.tab`, con la lunghezza del riassunto di riferimento e il numero di articoli
+di ogni cluster. Nasce dalla richiesta del relatore di verificare le lunghezze e, in caso di
+disomogeneità significative, contenere la distribuzione dentro un intervallo comune — dettagli
+e decisioni in [issue #15](https://github.com/girasella/multi-news-ai4stem-polito-master/issues/15)
+(sostituisce la #14, limitata a `lda`/notebook 15–17).
+
+Le medie aggregate per metodo (55 parole per `bart` → 477 per `lda`, viste nel notebook 05)
+nascondono la dispersione al livello a cui il confronto avviene davvero: **dentro un singolo
+cluster**, il riassunto più lungo dei 18 metodi è in mediana **8,5 volte** il più corto — una
+distanza pari a circa il doppio del riassunto di riferimento di quel cluster. Nessun metodo si
+adatta al cluster: la correlazione fra lunghezza generata e lunghezza del riferimento arriva al
+massimo a 0,51 (`primera`) ed è circa zero per gli estrattivi a budget di frasi (`lsa`,
+`lsa_steinberger`, `sbert_agglom`), che con "11 frasi" producono la stessa lunghezza qualunque
+sia la dimensione del cluster.
+
+Il riferimento inoltre non è costante: la sua mediana cresce con il numero di articoli, da ~164
+parole (1 articolo) a ~327 (8+). Il candidato naturale a budget per-cluster è quindi
+`T(n_articoli)`, la mediana del riferimento per bucket di articoli, **tarata sulla split train**
+e scritta in `scripts/budget_lunghezza.json`. La **Vista 5** del notebook mette però alla prova
+questo e altri candidati calcolabili dal solo input (decili di lunghezza della sorgente,
+regressioni log-log, combinazioni), tarandoli su train e valutandoli su test, e l'esito è
+netto: **nessuno prevede bene la lunghezza del riferimento**. Il migliore mette il riferimento
+entro ±25% del budget nel 58% dei cluster contro il 54% di un budget **costante**, con
+correlazione di rango mai sopra 0,46; la tendenza per numero di articoli è reale ma spiega
+poco del singolo cluster (l'81% dei cluster di test ha 2–3 articoli, dove `T` ≈ la costante).
+L'idea intuitiva «scala con la lunghezza della sorgente» va peggio di tutte (MAE ~138 parole),
+perché il rapporto di compressione varia di 5× fra cluster.
+
+Ne segue che il budget che davvero elimina la lunghezza come confondente è il **riferimento
+stesso, cluster per cluster** (protocollo *length-matched* / *oracle-length*, es. Sun et al.
+2019): usa la sola *lunghezza* gold, mai il contenuto, e va dichiarato come tale perché risponde
+a «quanto è buona la selezione dei contenuti a parità di lunghezza», non a «cosa otterrebbe il
+metodo in produzione». La sua applicazione ai 18 metodi è documentata in una issue dedicata.
+
+Output: `results/metrics/analisi_lunghezze_{ambito}.json` (committato, stesso pattern di
+`scripts/dataset_stats.json`; include la tabella del confronto fra predittori) e
+`scripts/budget_lunghezza.json` (scritto solo se mancante).
+
 ## Parametri principali (cella di configurazione di ogni notebook)
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
@@ -592,6 +635,9 @@ results/
                                               # conteggi di token): è l'artefatto PAGATO, va committato
   figures/{metodo}/*.png                     # figure della sezione esplicativa dei notebook 11 e 15-17
                                               # (solo con SALVA_FIGURE; illustrative, non usate dalle metriche)
+  metrics/analisi_lunghezze_{ambito}.json    # dispersione per cluster + T(n_articoli) (18_analisi_lunghezze.ipynb)
+scripts/
+  budget_lunghezza.json                      # T(n_articoli): budget per-cluster (18_analisi_lunghezze.ipynb)
 ```
 
 I riassunti sono la parte costosa: vengono scritti **incrementalmente** (una riga per esempio,

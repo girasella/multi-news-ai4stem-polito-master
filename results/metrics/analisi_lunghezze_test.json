@@ -790,5 +790,55 @@
     "7": 304,
     "8": 327
   },
-  "split_taratura_budget": "train"
+  "split_taratura_budget": "train",
+  "confronto_budget": {
+    "A  costante (mediana train)": {
+      "MAE (parole)": 53.2,
+      "APE mediano %": 20.0,
+      "riferimento in banda %": 54.2,
+      "spearman": null
+    },
+    "B  mediana per n_articoli (T)": {
+      "MAE (parole)": 48.1,
+      "APE mediano %": 19.0,
+      "riferimento in banda %": 56.7,
+      "spearman": 0.362
+    },
+    "C1 mediana per 10 decili di parole sorgente": {
+      "MAE (parole)": 48.0,
+      "APE mediano %": 18.4,
+      "riferimento in banda %": 57.7,
+      "spearman": 0.402
+    },
+    "C2 log-log riferimento ~ sorgente (esp. 0.18)": {
+      "MAE (parole)": 48.6,
+      "APE mediano %": 19.4,
+      "riferimento in banda %": 55.2,
+      "spearman": 0.407
+    },
+    "C3 sorgente / compressione mediana (6.4)": {
+      "MAE (parole)": 137.7,
+      "APE mediano %": 41.3,
+      "riferimento in banda %": 27.6,
+      "spearman": 0.407
+    },
+    "D  mediana per n_articoli x terzile sorgente": {
+      "MAE (parole)": 46.5,
+      "APE mediano %": 18.4,
+      "riferimento in banda %": 58.0,
+      "spearman": 0.436
+    },
+    "E  log-log riferimento ~ sorgente + n_articoli": {
+      "MAE (parole)": 46.7,
+      "APE mediano %": 18.8,
+      "riferimento in banda %": 56.7,
+      "spearman": 0.457
+    },
+    "F  oracolo = lunghezza del riferimento": {
+      "MAE (parole)": 0.0,
+      "APE mediano %": 0.0,
+      "riferimento in banda %": 100.0,
+      "spearman": 1.0
+    }
+  }
 }
