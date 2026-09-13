@@ -1,4 +1,10 @@
 {
+  "scope": "test",
+  "split": "test",
+  "banda": [
+    0.8,
+    1.25
+  ],
   "n_cluster": 5437,
   "metodi": [
     "bart",
@@ -774,12 +780,6 @@
       "corr_len_n_articoli": 0.202
     }
   },
-  "scope": "test",
-  "split": "test",
-  "banda": [
-    0.8,
-    1.25
-  ],
   "tabella_budget": {
     "1": 164,
     "2": 194,
