@@ -1,0 +1,29 @@
+{
+  "descrizione": "T(n_articoli): mediana della lunghezza (parole) del riassunto di riferimento per numero di articoli del cluster. Budget per-cluster del contenimento delle lunghezze (issue #15).",
+  "split_di_taratura": "train",
+  "bucket_massimo": 8,
+  "banda": [
+    0.8,
+    1.25
+  ],
+  "n_cluster_per_bucket": {
+    "1": 458,
+    "2": 23703,
+    "3": 12574,
+    "4": 4918,
+    "5": 1845,
+    "6": 707,
+    "7": 371,
+    "8": 304
+  },
+  "tabella": {
+    "1": 164,
+    "2": 194,
+    "3": 232,
+    "4": 250,
+    "5": 270,
+    "6": 287,
+    "7": 304,
+    "8": 327
+  }
+}
