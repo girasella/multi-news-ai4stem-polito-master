@@ -129,7 +129,7 @@
         "max": 0.77,
         "n": 5437
       },
-      "pct_in_banda": 0.0,
+      "pct_in_banda": 0.3,
       "corr_len_riferimento": 0.065,
       "corr_len_n_articoli": 0.013
     },
@@ -167,7 +167,7 @@
         "max": 14.24,
         "n": 5437
       },
-      "pct_in_banda": 15.5,
+      "pct_in_banda": 19.7,
       "corr_len_riferimento": 0.168,
       "corr_len_n_articoli": 0.212
     },
@@ -205,7 +205,7 @@
         "max": 6.5,
         "n": 5437
       },
-      "pct_in_banda": 13.9,
+      "pct_in_banda": 18.3,
       "corr_len_riferimento": 0.177,
       "corr_len_n_articoli": 0.201
     },
@@ -243,7 +243,7 @@
         "max": 29.1,
         "n": 5437
       },
-      "pct_in_banda": 49.1,
+      "pct_in_banda": 38.8,
       "corr_len_riferimento": 0.296,
       "corr_len_n_articoli": 0.583
     },
@@ -281,7 +281,7 @@
         "max": 32.46,
         "n": 5437
       },
-      "pct_in_banda": 48.5,
+      "pct_in_banda": 37.8,
       "corr_len_riferimento": 0.273,
       "corr_len_n_articoli": 0.563
     },
@@ -319,7 +319,7 @@
         "max": 2.93,
         "n": 5437
       },
-      "pct_in_banda": 37.1,
+      "pct_in_banda": 36.5,
       "corr_len_riferimento": 0.358,
       "corr_len_n_articoli": 0.351
     },
@@ -357,7 +357,7 @@
         "max": 3.9,
         "n": 5437
       },
-      "pct_in_banda": 45.7,
+      "pct_in_banda": 42.0,
       "corr_len_riferimento": 0.305,
       "corr_len_n_articoli": 0.28
     },
@@ -395,7 +395,7 @@
         "max": 33.31,
         "n": 5437
       },
-      "pct_in_banda": 2.7,
+      "pct_in_banda": 4.1,
       "corr_len_riferimento": 0.272,
       "corr_len_n_articoli": 0.32
     },
@@ -433,7 +433,7 @@
         "max": 15.78,
         "n": 5437
       },
-      "pct_in_banda": 4.3,
+      "pct_in_banda": 6.8,
       "corr_len_riferimento": 0.224,
       "corr_len_n_articoli": 0.266
     },
@@ -471,7 +471,7 @@
         "max": 15.2,
         "n": 5437
       },
-      "pct_in_banda": 44.6,
+      "pct_in_banda": 36.6,
       "corr_len_riferimento": -0.008,
       "corr_len_n_articoli": -0.027
     },
@@ -509,7 +509,7 @@
         "max": 4.44,
         "n": 5437
       },
-      "pct_in_banda": 49.1,
+      "pct_in_banda": 40.2,
       "corr_len_riferimento": 0.046,
       "corr_len_n_articoli": 0.015
     },
@@ -547,7 +547,7 @@
         "max": 1.26,
         "n": 5437
       },
-      "pct_in_banda": 41.4,
+      "pct_in_banda": 33.1,
       "corr_len_riferimento": 0.161,
       "corr_len_n_articoli": 0.041
     },
@@ -585,7 +585,7 @@
         "max": 1.37,
         "n": 5437
       },
-      "pct_in_banda": 60.5,
+      "pct_in_banda": 45.2,
       "corr_len_riferimento": 0.427,
       "corr_len_n_articoli": 0.145
     },
@@ -623,7 +623,7 @@
         "max": 2.62,
         "n": 5437
       },
-      "pct_in_banda": 54.5,
+      "pct_in_banda": 52.7,
       "corr_len_riferimento": 0.507,
       "corr_len_n_articoli": 0.412
     },
@@ -661,7 +661,7 @@
         "max": 1.04,
         "n": 5437
       },
-      "pct_in_banda": 17.4,
+      "pct_in_banda": 24.8,
       "corr_len_riferimento": 0.201,
       "corr_len_n_articoli": 0.113
     },
@@ -699,7 +699,7 @@
         "max": 7.32,
         "n": 5437
       },
-      "pct_in_banda": 53.5,
+      "pct_in_banda": 39.3,
       "corr_len_riferimento": -0.075,
       "corr_len_n_articoli": -0.076
     },
@@ -737,7 +737,7 @@
         "max": 7.37,
         "n": 5437
       },
-      "pct_in_banda": 51.1,
+      "pct_in_banda": 41.4,
       "corr_len_riferimento": 0.139,
       "corr_len_n_articoli": 0.156
     },
@@ -775,7 +775,7 @@
         "max": 7.25,
         "n": 5437
       },
-      "pct_in_banda": 13.5,
+      "pct_in_banda": 17.5,
       "corr_len_riferimento": 0.176,
       "corr_len_n_articoli": 0.202
     }

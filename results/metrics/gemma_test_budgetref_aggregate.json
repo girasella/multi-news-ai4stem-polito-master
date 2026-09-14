@@ -1,0 +1,59 @@
+{
+  "metodo": "gemma",
+  "scope": "test_budgetref",
+  "config": {
+    "modello": "gemma4:latest",
+    "backend": "ollama (endpoint OpenAI-compatibile)",
+    "max_tokens": 1500,
+    "temperature": 0.3,
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "/no_think\n\nSummarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese; max_tokens=1500 invece dei 300 originali perche' il reasoning di Gemma 4 consumava il budget (81 risposte vuote su 100 nella corsa LM Studio)",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "soffitto": "1.25 x budget, su.tronca_parole",
+      "sorgente_riassunti": "gemma_test.tsv",
+      "rigenerato_a_budget": false,
+      "righe_troncate_dal_soffitto": 3231
+    }
+  },
+  "timestamp": "2026-09-13T20:09:28+00:00",
+  "n_esempi": 5610,
+  "overall": {
+    "rouge1_f1": 0.34037682871232167,
+    "rouge1_p": 0.3235106226730061,
+    "rouge1_r": 0.3633800002958039,
+    "rouge2_f1": 0.10109208131639037,
+    "rouge2_p": 0.09718068311375763,
+    "rouge2_r": 0.10693521707573389,
+    "rougeL_f1": 0.18206756315042882,
+    "rougeL_p": 0.1748325283121487,
+    "rougeL_r": 0.1928833816889231,
+    "bleu": 0.07185931600243392,
+    "meteor": 0.4125553982879466,
+    "parole_generate": 242.24688057040999,
+    "bertscore_f1": 0.8466189840473168,
+    "bertscore_p": 0.839489308908024,
+    "bertscore_r": 0.8539589812092603
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5610,
+      "rouge1_f1": 0.34037682871232167,
+      "rouge1_p": 0.3235106226730061,
+      "rouge1_r": 0.3633800002958039,
+      "rouge2_f1": 0.10109208131639037,
+      "rouge2_p": 0.09718068311375763,
+      "rouge2_r": 0.10693521707573389,
+      "rougeL_f1": 0.18206756315042882,
+      "rougeL_p": 0.1748325283121487,
+      "rougeL_r": 0.1928833816889231,
+      "bleu": 0.07185931600243392,
+      "meteor": 0.4125553982879466,
+      "parole_generate": 242.24688057040999,
+      "bertscore_f1": 0.8466189840473168,
+      "bertscore_p": 0.839489308908024,
+      "bertscore_r": 0.8539589812092603
+    }
+  }
+}

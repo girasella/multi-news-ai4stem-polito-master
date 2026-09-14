@@ -1,0 +1,60 @@
+{
+  "metodo": "gpt5mini",
+  "scope": "test_budgetref",
+  "config": {
+    "modello": "gpt-5-mini",
+    "deployment": "gpt-5-mini",
+    "backend": "Azure OpenAI (chat completions, API v1)",
+    "max_completion_tokens": 1500,
+    "reasoning_effort": "minimal",
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "Summarize the following document into a comprehensive summary: {documento}",
+    "note": "prompt zero-shot in inglese identico ai notebook 07-09 (senza /no_think); modello con reasoning: niente temperature, max_completion_tokens=1500 con reasoning_effort='minimal' (caso gemma); ambiti sample, test e full (full sequenziale: la Batch API non offre gpt-5-mini)",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "soffitto": "1.25 x budget, su.tronca_parole",
+      "sorgente_riassunti": "gpt5mini_test.tsv",
+      "rigenerato_a_budget": false,
+      "righe_troncate_dal_soffitto": 1856
+    }
+  },
+  "timestamp": "2026-09-13T20:14:31+00:00",
+  "n_esempi": 5471,
+  "overall": {
+    "rouge1_f1": 0.3520259392708571,
+    "rouge1_p": 0.3506477614984487,
+    "rouge1_r": 0.3635360850315014,
+    "rouge2_f1": 0.10362023114093065,
+    "rouge2_p": 0.10715322711509838,
+    "rouge2_r": 0.10409877120674375,
+    "rougeL_f1": 0.18235293588821908,
+    "rougeL_p": 0.1892436088489985,
+    "rougeL_r": 0.18287298600353227,
+    "bleu": 0.06985023636302191,
+    "meteor": 0.38814015336442714,
+    "parole_generate": 210.3083531347103,
+    "bertscore_f1": 0.8545303427199084,
+    "bertscore_p": 0.8526369433498017,
+    "bertscore_r": 0.8565787628655285
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5471,
+      "rouge1_f1": 0.3520259392708571,
+      "rouge1_p": 0.3506477614984487,
+      "rouge1_r": 0.3635360850315014,
+      "rouge2_f1": 0.10362023114093065,
+      "rouge2_p": 0.10715322711509838,
+      "rouge2_r": 0.10409877120674375,
+      "rougeL_f1": 0.18235293588821908,
+      "rougeL_p": 0.1892436088489985,
+      "rougeL_r": 0.18287298600353227,
+      "bleu": 0.06985023636302191,
+      "meteor": 0.38814015336442714,
+      "parole_generate": 210.3083531347103,
+      "bertscore_f1": 0.8545303427199084,
+      "bertscore_p": 0.8526369433498017,
+      "bertscore_r": 0.8565787628655285
+    }
+  }
+}

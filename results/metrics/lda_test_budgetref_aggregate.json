@@ -1,0 +1,59 @@
+{
+  "metodo": "lda",
+  "scope": "test_budgetref",
+  "config": {
+    "n_topics": 5,
+    "n_sentences": 11,
+    "segmentazione": "psr.summarization",
+    "vettorizzazione": "sklearn CountVectorizer (stop_words=english)",
+    "modello": "sklearn LatentDirichletAllocation",
+    "selezione": "allocazione proporzionale ai pesi dei topic",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "soffitto": "1.25 x budget, su.tronca_parole",
+      "sorgente_riassunti": "lda_test_budgetref.tsv",
+      "rigenerato_a_budget": true,
+      "righe_troncate_dal_soffitto": 896
+    }
+  },
+  "timestamp": "2026-09-13T19:02:07+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.33816898385367283,
+    "rouge1_p": 0.3317733731173941,
+    "rouge1_r": 0.3481745766195513,
+    "rouge2_f1": 0.11265429663890476,
+    "rouge2_p": 0.11122840355631398,
+    "rouge2_r": 0.11518858470392776,
+    "rougeL_f1": 0.17954592266551933,
+    "rougeL_p": 0.1751903214286933,
+    "rougeL_r": 0.18577277840937836,
+    "bleu": 0.09832755944165286,
+    "meteor": -13.480498647298536,
+    "parole_generate": 229.5973514674302,
+    "bertscore_f1": 0.8377513897657907,
+    "bertscore_p": 0.8287805324272335,
+    "bertscore_r": 0.8470593988255424
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.33816898385367283,
+      "rouge1_p": 0.3317733731173941,
+      "rouge1_r": 0.3481745766195513,
+      "rouge2_f1": 0.11265429663890476,
+      "rouge2_p": 0.11122840355631398,
+      "rouge2_r": 0.11518858470392776,
+      "rougeL_f1": 0.17954592266551933,
+      "rougeL_p": 0.1751903214286933,
+      "rougeL_r": 0.18577277840937836,
+      "bleu": 0.09832755944165286,
+      "meteor": -13.480498647298536,
+      "parole_generate": 229.5973514674302,
+      "bertscore_f1": 0.8377513897657907,
+      "bertscore_p": 0.8287805324272335,
+      "bertscore_r": 0.8470593988255424
+    }
+  }
+}
