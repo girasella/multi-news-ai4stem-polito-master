@@ -191,7 +191,7 @@ class ScrittoreRiassunti:
 
 
 def ciclo_summarization(esempi, scrittore, genera, limit=None, etichetta='',
-                        prepara=prepara_documento):
+                        prepara=prepara_documento, budget=None):
     """Applica `genera(documento) -> riassunto` a ogni esempio, con ripresa e progresso.
 
     - `esempi`: iterabile di dict con chiavi row_id/document (campione o streaming full)
@@ -200,6 +200,11 @@ def ciclo_summarization(esempi, scrittore, genera, limit=None, etichetta='',
     - `prepara`: pre-processing del documento prima di `genera`. Default:
       `prepara_documento` (separatore `|||||` -> newline). Il notebook 06 (PRIMERA)
       passa `str.strip` perche' deve vedere il separatore originale tra articoli.
+    - `budget`: opzionale, callable `budget(esempio) -> int` (parole). Se presente la
+      chiamata diventa `genera(documento, budget(esempio))`: e' il canale con cui gli
+      ambiti `*_budgetref` passano a ogni metodo la lunghezza obiettivo del cluster
+      (vedi `budget_riferimento`). Con `None` la firma di `genera` resta a un solo
+      argomento e i notebook esistenti non cambiano.
 
     Gli errori su un singolo esempio vengono registrati e non fermano il ciclo.
     """
@@ -212,7 +217,9 @@ def ciclo_summarization(esempi, scrittore, genera, limit=None, etichetta='',
         if limit is not None and processati >= limit:
             break
         try:
-            riassunto = genera(prepara(es['document']))
+            documento = prepara(es['document'])
+            riassunto = (genera(documento) if budget is None
+                         else genera(documento, budget(es)))
             scrittore.scrivi(es['row_id'], riassunto)
         except Exception as exc:  # difensivo: un esempio rotto non ferma la corsa
             errori.append((es['row_id'], repr(exc)))
@@ -225,6 +232,78 @@ def ciclo_summarization(esempi, scrittore, genera, limit=None, etichetta='',
     print(f'{etichetta}Completato: {processati} nuovi, {saltati} saltati, '
           f'{len(errori)} errori, {time.time()-t0:.0f} s totali')
     return errori
+
+
+# ---------------------------------------------------------------------------
+# Budget di lunghezza per cluster (issue #16) — protocollo length-matched
+# ---------------------------------------------------------------------------
+#
+# Il notebook 18 mostra che, dentro un singolo cluster, il riassunto piu' lungo
+# dei 18 metodi e' in mediana 8,5 volte il piu' corto, e che nessun predittore
+# calcolabile dal solo input (numero di articoli, lunghezza della sorgente...)
+# approssima bene la lunghezza del riferimento. Il budget che elimina la
+# lunghezza come confondente PER COSTRUZIONE e' il riferimento stesso, cluster
+# per cluster: con |candidato| ~ |riferimento| richiamo e precisione ROUGE
+# coincidono. E' un'informazione gold — la sola LUNGHEZZA, mai il contenuto — e
+# va dichiarata come tale: i numeri rispondono a "quanto e' buona la selezione
+# dei contenuti a parita' di lunghezza", non a "cosa otterrebbe il metodo in
+# produzione". Gli ambiti che la usano portano il suffisso `_budgetref`.
+
+SUFFISSO_BUDGET = '_budgetref'
+
+
+def budget_attivo(scope):
+    """True per gli ambiti a lunghezza del riferimento (`test_budgetref`, ...)."""
+    return scope.endswith(SUFFISSO_BUDGET)
+
+
+def split_base(scope):
+    """Ambito di lettura delle righe: 'test_budgetref' -> 'test', altrimenti invariato."""
+    return scope[:-len(SUFFISSO_BUDGET)] if budget_attivo(scope) else scope
+
+
+def budget_riferimento(esempio):
+    """Budget in parole di un esempio = lunghezza del suo riassunto di riferimento.
+
+    Stesso conteggio di `parole_generate` (`str.split()` dopo `pulisci_riferimento`),
+    cosi' un metodo che centra il budget ha rapporto lunghezza/riferimento = 1.
+    """
+    return len(pulisci_riferimento(esempio['summary']).split())
+
+
+def seleziona_per_budget(frasi, ordine, budget_parole):
+    """Sceglie frasi in `ordine` (indici per rilevanza decrescente) fino al budget.
+
+    Scorre gli indici accumulando parole e si ferma alla prima frase che non entra.
+    Quella frase viene comunque INCLUSA se ne entra piu' della meta': cosi' la
+    lunghezza ottenuta e' centrata sul budget invece che sistematicamente sotto
+    (regola concordata nella issue #14). Non salta frasi lunghe per cercarne di
+    piu' corte piu' in basso: l'ordinamento e' il criterio del metodo e non va
+    alterato, questa funzione decide solo DOVE fermarsi. Restituisce gli indici
+    nell'ordine in cui sono stati scelti: chi vuole l'ordine del documento fa
+    `sorted(...)` a valle, chi (come pyAutoSummarizer) emette in ordine di rank
+    li usa cosi'. Garantisce almeno una frase, anche se sfora il budget: il
+    tetto a valle (`tronca_parole`) provvede.
+    """
+    scelti, totale = [], 0
+    for i in ordine:
+        i = int(i)
+        n = len(frasi[i].split())
+        if n == 0:
+            continue
+        if totale + n <= budget_parole:
+            scelti.append(i)
+            totale += n
+            continue
+        if budget_parole - totale > n / 2:
+            scelti.append(i)
+        break
+    if not scelti:
+        for i in ordine:
+            if len(frasi[int(i)].split()) > 0:
+                scelti.append(int(i))
+                break
+    return scelti
 
 
 # ---------------------------------------------------------------------------

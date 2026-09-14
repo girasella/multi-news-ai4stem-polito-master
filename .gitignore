@@ -7,3 +7,7 @@ run_benchmark_test.log
 
 # Log of scripts/run_geval.py — regenerable, append-only
 run_geval.log
+
+# Notebook eseguiti dal driver per gli ambiti a budget (issue #16): evidenza della corsa
+# sono i TSV/metriche, non questi file
+results/notebook_runs/
