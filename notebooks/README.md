@@ -593,6 +593,70 @@ Output: `results/metrics/analisi_lunghezze_{ambito}.json` (committato, stesso pa
 `scripts/dataset_stats.json`; include la tabella del confronto fra predittori) e
 `scripts/budget_lunghezza.json` (scritto solo se mancante).
 
+## Ambito `test_budgetref` — confronto a lunghezza del riferimento (issue #16)
+
+Il seguito operativo del notebook 18: un ambito in cui ogni metodo ha, per ogni cluster, **lo
+stesso budget di parole — la lunghezza del riassunto di riferimento** (`su.budget_riferimento`).
+È il protocollo *length-matched* / *oracle-length* (Sun et al., 2019): con
+`|candidato| ≈ |riferimento|` richiamo e precisione ROUGE coincidono e l'obiezione «i riassunti
+lunghi vincono sul recall» non può più nascere per costruzione. Usa un'informazione gold — la sola
+*lunghezza*, mai il contenuto — e va dichiarato come tale: i numeri rispondono a «quanto è buona la
+selezione dei contenuti a parità di lunghezza», **non** a «cosa otterrebbe il metodo in
+produzione», e non sostituiscono i numeri di testa dell'ambito `test`.
+
+Si attiva con `SUMM_SCOPE='test_budgetref'`: i notebook leggono le stesse righe dell'ambito `test`
+(`su.split_base`) e scrivono file con suffisso `_test_budgetref`; l'ambito `test` committato non
+viene toccato. Due interventi distinti, perché il solo troncamento non basta (porta il rapporto
+max/min mediano per cluster da 8,5× a ~4×: `bart` resta sotto banda nel 100% dei cluster, `qwen`
+nel 99%, e un riassunto corto non si tronca verso l'alto):
+
+- **Soffitto, tutti e 18 i metodi** — `scripts/applica_budget.py` tronca ogni riassunto a
+  `1,25 × budget` e ricalcola le metriche (ROUGE/BLEU/METEOR + BERTScore).
+- **Pavimento, gli 11 estrattivi** (notebook 01, 02, 10, 11, 15, 16, 17; driver
+  `scripts/run_benchmark_test.py --scope test_budgetref`) — rigenerati con il budget in **parole**
+  al posto del budget in **frasi**. Il criterio di ordinamento di ciascun metodo è invariato;
+  cambia solo *dove* ci si ferma (`su.seleziona_per_budget`: si accumulano frasi nell'ordine del
+  metodo, la frase che sfora entra se ne entra più della metà). Adattamenti per notebook: in 01/02
+  si usa l'ordine di rank di `show_summary`; in 10 l'ordine è round-robin fra gli articoli (1ª
+  frase di ognuno, poi 2ª, …); in 11 e 15 il greedy produce un ordine lungo fino a
+  `K_ORDINE_BUDGET = 50` frasi poi tagliato; in 15 e 16 il parametro **strutturale**
+  (`K_LATENTE`, `N_CLUSTER`) resta 11 — vincolo segnalato nella issue #14 — e in 16 l'ordine è a
+  giri (medoide di ogni cluster, poi la seconda frase più vicina al centroide, …); in 17
+  l'allocazione proporzionale ai topic ripartisce parole invece di frasi.
+- **Pavimento, gli LLM** (notebook 07, 08, 09, 12) — rigenerati con il budget **nel prompt**: alla
+  stessa richiesta zero-shot si aggiunge la sola frase «of approximately *N* words»
+  (`PROMPT_USER_BUDGET`, derivato meccanicamente da `PROMPT_USER`), il cap in token sale a
+  `MAX_TOKENS_BUDGET = 1500` (con 200/300 un bersaglio da 300 parole sarebbe irraggiungibile). Un
+  LLM segue l'istruzione di lunghezza solo **approssimativamente**: il pavimento è installato
+  *circa*, il soffitto si applica comunque dopo, e la quota in banda è un risultato misurato. Non
+  sono nella lista del driver: si lanciano singolarmente, pilota su poche righe prima della corsa
+  (ore per modello).
+- **Solo soffitto per `bart`, `pegasus`, `primera`** — rigenerarli con `min_length`/`max_length`
+  costerebbe decine di ore di GPU (`primera` da sola 28–56 h); restano *sotto* banda e vanno letti
+  come tali.
+
+**G-Eval non è ricalcolato** (cache indicizzata su `(metodo, row_id)`, ri-giudizio ~€70–95; misura
+la fedeltà alla fonte, non la sovrapposizione col riferimento). Il confronto prima/dopo è la
+**Vista 3 del notebook 05**; la dispersione per cluster «dopo» si ottiene rieseguendo il notebook
+18 con `SUMM_SCOPE='test_budgetref'`.
+
+**Esito delle corse (2026-09-13/14: estrattivi e `qwen` rigenerati, soffitto sui 18; `gemma`,
+`mistral`, `gpt5mini` ancora da rigenerare).** Gli 11 estrattivi cadono in banda nel **93–98,5%** dei cluster con lunghezza
+mediana pari al riferimento (media ~215 parole per tutti); il rapporto max/min dentro il cluster
+scende da 8,5× a 4,7×, residuo tutto dei metodi corti non rigenerati (`bart` 0,26×, `mistral`
+0,75×). `qwen`, rigenerato col budget nel prompt (fattore 1,2), passa da 0,65× a 1,01× del
+riferimento con il 79% delle righe in banda, e guadagna in F1 (0,344 → 0,351) e METEOR
+(0,32 → 0,41): il pavimento aiuta i metodi corti quanto il soffitto penalizza i lunghi. La graduatoria degli estrattivi si riassesta: `lda` perde il primato di
+recall (0,499 → 0,348) e finisce ultimo in F1 (0,338); `lexrank`, `textrank` e `centroid_mmr`
+perdono ~0,10 di recall ma guadagnano precisione, e l'F1 di `centroid_mmr` resta il migliore fra
+gli estrattivi (0,378), seguito da `lsa_steinberger` (0,369) e dalle baseline `firstk_*`
+(0,368), che a lunghezza pari salgono dal 9°–10° al 3°–4° posto. `primera` (0,446) e `pegasus`
+(0,424), già sotto il riferimento e quindi non toccati, restano in testa: un vantaggio che non
+era di lunghezza. Avvertenza: sulla riga 50540 (sorgente degenere, un elenco di birrifici) il
+METEOR non limitato di pyAutoSummarizer esplode (−77.557 per `lda`, −3.074 per `lexrank`) e
+trascina le medie a −13,5 e −0,16 contro ~0,40 e ~0,39 reali — stesso fenomeno della riga 51178
+di PEGASUS, stessa scelta: nessun file modificato.
+
 ## Parametri principali (cella di configurazione di ogni notebook)
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
@@ -604,6 +668,10 @@ Output: `results/metrics/analisi_lunghezze_{ambito}.json` (committato, stesso pa
 - `LIMIT` — `None` per la corsa completa; un intero piccolo (es. `3`) per uno smoke test. Nei
   notebook 03-04, 06-11 e 15-17 letto anche dalla variabile d'ambiente `SUMM_LIMIT` (usata da
   `run_benchmark_test.py --limit N`).
+- `BUDGET` (01/02, 07-12, 15-17) — `su.budget_riferimento` quando `SCOPE` è un ambito `*_budgetref`,
+  altrimenti `None`: il canale con cui `ciclo_summarization` passa a `genera()` la lunghezza
+  obiettivo del cluster. Con esso `K_ORDINE_BUDGET` (11, 15), `MAX_TOKENS_BUDGET` e
+  `PROMPT_USER_BUDGET` (07-09, 12) — vedi la sezione sull'ambito `test_budgetref`.
 - `N_SENTENCES` (01/02, 11 e 15-17) — frasi estratte per riassunto (default 11, la mediana di
   frasi per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei
   riferimenti, perché le frasi di cronaca sono più lunghe di quelle dei digest). Attenzione: a
@@ -636,6 +704,10 @@ results/
   figures/{metodo}/*.png                     # figure della sezione esplicativa dei notebook 11 e 15-17
                                               # (solo con SALVA_FIGURE; illustrative, non usate dalle metriche)
   metrics/analisi_lunghezze_{ambito}.json    # dispersione per cluster + T(n_articoli) (18_analisi_lunghezze.ipynb)
+  summaries/{metodo}_test_budgetref.tsv      # riassunti rigenerati a lunghezza del riferimento (issue #16):
+                                              # gli 11 estrattivi via driver --scope, gli LLM col budget nel prompt
+  metrics/{metodo}_test_budgetref_*          # metriche post-soffitto per tutti e 18 (scripts/applica_budget.py)
+  notebook_runs/{ambito}/*.ipynb             # notebook eseguiti dal driver negli ambiti a budget (in .gitignore)
 scripts/
   budget_lunghezza.json                      # T(n_articoli): budget per-cluster (18_analisi_lunghezze.ipynb)
 ```
@@ -726,8 +798,10 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   ROUGE-1 **recall** più alto del gruppo (0,499 contro 0,357 di `lsa`) e il METEOR più alto
   (0,511), ma in **F1** resta alla pari con `lsa` (0,351) e sotto `lsa_steinberger` (0,376). Su
   questi cinque metodi conviene quindi leggere l'F1, non il recall; la colonna `parole_generate`
-  del notebook 05 rende il confronto esplicito. Per un confronto a lunghezza davvero pari
-  servirebbe un budget in parole, non in frasi — non è stato fatto.
+  del notebook 05 rende il confronto esplicito. Il confronto a lunghezza pari è stato poi
+  fatto (ambito `test_budgetref`, issue #16, Vista 3 del notebook 05) e **chiude la questione**:
+  con il budget in parole `lda` scende all'ultimo posto degli estrattivi in F1 (0,338) e il suo
+  recall cala da 0,499 a 0,348 — il vantaggio era interamente di lunghezza.
 - **Il content filter di Azure non è stabile nel tempo**: BERTScore e G-Eval ci sono ora per
   tutti e 18 i metodi, ma i due backfill sono stati eseguiti in due momenti diversi (i tredici
   metodi il 2026-08-17, i cinque dei notebook 15–17 il 2026-08-31) e le righe che Azure respinge

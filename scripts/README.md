@@ -16,7 +16,19 @@ a mano ogni notebook. I notebook 10, 11, 15 e 16 generano ciascuno due varianti 
 python scripts/run_benchmark_test.py             # corsa completa, tutte le righe (~3,5-5 giorni su GPU CUDA)
 python scripts/run_benchmark_test.py --limit 2   # smoke test: 2 righe per metodo, da capo a fondo
 python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (il 05 viene comunque rieseguito)
+python scripts/run_benchmark_test.py --scope test_budgetref   # issue #16: gli estrattivi a budget di parole
 ```
+
+`--scope` è l'ambito passato ai notebook come `SUMM_SCOPE` (default `test`). Con un ambito
+`*_budgetref` (vedi `su.budget_attivo`) la lista dei notebook diventa quella dei sette
+estrattivi che supportano il budget in parole — 01 e 02 **compresi**, eseguiti davvero sulla split
+test invece di essere derivati dalla corsa `full`, perché il budget cambia i riassunti — la
+derivazione di textrank/lexrank viene saltata e il notebook 05 **non** viene rieseguito (la sua
+Vista 3 legge i file a posteriori). In questo ambito i notebook non vengono eseguiti in-place ma
+in `results/notebook_runs/{scope}/` (in `.gitignore`): gli output committati restano quelli della
+corsa `test`, l'evidenza della corsa a budget sono i suoi TSV e le sue metriche. Gli LLM (07-09,
+12) supportano lo stesso ambito ma non sono nella lista del driver: vanno lanciati singolarmente,
+pilota prima (vedi issue #16).
 
 `--only` accetta i prefissi numerici dei notebook separati da virgola; è utile quando gli altri
 notebook hanno già completato la loro corsa `test` (rieseguirli ricaricherebbe i modelli e
@@ -62,6 +74,47 @@ stesso. Servono le dipendenze dei notebook (`pip install -r requirements-noteboo
 Disattivare la sospensione di Windows (`powercfg /change standby-timeout-ac 0`), assicurarsi che
 `ollama serve` sia in esecuzione con i tag richiesti (`ollama list`) e mettere in conto che la
 macchina resterà occupata per diversi giorni: lo script non limita l'uso di GPU e CPU.
+
+## `applica_budget.py`
+
+Soffitto e rivalutazione per l'ambito **`test_budgetref`** (issue #16, protocollo
+*length-matched* / *oracle-length*): per ciascuno dei 18 metodi tronca ogni riassunto a
+`1,25 × B_i` parole, dove `B_i` è la lunghezza del riassunto di riferimento di quel cluster
+(`su.budget_riferimento`), e ricalcola le metriche sul testo troncato.
+
+### Uso
+
+```
+python scripts/applica_budget.py                      # 18 metodi, con BERTScore (GPU, ~1,5 h)
+python scripts/applica_budget.py --senza-bertscore    # solo metriche lessicali (minuti)
+python scripts/applica_budget.py --solo lda,lexrank   # sottoinsieme
+python scripts/applica_budget.py --forza              # ricalcola anche i metodi già fatti
+```
+
+### Che cosa fa
+
+1. **Sorgente dei riassunti**: `{metodo}_test_budgetref.tsv` se esiste (gli 11 estrattivi
+   rigenerati dal driver, e gli LLM una volta rigenerati col budget nel prompt), altrimenti il
+   `{metodo}_test.tsv` committato (i metodi che ricevono il solo soffitto; `textrank`/`lexrank`
+   ripiegano sul `_full.tsv` se non c'è la corsa a budget). Quale file è stato usato, e se il
+   metodo è stato rigenerato o solo troncato, finisce nel JSON aggregato
+   (`config.ambito_budget`).
+2. **Soffitto**: `su.tronca_parole(testo, round(1,25 × B_i))`, riga per riga.
+3. **Rivalutazione**: ROUGE-1/2/L, BLEU, METEOR e `parole_generate` via `su.valuta_e_salva`, più
+   BERTScore (`su.calcola_bertscore_batch`) salvo `--senza-bertscore`.
+
+I notebook che rigenerano a budget scrivono già `{metodo}_test_budgetref_*` sull'output grezzo:
+questo script li **sovrascrive** con i numeri post-soffitto, che sono quelli da leggere.
+Riprendibile per metodo: un metodo il cui JSON aggregato porta già il marcatore del soffitto
+viene saltato salvo `--forza`. I file `*_test_*` committati non vengono mai toccati.
+
+### Che cosa NON fa
+
+Il troncamento installa solo il **soffitto**: i metodi più corti del riferimento (`bart` su
+tutti) restano corti, e la loro quota di righe in banda — riportata dal notebook 18 sull'ambito
+`test_budgetref` e dalla Vista 3 del notebook 05 — è un risultato, non un difetto da correggere
+qui. G-Eval non viene ricalcolato (giudizio a pagamento; misura la fedeltà alla fonte, non la
+sovrapposizione col riferimento).
 
 ## `run_geval.py`
 

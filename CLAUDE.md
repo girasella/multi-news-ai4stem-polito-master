@@ -23,7 +23,9 @@ scripts/
   dataset_stats.json   # Its output: one aggregated JSON over train+val+test (committed)
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
   import_llm_results.py  # One-off importer of the archived LM Studio LLM runs (notebooks/llm/*.csv) into results/ — superseded by the ollama re-runs, kept for provenance
-  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11/15-17 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs notebook 05
+  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11/15-17 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs notebook 05; --scope test_budgetref runs the 7 extractive notebooks at reference-length budget (issue #16)
+  applica_budget.py    # Ceiling (1.25x reference length) + re-scoring of all 18 methods into the test_budgetref scope (issue #16)
+  budget_lunghezza.json  # T(n_articoli) table from notebook 18 — an analysis artifact, NOT the containment budget (which is the reference length)
   run_geval.py         # Unattended driver for the G-Eval backfill (notebook 14): staged --righe/--pilota/full run, --budget hard stop, --costo offline cost report, --solo-metriche re-derivation
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
@@ -200,11 +202,45 @@ respect:
   CSV already has the `bertscore_*` columns, because `valuta_e_salva` rewrites that method's CSV
   and JSON wholesale. `BERTSCORE_FORZA=1` forces a full recompute. This is what let the five new
   slugs be backfilled without regenerating the 13 published files.
+- **Reference-length scope `test_budgetref` (issue #16, length-matched / oracle-length)**:
+  notebook 18 showed that inside a single cluster the longest of the 18 summaries is a median
+  8.5x the shortest, and that no input-only predictor (article count, source length,
+  regressions) approximates the reference length well — the best brackets it within ±25% in
+  58% of clusters vs 54% for a constant (its Vista 5). So the containment budget is the
+  **reference length itself**, per cluster (`su.budget_riferimento`): only the *length* is
+  gold, never the content, and the numbers answer "content selection at matched length",
+  never "production performance" — say so wherever they appear; they never replace the
+  `test` headline numbers. Mechanics: `SUMM_SCOPE=test_budgetref` reads the test rows
+  (`su.split_base`) and writes `*_test_budgetref*` files; `ciclo_summarization(budget=...)`
+  passes the per-row budget to `genera(doc, budget)`; the 7 extractive notebooks
+  (01/02/10/11/15/16/17, driver `run_benchmark_test.py --scope test_budgetref`, executed to
+  `results/notebook_runs/` not in-place) swap the sentence budget for a word budget via
+  `su.seleziona_per_budget` (keeps each method's own ordering — rank order for 01/02,
+  document order elsewhere; crossing sentence kept if more than half fits; `K_LATENTE` /
+  `N_CLUSTER` stay 11, they are structural); the LLM notebooks (07/08/09/12) put the budget
+  in the prompt (`PROMPT_USER_BUDGET` derived from `PROMPT_USER`: "about N words ... at least N
+  words" with N = `FATTORE_RICHIESTA`(1.2) x budget — calibrated on a 30-row qwen pilot, where
+  the bare "approximately N" gave 0.65N and 13% in band; `MAX_TOKENS_BUDGET=1500` because
+  qwen's 200 / mistral's 300 cannot reach a 300-word target) and follow it only approximately
+  — re-pilot each model, the factor may differ; `scripts/applica_budget.py` then truncates everyone to 1.25x the budget and
+  re-scores (overwriting the notebooks' raw `_test_budgetref_*` metrics — the post-ceiling
+  numbers are the ones to read). bart/pegasus/primera get the ceiling only and stay below
+  band; G-Eval is not recomputed. Notebook 05 Vista 3 is the before/after view. Outcome of
+  the 2026-09-13/14 runs (extractives and qwen regenerated; gemma/mistral/gpt5mini not yet):
+  the 11 extractives are in band in 93-98.5% of clusters at ~215 words, qwen in 79% (median
+  1.01x, F1 0.344 → 0.351); per-cluster max/min drops 8.5x → 4.7x, the residual being
+  bart/mistral; `centroid_mmr` keeps the best extractive F1 (0.378), `firstk_*`
+  climb to 3rd-4th (0.368), `primera`/`pegasus` stay on top (0.446/0.424). Row 50540 (a
+  degenerate list-of-breweries source) blows up pyAutoSummarizer's unbounded METEOR for
+  `lda` (−77,557) and `lexrank` (−3,074) — same pathology as PEGASUS row 51178, same policy:
+  documented, no file altered.
 - **LDA summary length**: notebooks 15/16/17 share `N_SENTENCES = 11`, but LDA's
   topic-proportional allocation picks much longer sentences — 477 words per summary vs 216-264
   for the other four. Its ROUGE-1 *recall* (0.499) and METEOR (0.511) lead the group for that
   reason alone, while its F1 (0.351) only ties `lsa` and trails `lsa_steinberger` (0.376).
-  Compare these five on F1, not recall.
+  Compare these five on F1, not recall. Settled by the `test_budgetref` scope (below): at
+  matched length `lda` drops to last among the extractives in F1 (0.338) and its recall falls
+  0.499 → 0.348 — the advantage was entirely length.
 - **LLM results provenance (`qwen`/`gemma`/`mistral`), historical**: this describes the
   retired `sample`-scope validation, not the currently-committed `test`-scope results. The
   first (sample-scope) summaries/metrics came from local ollama runs of notebooks 07-09
