@@ -225,12 +225,36 @@ respect:
   — re-pilot each model, the factor may differ; `scripts/applica_budget.py` then truncates everyone to 1.25x the budget and
   re-scores (overwriting the notebooks' raw `_test_budgetref_*` metrics — the post-ceiling
   numbers are the ones to read). bart/pegasus/primera get the ceiling only and stay below
-  band; G-Eval is not recomputed. Notebook 05 Vista 3 is the before/after view. Outcome of
-  the 2026-09-13/14 runs (extractives and qwen regenerated; gemma/mistral/gpt5mini not yet):
-  the 11 extractives are in band in 93-98.5% of clusters at ~215 words, qwen in 79% (median
-  1.01x, F1 0.344 → 0.351); per-cluster max/min drops 8.5x → 4.7x, the residual being
-  bart/mistral; `centroid_mmr` keeps the best extractive F1 (0.378), `firstk_*`
-  climb to 3rd-4th (0.368), `primera`/`pegasus` stay on top (0.446/0.424). Row 50540 (a
+  band — a deliberate choice, not just cost: their floor would come from `min_length` in tokens,
+  which forces beam search past the model's natural length and is the very mechanism behind the
+  repetition loops already documented for PEGASUS (row 51178, METEOR −1959, at its *natural*
+  length); on bart, which would have to quadruple its output, that would measure
+  forced-lengthening damage rather than content selection, while pegasus (0.83x) and primera
+  (0.97x) already sit at or inside the band unaided. bart (0.26x, 0% in band) is the declared
+  exception of the comparison — do not "fix" it by regenerating; G-Eval is not recomputed. Notebook 05 Vista 3 is the before/after view. Outcome of
+  the 2026-09-13/17 runs (15 of 18 regenerated, ceiling on all 18): the 15 are in band in
+  71-100% of clusters (11 extractives 93-99%, gpt5mini 100%, gemma 99%, qwen 79%, mistral 71%).
+  Per-cluster max/min goes 8.5x → 4.7x across all 18, but that 4.7 is almost entirely `bart`
+  (0.26x = the minimum in nearly every cluster, while the ceiling caps the max at 1.25x):
+  **without bart it is 3.8x → 1.6x, and over the 15 regenerated 3.7x → 1.4x** — quote those, the
+  all-18 figure understates the containment. Ranking shifts: `lda` loses everything (recall
+  0.499 → 0.348, last extractive in F1 at 0.338); `firstk_*` climb from 9th-10th to 5th-6th
+  (0.368), above far more elaborate selectors; the short methods *gain* because the floor gives
+  them room they weren't using (qwen 0.344 → 0.351, mistral 0.354 → 0.365) — the confound cut
+  both ways; `primera` (0.446) and `pegasus` (0.424) stay on top, their advantage was not length.
+  The prompt factor is calibrated PER MODEL on a 30-row pilot (qwen 1.2 undershoots, gemma 0.9
+  and gpt5mini 0.9 overshoot the "at least" constraint, mistral 1.0 but very dispersed: p10 0.76x,
+  p90 1.98x). NOTE on Azure's content filter: its severity is configured PER RESOURCE, not
+  merely unstable across runs — gpt5mini's first budgetref run on the new resource covered only
+  5,250/5,610 rows (360 rejections, all content_filter) vs 5,471 on the old one. Attaching a
+  **custom permissive content filter** to the deployment and rerunning only the missing rows
+  recovered 312 of the 360: final coverage **5,562/5,610 = 99.1%**, the highest of any Azure run
+  in the project, and the 18-method common intersection rose to **5,527** clusters (above the
+  5,437 it started from). The remaining 48 rows are refused even by the permissive policy.
+  Provenance stays clean — same resource, model, prompt and params; only the filter policy
+  differs, and a filter gates *access* without altering generation. **Reproducing this run
+  requires the custom filter on the deployment**, otherwise coverage falls back to ~93.6%. The
+  `test`-scope gpt5mini numbers were produced under the default policy. Row 50540 (a
   degenerate list-of-breweries source) blows up pyAutoSummarizer's unbounded METEOR for
   `lda` (−77,557) and `lexrank` (−3,074) — same pathology as PEGASUS row 51178, same policy:
   documented, no file altered.

@@ -631,31 +631,56 @@ nel 99%, e un riassunto corto non si tronca verso l'alto):
   *circa*, il soffitto si applica comunque dopo, e la quota in banda è un risultato misurato. Non
   sono nella lista del driver: si lanciano singolarmente, pilota su poche righe prima della corsa
   (ore per modello).
-- **Solo soffitto per `bart`, `pegasus`, `primera`** — rigenerarli con `min_length`/`max_length`
-  costerebbe decine di ore di GPU (`primera` da sola 28–56 h); restano *sotto* banda e vanno letti
-  come tali.
+- **Solo soffitto per `bart`, `pegasus`, `primera`** — decisione deliberata, non solo di costo
+  (pur essendo 2 h + 5–9 h + 28–56 h di GPU). Il pavimento qui passerebbe da `min_length` in
+  token, che costringe il beam search a generare oltre la lunghezza naturale del modello: e' il
+  meccanismo dei loop di ripetizione gia' documentati per PEGASUS (riga 51178, METEOR −1959, alla
+  lunghezza *naturale*). Su `bart`, che dovrebbe quadruplicare l'output, si misurerebbe il degrado
+  da allungamento forzato invece della selezione dei contenuti. `pegasus` (mediana 0,83× il
+  riferimento) e `primera` (0,97×) sono comunque gia' al bordo o dentro la banda da soli; `bart`
+  (0,26×, 0% in banda) resta l'**eccezione dichiarata** del confronto e va letto come tale.
 
 **G-Eval non è ricalcolato** (cache indicizzata su `(metodo, row_id)`, ri-giudizio ~€70–95; misura
 la fedeltà alla fonte, non la sovrapposizione col riferimento). Il confronto prima/dopo è la
 **Vista 3 del notebook 05**; la dispersione per cluster «dopo» si ottiene rieseguendo il notebook
 18 con `SUMM_SCOPE='test_budgetref'`.
 
-**Esito delle corse (2026-09-13/14: estrattivi e `qwen` rigenerati, soffitto sui 18; `gemma`,
-`mistral`, `gpt5mini` ancora da rigenerare).** Gli 11 estrattivi cadono in banda nel **93–98,5%** dei cluster con lunghezza
-mediana pari al riferimento (media ~215 parole per tutti); il rapporto max/min dentro il cluster
-scende da 8,5× a 4,7×, residuo tutto dei metodi corti non rigenerati (`bart` 0,26×, `mistral`
-0,75×). `qwen`, rigenerato col budget nel prompt (fattore 1,2), passa da 0,65× a 1,01× del
-riferimento con il 79% delle righe in banda, e guadagna in F1 (0,344 → 0,351) e METEOR
-(0,32 → 0,41): il pavimento aiuta i metodi corti quanto il soffitto penalizza i lunghi. La graduatoria degli estrattivi si riassesta: `lda` perde il primato di
-recall (0,499 → 0,348) e finisce ultimo in F1 (0,338); `lexrank`, `textrank` e `centroid_mmr`
-perdono ~0,10 di recall ma guadagnano precisione, e l'F1 di `centroid_mmr` resta il migliore fra
-gli estrattivi (0,378), seguito da `lsa_steinberger` (0,369) e dalle baseline `firstk_*`
-(0,368), che a lunghezza pari salgono dal 9°–10° al 3°–4° posto. `primera` (0,446) e `pegasus`
-(0,424), già sotto il riferimento e quindi non toccati, restano in testa: un vantaggio che non
-era di lunghezza. Avvertenza: sulla riga 50540 (sorgente degenere, un elenco di birrifici) il
-METEOR non limitato di pyAutoSummarizer esplode (−77.557 per `lda`, −3.074 per `lexrank`) e
-trascina le medie a −13,5 e −0,16 contro ~0,40 e ~0,39 reali — stesso fenomeno della riga 51178
-di PEGASUS, stessa scelta: nessun file modificato.
+**Esito finale (corse 2026-09-13/17: 15 slug su 18 rigenerati, soffitto su tutti e 18).** I 15
+rigenerati cadono in banda nel **71–100%** dei cluster (gli 11 estrattivi 93–99%, `gpt5mini` 100%,
+`gemma` 99%, `qwen` 79%, `mistral` 71%), con lunghezza mediana pari al riferimento (~215 parole).
+Il rapporto max/min dentro il cluster passa da 8,5× a 4,7× sui 18 — ma quel 4,7 è quasi tutto
+`bart`, che a 0,26× è il minimo in quasi ogni cluster mentre il soffitto tiene il massimo a 1,25×:
+**senza `bart` si passa da 3,8× a 1,6×, e sui soli 15 rigenerati da 3,7× a 1,4×**. Fra i metodi
+effettivamente riportati a lunghezza pari la dispersione è quindi quasi annullata — il numero sui
+18 sottostima il contenimento.
+
+La graduatoria si riassesta: `lda` perde tutto il vantaggio (recall 0,499 → 0,348, ultimo fra gli
+estrattivi in F1, 0,338); le baseline `firstk_*` salgono dal 9°–10° al **5°–6° posto** (F1 0,368),
+sopra metodi di selezione molto più elaborati; i metodi corti **guadagnano**, perché il pavimento
+dà loro lo spazio che non usavano (`qwen` 0,344 → 0,351, `mistral` 0,354 → 0,365) — prova che il
+confondente tagliava in entrambe le direzioni, non solo a favore dei lunghi; `primera` (0,446) e
+`pegasus` (0,424), già a lunghezza di riferimento e non rigenerati, restano in testa: il loro
+vantaggio non era di lunghezza. Il fattore del prompt è calibrato **per modello** (`qwen` 1,2,
+`gemma` 0,9, `mistral` 1,0, `gpt5mini` 0,9): i modelli sbagliano in direzioni opposte, e `mistral`
+resta molto disperso (p10 0,76×, p90 1,98×) contro il 99–100% in banda di `gemma` e `gpt5mini`.
+
+⚠️ **Content filter di Azure e filtro custom.** La corsa `test` di `gpt5mini` (vecchio account,
+policy di default) copriva 5.471 righe su 5.610; la prima corsa `test_budgetref` sul nuovo
+account ne copriva solo **5.250** (360 rifiuti, tutti `content_filter`, 6,4%), perche' la
+severita' del filtro e' configurata **per risorsa** e non solo instabile fra corse. Attaccando al
+deployment un **filtro contenuti custom permissivo** e rilanciando le sole righe mancanti, 312
+delle 360 sono state recuperate: copertura finale **5.562/5.610 = 99,1%**, la piu' alta di tutte
+le corse Azure del progetto. Le 48 righe residue restano respinte anche dalla policy permissiva.
+La provenienza resta pulita — stessa risorsa, stesso modello, stesso prompt, stessi parametri:
+cambia solo la policy del filtro, che regola l'**accesso** e non altera la generazione. Effetto
+sul confronto: l'intersezione comune ai 18 metodi sale a **5.527** cluster, sopra i 5.437 di
+partenza. **Per riprodurre la corsa serve il filtro custom sul deployment**, altrimenti si
+ricade a ~93,6% di copertura.
+
+Avvertenza: sulla riga 50540 (sorgente degenere, un elenco di birrifici) il METEOR non limitato di
+pyAutoSummarizer esplode (−77.557 per `lda`, −3.074 per `lexrank`) e trascina le medie a −13,5 e
+−0,16 contro ~0,40 e ~0,39 reali — stesso fenomeno della riga 51178 di PEGASUS, stessa scelta:
+nessun file modificato.
 
 ## Parametri principali (cella di configurazione di ogni notebook)
 
