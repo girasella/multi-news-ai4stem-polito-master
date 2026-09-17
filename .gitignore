@@ -11,3 +11,7 @@ run_geval.log
 # Notebook eseguiti dal driver per gli ambiti a budget (issue #16): evidenza della corsa
 # sono i TSV/metriche, non questi file
 results/notebook_runs/
+
+# Log dell orchestratore notturno una tantum (scripts/notte_mistral.py)
+notte_mistral.log
+notte_mistral.err
