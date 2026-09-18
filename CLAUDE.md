@@ -26,13 +26,16 @@ scripts/
   run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11/15-17 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs notebook 05; --scope test_budgetref runs the 7 extractive notebooks at reference-length budget (issue #16)
   applica_budget.py    # Ceiling (1.25x reference length) + re-scoring of all 18 methods into the test_budgetref scope (issue #16)
   budget_lunghezza.json  # T(n_articoli) table from notebook 18 — an analysis artifact, NOT the containment budget (which is the reference length)
+  pilota_giudice_deepseek.py  # Paired second-judge pilot (DeepSeek vs gpt-5.4-mini) — tests the family-bias
+                       # hypothesis on 7 methods; separate cache/JSON, touches nothing committed
   run_geval.py         # Unattended driver for the G-Eval backfill (notebook 14): staged --righe/--pilota/full run, --budget hard stop, --costo offline cost report, --solo-metriche re-derivation
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
   0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
-  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill, 15 LSA (2 variants), 16 SBERT clustering (2 variants), 17 LDA, 18 per-cluster length analysis (issue #15, generates nothing); ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
+  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill, 15 LSA (2 variants), 16 SBERT clustering (2 variants), 17 LDA, 18 per-cluster length analysis (issue #15, generates nothing), 19 second-judge
+                       # validation of the G-Eval judge (generates nothing, spends nothing); ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
                        # results, since replaced by local ollama runs) and docx report —
@@ -365,6 +368,45 @@ respect:
     a 12% gap from currency, not from Cost Management's reporting lag. `su.prezzi_retail_azure`
     and `scripts/run_geval.py` take `valuta`/`--valuta`; it must match the subscription's real
     billing currency, or the token accounting stays exact but the printed figure won't.
+  - **The judge was validated against a second judge of different lineage, and it held**
+    (notebook 19 + `scripts/pilota_giudice_deepseek.py`, 2026-09-17/18). The concern was real:
+    `gpt-5.4-mini` is GPT-5-family and so is one of the *judged* methods, `gpt5mini`, which is
+    3rd of four LLMs on BERTScore/ROUGE-1 F1 but 1st overall on G-Eval (4.89). 6,577 paired
+    judgments over 950 clusters were re-judged by `DeepSeek-V3.2-Speciale` with an identical
+    prompt, on the 4 LLMs plus **3 non-LLM controls** (the controls are what separate "the judge
+    likes LLM prose" from "the judge likes its own family" — without them the design concludes
+    nothing). Result: **rank order identical, Spearman rho = 1.000, zero inversions over seven
+    positions**, and the family-bias contrast (`delta(gpt5mini) - mean(delta of the other 3
+    LLMs)`, computed per row) is **+0.051, 95% CI [+0.024, +0.078]**. Family bias predicted a
+    **negative** contrast, so the sign is wrong for the hypothesis — correcting for this effect
+    would *widen* gpt5mini's G-Eval lead, not shrink it. Two things not to get wrong when
+    quoting this: (a) **zero is outside the CI** — with ~940 paired clusters the SE is 0.014 and
+    five hundredths of a point is statistically detectable, so do NOT write "compatible with
+    zero"; what makes the result conclusive is the sign, not the significance; (b) the two
+    judges are **not interchangeable** — DeepSeek is harsher on non-LLM methods (−0.277 vs
+    +0.003 on LLMs), widening the LLM-vs-extractive gap by 0.28, concentrated in `coherence`
+    (−0.32) and `relevance` (−0.30, almost all of it on the controls: −0.675 vs −0.017), while
+    `fluency` is identical and `consistency` moves the other way (+0.19). The LLM-prose
+    preference is a property of the LLM-as-a-Judge paradigm, shared by both, not a family
+    distortion. **DeepSeek stays a pilot, for throughput not quality**: 20 RPM nominal but
+    **6.5 judgments/min measured** (32% of nominal, rest is 429 backoff) — 6,997 judgments in
+    17.99 h for €9.16, extrapolating to **10.8 days and €132 per scope** vs 3–12 h and €93 for
+    `gpt-5.4-mini`, which is faster *and* cheaper per judgment because GlobalStandard has the
+    **prompt cache** that MaaS deployments lack. Raising `--thread` does not help. So the
+    `test_budgetref` G-Eval runs on `gpt-5.4-mini` (old account), keeping continuity with the
+    published numbers. Its cache `geval_cache_test_deepseek.jsonl` is a paid artifact — commit
+    it — and is kept SEPARATE from `geval_cache_test.jsonl`; never merge them.
+  - **`GEVAL_SCOPE=test_budgetref` is supported** (`run_geval.py --scope test_budgetref`).
+    Three things differ from `test`, all in notebook 14: rows come from `su.split_base(SCOPE)`;
+    `percorso_riassunti` prefers `{m}_{scope}.tsv`, then `_test`, then `_full`; and the
+    **1.25x ceiling is re-applied per row** (`su.soffitto_riferimento`, the factor now lives in
+    `summ_utils` and `applica_budget.py` imports it) because the budget TSVs are pre-ceiling and
+    bart/pegasus/primera have none — the judge must see the exact text the metrics were scored
+    on. Judgments whose post-ceiling text is byte-identical to the `test` text are **copied from
+    `geval_cache_test.jsonl`** instead of re-bought (entries carry `riuso_da: 'test'` and zero
+    tokens; `--costo` excludes them from the per-judgment cost): 15,061 of 100,712 — bart 94%,
+    pegasus 84%, primera 74%. The notebook executes to `results/notebook_runs/test_budgetref/`,
+    not in place, so the committed notebook 14 keeps its `test` outputs.
 
 ## Working with the data files
 

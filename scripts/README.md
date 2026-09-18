@@ -143,6 +143,32 @@ python scripts/run_geval.py --no-05          # non rieseguire il notebook 05 all
 Vanno eseguiti in quest'ordine: `--righe 1`, poi `--pilota 20`, poi la corsa completa. È il pilota
 a trasformare la stima di costo in un numero misurato.
 
+#### Ambito `test_budgetref` (issue #16)
+
+```
+python scripts/run_geval.py --scope test_budgetref --pilota 2 --valuta EUR --no-05
+python scripts/run_geval.py --scope test_budgetref --casuale --budget 45 --valuta EUR
+python scripts/run_geval.py --scope test_budgetref --costo --valuta EUR
+```
+
+Stesso giudice, stessa cache per-ambito (`geval_cache_test_budgetref.jsonl`), ma tre cose
+cambiano rispetto all'ambito `test`, tutte nel notebook 14:
+
+- le **righe** si leggono dalla split base (`su.split_base`: `test_budgetref` → `test`) e i
+  riassunti dalla corsa a budget quando esiste (`{m}_test_budgetref.tsv`, i 15 rigenerati),
+  altrimenti da `_test.tsv` (bart/pegasus/primera, a solo soffitto);
+- il **soffitto a 1,25 × riferimento** (`su.soffitto_riferimento`, lo stesso fattore di
+  `applica_budget.py`) viene riapplicato riga per riga prima di giudicare: i TSV a budget sono
+  pre-soffitto, e il giudice deve vedere esattamente il testo su cui sono state calcolate le
+  metriche dell'ambito;
+- i giudizi dei testi **rimasti identici** all'ambito `test` vengono **copiati dalla cache
+  `test`** invece di essere ripagati (voci con `riuso_da`, zero token): 15.061 su 100.712 — bart
+  94 %, pegasus 84 %, primera 74 %, briciole dagli estrattivi. `--costo` li esclude dal costo per
+  giudizio. Restano 85.651 giudizi da comprare, ~€50–60 a 2 thread (18 h).
+
+L'eseguito del notebook va in `results/notebook_runs/test_budgetref/` (ignorato da git), non
+in-place: gli output committati del notebook 14 restano quelli dell'ambito `test`.
+
 ### Che cosa fa
 
 Esegue `notebooks/14_geval.ipynb` in-place tramite `nbconvert`, passando le variabili d'ambiente
@@ -209,6 +235,58 @@ Disattivare la sospensione di Windows (`powercfg /change standby-timeout-ac 0`),
 **quota TPM** del deployment nel portale Azure (è quella, non `--thread`, il vero collo di
 bottiglia) e ricordare che qui si spendono soldi veri: tenere d'occhio il contatore di costo
 stampato e impostare `--budget`.
+
+## `pilota_giudice_deepseek.py`
+
+Pilota diagnostico: verifica che la graduatoria G-Eval non sia un artefatto della **parentela
+fra giudice e giudicato**. Il G-Eval committato è prodotto da `gpt-5.4-mini` (OpenAI, serie
+GPT-5) e fra i metodi giudicati c'è `gpt5mini`, della stessa famiglia. Lo script rigiudica gli
+**stessi riassunti già valutati** con `DeepSeek-V3.2-Speciale`, di lignaggio diverso, e confronta
+i due giudici metodo per metodo. L'analisi e le figure stanno in
+[`notebooks/19_confronto_giudici.ipynb`](../notebooks/19_confronto_giudici.ipynb).
+
+### Uso
+
+```bash
+python scripts/pilota_giudice_deepseek.py --righe 1000
+python scripts/pilota_giudice_deepseek.py --righe 1000 --budget 12   # tetto di spesa in EUR
+python scripts/pilota_giudice_deepseek.py --solo-metriche            # riepilogo, zero chiamate
+```
+
+Servono `AZURE_OPENAI_ENDPOINT` e `AZURE_OPENAI_API_KEY` dell'account che ospita il deployment
+DeepSeek (`--deployment`, default `deepseek-giudice`, oppure `AZURE_GEVAL_DEPLOYMENT`).
+
+### Che cosa fa
+
+- **7 metodi**: i 4 LLM (dove il bias si vedrebbe) più 3 controlli non-LLM (`primera`,
+  `firstk_psr`, `lexrank`) presi a quote diverse della graduatoria. I controlli sono ciò che
+  separa un effetto generico «al giudice piace la prosa LLM» da un effetto **specifico della
+  famiglia** OpenAI: senza di loro il confronto non conclude nulla.
+- **Righe estratte con seme fisso** (42) fra quelle coperte da tutti i metodi del pilota, così
+  una corsa interrotta a metà resta comunque un campione non distorto — la stessa proprietà che
+  ha salvato la corsa di agosto quando il tetto di spesa l'ha fermata al 60%.
+- **Chiamata identica** a quella del notebook 14 (stessi messaggi, stesse rubriche, stesso
+  `response_format` json_schema strict): l'unica variabile che cambia è il giudice. Senza
+  `response_format` DeepSeek discorre invece di emettere JSON.
+- Scrive su **cache e JSON separati** (`geval_cache_test_deepseek.jsonl`,
+  `confronto_giudici_test.json`): nulla di committato viene toccato e i due giudici restano
+  indipendentemente ispezionabili. La cache è riprendibile come quella del notebook 14.
+
+### Portata, non qualità
+
+`--thread` è deliberatamente basso (2) e **alzarlo non accelera**: il deployment è a 20 RPM e
+la resa effettiva misurata è **6,5 giudizi/min**, cioè il 32% del nominale, il resto essendo
+attesa di backoff sui 429. Sul pilota: 6.997 giudizi in **17,99 h** per **€9,16** (€0,00131 per
+giudizio). Estrapolato a un ambito intero (100.621 giudizi) fa **10,8 giorni e €132** — contro
+le 3–12 h e i €93 di `gpt-5.4-mini`, che è più veloce **e** più economico per giudizio grazie
+alla prompt cache, assente sui deployment MaaS. Per questo il secondo giudice resta un pilota
+di validazione e non diventa la metrica.
+
+### Esito
+
+Nessun family bias: ordinamento identico (ρ di Spearman 1,000, nessuna inversione su 7
+posizioni) e contrasto `gpt5mini` vs altri LLM pari a **+0,051** — di **segno opposto** a quello
+che l'ipotesi del bias prevedeva. Dettagli e avvertenze nel notebook 19.
 
 ## `import_llm_results.py`
 

@@ -63,6 +63,7 @@ automaticamente e la usano se disponibile.
 | 16 | [16_sbert_clustering.ipynb](16_sbert_clustering.ipynb) | Clustering su sentence embeddings SBERT (`all-MiniLM-L6-v2`) con selezione del **medoide** di ogni cluster. Genera **due varianti** — `sbert_kmeans` (KMeans, distanza euclidea su embedding L2-normalizzati) e `sbert_agglom` (Agglomerative, cosine + average linkage) — che differiscono solo per l'algoritmo di clustering. Ambiti `sample`, `test` e `full`. |
 | 17 | [17_lda.ipynb](17_lda.ipynb) | Topic modeling con LDA (`CountVectorizer` + `LatentDirichletAllocation`): le frasi vengono allocate ai topic in proporzione al peso di ciascuno. Slug `lda`. Ambiti `sample`, `test` e `full`. |
 | 18 | [18_analisi_lunghezze.ipynb](18_analisi_lunghezze.ipynb) | Analisi **per cluster** delle lunghezze dei riassunti generati dai 18 metodi (issue #15): non genera nulla, legge le metriche `test` già salvate e la mediana del riferimento per numero di articoli. |
+| 19 | [19_confronto_giudici.ipynb](19_confronto_giudici.ipynb) | **Validazione del giudice** G-Eval: rigiudica un campione appaiato di riassunti gia' valutati con un secondo giudice di lignaggio diverso (DeepSeek-V3.2-Speciale) per verificare che il primato di `gpt5mini` non sia family bias. Non genera nulla e non spende nulla: legge le due cache di giudizi. |
 
 I notebook dei metodi (01–04, 06–12 e 15–17) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
@@ -682,6 +683,70 @@ pyAutoSummarizer esplode (−77.557 per `lda`, −3.074 per `lexrank`) e trascin
 −0,16 contro ~0,40 e ~0,39 reali — stesso fenomeno della riga 51178 di PEGASUS, stessa scelta:
 nessun file modificato.
 
+## Validazione del giudice G-Eval (notebook 19)
+
+Il G-Eval committato ha **un solo giudice**, `gpt-5.4-mini`, e fra i 18 metodi giudicati ce n'è
+uno della stessa famiglia: `gpt5mini`. `CLAUDE.md` ha sempre rivendicato l'indipendenza a
+livello di *modello* («no self-judging»), mai a livello di **famiglia**. La domanda è legittima
+perché i numeri la sollevano da soli: fra i quattro LLM l'ordine G-Eval è esattamente invertito
+rispetto a BERTScore e ROUGE-1 F1, e `gpt5mini` è terzo su quattro sulle metriche ancorate al
+riferimento ma primo in assoluto su G-Eval (4,89).
+
+[19_confronto_giudici.ipynb](19_confronto_giudici.ipynb) risponde con un **confronto appaiato**:
+gli stessi riassunti, già generati e già giudicati, vengono rigiudicati da
+`DeepSeek-V3.2-Speciale` — lignaggio completamente diverso, stesso prompt, stesse rubriche. Il
+campione è di 1.000 righe estratte con seme fisso su 7 metodi: i 4 LLM più **3 controlli
+non-LLM** (`primera`, `firstk_psr`, `lexrank`), che sono la parte che fa funzionare il disegno,
+perché separano un effetto generico «al giudice piace la prosa LLM» da un effetto specifico
+della famiglia OpenAI. La corsa è
+[`scripts/pilota_giudice_deepseek.py`](../scripts/pilota_giudice_deepseek.py); scrive su una
+cache e un JSON **separati**, quindi non tocca nulla di committato.
+
+Esito su 6.577 giudizi appaiati (950 cluster, 2026-09-17/18, €9,16):
+
+- **ordinamento identico**, ρ di Spearman **1,000**, nessuna inversione su sette posizioni;
+- il contrasto che misurerebbe il bias — `delta(gpt5mini) − media(delta degli altri 3 LLM)`,
+  calcolato riga per riga — vale **+0,051** con IC95% `[+0,024, +0,078]`. Il family bias
+  prevedeva un contrasto **negativo**: il segno è quello sbagliato per l'ipotesi, quindi
+  correggere per questo effetto *allargherebbe* il primato di `gpt5mini` invece di ridurlo.
+
+Due avvertenze da non perdere. **Lo zero è fuori dall'intervallo**: con ~940 cluster appaiati
+l'errore standard è 0,014 e anche cinque centesimi di punto risultano statisticamente
+distinguibili, quindi non si scriva «compatibile con zero» — ciò che rende conclusivo il
+risultato è il *segno*, non la significatività. E i due giudici **non sono intercambiabili**:
+DeepSeek è più severo sui metodi non-LLM (`−0,277` contro `+0,003` sugli LLM) e quindi allarga
+di 0,28 punti il distacco fra prosa LLM e prosa estrattiva. L'effetto «al giudice piace la
+prosa LLM» è reale ed è più forte nel giudice DeepSeek che in quello OpenAI: è una proprietà
+del paradigma LLM-as-a-Judge, condivisa, non una distorsione di famiglia. Il disaccordo si
+concentra su `coherence` (−0,32) e `relevance` (−0,30, quasi tutta sui controlli: −0,675 contro
+−0,017 sugli LLM), mentre `fluency` è identica e `consistency` va in senso opposto (+0,19).
+
+**Perché il secondo giudice resta un pilota.** Non per qualità ma per portata del deployment:
+20 RPM nominali, **6,5 giudizi/min effettivi** (il resto è attesa di backoff sui 429), misurati
+su 17,99 h di corsa. Estrapolato ai 100.621 giudizi di un ambito fa **10,8 giorni e €132** per
+ambito, 21,6 giorni per entrambi. `gpt-5.4-mini` copre lo stesso ambito in 3–12 h **e costa
+meno per giudizio** (€93 contro €132) nonostante un listino per token più alto, perché il suo
+deployment GlobalStandard ha la **prompt cache**, che un deployment MaaS non offre: la sorgente
+troncata condivisa fra i metodi di una riga — il motivo per cui l'ordine dei messaggi è un
+contratto nel notebook 14 — con DeepSeek si ripaga a ogni chiamata. Alzare i thread non aiuta;
+servirebbe un aumento di quota su `DeepSeek-V3.2-Speciale`.
+
+Conseguenza operativa: il G-Eval dell'ambito `test_budgetref` si esegue con **`gpt-5.4-mini`**,
+stesso giudice dei numeri pubblicati (quindi continuità del confronto prima/dopo), con questa
+validazione appaiata come garanzia metodologica.
+
+### G-Eval nell'ambito `test_budgetref`
+
+Il notebook 14 accetta `GEVAL_SCOPE=test_budgetref` (driver: `scripts/run_geval.py --scope
+test_budgetref`). Legge le righe della split base, prende i riassunti dalla corsa a budget quando
+esiste e da `_test.tsv` altrimenti, e **riapplica il soffitto a 1,25 × riferimento**
+(`su.soffitto_riferimento`, lo stesso di `applica_budget.py`) prima di giudicare, così il giudice
+vede esattamente il testo su cui sono state calcolate le metriche dell'ambito. I giudizi dei testi
+rimasti identici all'ambito `test` — bart 94 %, pegasus 84 %, primera 74 % — vengono copiati dalla
+cache `test` invece di essere ripagati (voci con `riuso_da`, zero token). Il giudice è lo stesso
+`gpt-5.4-mini` dei numeri pubblicati, validato nel notebook 19. L'eseguito va in
+`results/notebook_runs/test_budgetref/`, non in-place.
+
 ## Parametri principali (cella di configurazione di ogni notebook)
 
 - `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
@@ -729,6 +794,9 @@ results/
   figures/{metodo}/*.png                     # figure della sezione esplicativa dei notebook 11 e 15-17
                                               # (solo con SALVA_FIGURE; illustrative, non usate dalle metriche)
   metrics/analisi_lunghezze_{ambito}.json    # dispersione per cluster + T(n_articoli) (18_analisi_lunghezze.ipynb)
+  metrics/geval_cache_test_deepseek.jsonl    # cache del SECONDO giudice (pilota, 6.997 giudizi): artefatto
+                                              # pagato come l'altra cache, va committato
+  metrics/confronto_giudici_test.json        # esito del confronto fra i due giudici (19_confronto_giudici.ipynb)
   summaries/{metodo}_test_budgetref.tsv      # riassunti rigenerati a lunghezza del riferimento (issue #16):
                                               # gli 11 estrattivi via driver --scope, gli LLM col budget nel prompt
   metrics/{metodo}_test_budgetref_*          # metriche post-soffitto per tutti e 18 (scripts/applica_budget.py)
