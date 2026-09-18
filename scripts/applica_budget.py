@@ -45,7 +45,7 @@ sys.path.insert(0, str(NOTEBOOKS_DIR))
 import summ_utils as su  # noqa: E402  (needs NOTEBOOKS_DIR on sys.path first)
 
 SCOPE = 'test' + su.SUFFISSO_BUDGET          # test_budgetref
-FATTORE_SOFFITTO = 1.25                       # upper edge of the band around the budget
+FATTORE_SOFFITTO = su.FATTORE_SOFFITTO_BUDGET  # 1.25: shared with notebook 14 (G-Eval judges the same text)
 
 # Same 18 slugs as notebooks 05/13, in the driver's fastest-first order.
 METODI = ['firstk_psr', 'firstk_nltk', 'lda', 'lsa', 'lsa_steinberger',
@@ -100,8 +100,7 @@ def main():
           f'{"senza" if args.senza_bertscore else "con"} BERTScore')
     print('Lettura dei riferimenti della split test...', flush=True)
     riferimenti = list(su.itera_split(percorsi['complete_tab'], 'test'))
-    soffitto = {es['row_id']: int(round(FATTORE_SOFFITTO * su.budget_riferimento(es)))
-                for es in riferimenti}
+    soffitto = {es['row_id']: su.soffitto_riferimento(es) for es in riferimenti}
     print(f'  {len(riferimenti)} righe')
 
     device = None if args.senza_bertscore else su.rileva_device()

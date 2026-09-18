@@ -76,9 +76,14 @@ def log(message):
 
 
 def percorso_riassunti(metodo, scope):
-    """textrank/lexrank hanno solo la corsa '_full.tsv' (vedi notebook 13/14)."""
-    suffisso = 'full' if metodo in ('textrank', 'lexrank') else scope
-    return RESULTS_DIR / 'summaries' / f'{metodo}_{suffisso}.tsv'
+    """Stessa regola del notebook 14: la corsa dell'ambito se esiste (i 15 rigenerati
+    a budget in `test_budgetref`), poi `_test.tsv`, poi `_full.tsv` (l'unica di
+    textrank/lexrank nell'ambito `test`). Serve solo al preflight."""
+    for suffisso in (scope, su.split_base(scope), 'full'):
+        path = RESULTS_DIR / 'summaries' / f'{metodo}_{suffisso}.tsv'
+        if path.exists():
+            return path
+    return RESULTS_DIR / 'summaries' / f'{metodo}_{scope}.tsv'
 
 
 def percorso_cache(scope):
@@ -200,18 +205,23 @@ def rapporto_costo(scope, prezzi=None, valuta='USD'):
     cache = su.CacheGiudizi(path)
     totali = cache.totali_token()
     errori = cache.errori()
+    # Negli ambiti a budget il notebook 14 copia dalla cache `test` i giudizi dei
+    # testi rimasti identici (voci con `riuso_da`, zero token): sono gratis e non
+    # devono entrare nel costo per giudizio, altrimenti la proiezione crolla a zero.
+    riusati = sum(1 for v in cache._voci.values() if v.get('riuso_da'))
     cache.chiudi()
 
     costi = su.costo_da_token(totali, prezzi)
     totale = sum(costi.values())
     n = totali['n_giudizi']
-    n_pagati = max(totali['n_riusciti'], 1)
+    n_pagati = max(totali['n_riusciti'] - riusati, 1)
 
     rimanenti = max(giudizi_attesi(scope) - n, 0)
 
     log(f'--- Costo G-Eval (scope={scope}) ---')
     log(f'  giudizi in cache : {n:,} ({totali["n_riusciti"]:,} riusciti, '
-        f'{len(errori):,} falliti)')
+        f'{len(errori):,} falliti'
+        + (f", di cui {riusati:,} riusati gratis dall'ambito test" if riusati else '') + ')')
     log(f'  token input      : {totali["prompt_tokens"]:,} '
         f'({totali["cached_tokens"] / max(totali["prompt_tokens"], 1):.0%} in cache)')
     log(f'  token output     : {totali["completion_tokens"]:,} '
@@ -230,16 +240,27 @@ def rapporto_costo(scope, prezzi=None, valuta='USD'):
 # Esecuzione notebook
 # ---------------------------------------------------------------------------
 
-def esegui_notebook(nome, env_extra=None):
-    """Esegue un notebook in-place via nbconvert con le variabili GEVAL_* impostate."""
+def esegui_notebook(nome, env_extra=None, scope=None):
+    """Esegue un notebook via nbconvert con le variabili GEVAL_* impostate.
+
+    In-place di norma; negli ambiti a budget l'eseguito va invece in
+    results/notebook_runs/{scope}/ (ignorato da git), come fa run_benchmark_test.py,
+    cosi' gli output committati del notebook (ambito `test`) restano quelli.
+    """
     env = dict(os.environ, **(env_extra or {}))
     inizio = time.time()
     dettagli = ', '.join(f'{k}={v}' for k, v in sorted((env_extra or {}).items()))
     log(f'=== Avvio {nome} ({dettagli or "nessuna variabile extra"}) ===')
 
+    if scope and su.budget_attivo(scope):
+        out_dir = RESULTS_DIR / 'notebook_runs' / scope
+        out_dir.mkdir(parents=True, exist_ok=True)
+        destinazione = ['--output-dir', str(out_dir), '--output', nome]
+    else:
+        destinazione = ['--inplace']
     risultato = subprocess.run(
         [sys.executable, '-m', 'jupyter', 'nbconvert', '--to', 'notebook', '--execute',
-         '--inplace', '--ExecutePreprocessor.timeout=-1', nome],
+         *destinazione, '--ExecutePreprocessor.timeout=-1', nome],
         cwd=NOTEBOOKS_DIR, env=env, capture_output=True, text=True)
     durata = time.time() - inizio
 
@@ -337,7 +358,7 @@ def main():
     if args.solo_metriche:
         env['GEVAL_SOLO_METRICHE'] = '1'
 
-    ok = esegui_notebook(NOTEBOOK, env)
+    ok = esegui_notebook(NOTEBOOK, env, scope=args.scope)
 
     dopo = conta_cache(args.scope)
     log(f'Giudizi in cache: {prima:,} -> {dopo:,} (+{dopo - prima:,})')

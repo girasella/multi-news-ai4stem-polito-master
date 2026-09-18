@@ -271,6 +271,19 @@ def budget_riferimento(esempio):
     return len(pulisci_riferimento(esempio['summary']).split())
 
 
+# Bordo superiore della banda attorno al budget: e' il tetto che
+# scripts/applica_budget.py applica a TUTTI i 18 metodi prima di calcolare le
+# metriche dell'ambito. Ogni valutazione di quell'ambito (metriche standard,
+# BERTScore, G-Eval) deve vedere lo stesso testo post-soffitto: per questo il
+# fattore vive qui e non nello script.
+FATTORE_SOFFITTO_BUDGET = 1.25
+
+
+def soffitto_riferimento(esempio):
+    """Tetto in parole di un esempio negli ambiti a budget: 1,25 x budget."""
+    return int(round(FATTORE_SOFFITTO_BUDGET * budget_riferimento(esempio)))
+
+
 def seleziona_per_budget(frasi, ordine, budget_parole):
     """Sceglie frasi in `ordine` (indici per rilevanza decrescente) fino al budget.
 
