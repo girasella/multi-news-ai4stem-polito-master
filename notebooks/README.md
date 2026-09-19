@@ -539,8 +539,9 @@ i casi, cambia solo la cifra.
 ### Avvertenze
 
 - **Copertura parziale**: alcune righe vengono respinte dal content filter di Azure o producono
-  risposte non conformi — 5.855 giudizi su 100.621 (5,8%), per una copertura per metodo fra
-  93,5% e 96,7%. Le medie vanno lette insieme a `n_geval`, che può essere minore di `n_esempi`.
+  risposte non conformi — 1.071 giudizi su 100.621 (1,1%) dopo il ritentativo del 2026-09-19
+  (erano 5.855, il 5,8%, nella corsa di agosto), per una copertura per metodo fra 96,8% e
+  99,0%. Le medie vanno lette insieme a `n_geval`, che può essere minore di `n_esempi`.
   **Le righe respinte non sono le stesse in corse diverse** (vedi l'avvertenza dedicata più
   sotto): la copertura più alta dei cinque metodi dei notebook 15–17 dipende dal filtro, non dai
   metodi.
@@ -702,19 +703,19 @@ della famiglia OpenAI. La corsa è
 [`scripts/pilota_giudice_deepseek.py`](../scripts/pilota_giudice_deepseek.py); scrive su una
 cache e un JSON **separati**, quindi non tocca nulla di committato.
 
-Esito su 6.577 giudizi appaiati (950 cluster, 2026-09-17/18, €9,16):
+Esito su 6.799 giudizi appaiati (983 cluster, 2026-09-17/18, €9,16):
 
 - **ordinamento identico**, ρ di Spearman **1,000**, nessuna inversione su sette posizioni;
 - il contrasto che misurerebbe il bias — `delta(gpt5mini) − media(delta degli altri 3 LLM)`,
-  calcolato riga per riga — vale **+0,051** con IC95% `[+0,024, +0,078]`. Il family bias
+  calcolato riga per riga — vale **+0,049** con IC95% `[+0,022, +0,076]`. Il family bias
   prevedeva un contrasto **negativo**: il segno è quello sbagliato per l'ipotesi, quindi
   correggere per questo effetto *allargherebbe* il primato di `gpt5mini` invece di ridurlo.
 
-Due avvertenze da non perdere. **Lo zero è fuori dall'intervallo**: con ~940 cluster appaiati
+Due avvertenze da non perdere. **Lo zero è fuori dall'intervallo**: con ~970 cluster appaiati
 l'errore standard è 0,014 e anche cinque centesimi di punto risultano statisticamente
 distinguibili, quindi non si scriva «compatibile con zero» — ciò che rende conclusivo il
 risultato è il *segno*, non la significatività. E i due giudici **non sono intercambiabili**:
-DeepSeek è più severo sui metodi non-LLM (`−0,277` contro `+0,003` sugli LLM) e quindi allarga
+DeepSeek è più severo sui metodi non-LLM (`−0,276` contro `+0,005` sugli LLM) e quindi allarga
 di 0,28 punti il distacco fra prosa LLM e prosa estrattiva. L'effetto «al giudice piace la
 prosa LLM» è reale ed è più forte nel giudice DeepSeek che in quello OpenAI: è una proprietà
 del paradigma LLM-as-a-Judge, condivisa, non una distorsione di famiglia. Il disaccordo si
@@ -746,6 +747,17 @@ rimasti identici all'ambito `test` — bart 94 %, pegasus 84 %, primera 74 % —
 cache `test` invece di essere ripagati (voci con `riuso_da`, zero token). Il giudice è lo stesso
 `gpt-5.4-mini` dei numeri pubblicati, validato nel notebook 19. L'eseguito va in
 `results/notebook_runs/test_budgetref/`, non in-place.
+
+**Esito (corsa 2026-09-18/19, 100.712 giudizi, 99.040 riusciti, €76,26 di spesa utile): la
+lunghezza non era il confondente del G-Eval.** Dove il riallineamento ha ribaltato il recall
+ROUGE e rimescolato la sua graduatoria, **le prime undici posizioni del G-Eval restano
+identiche** e il massimo spostamento è 0,34 su 5. I due estrattivi più lunghi *guadagnano*
+tagliando (`lexrank` +0,34, `textrank` +0,27: coerenza, consistenza e fluenza in su, pertinenza
+in lieve calo); la **pertinenza è l'unica dimensione sensibile alla lunghezza**, controparte del
+recall (`lda` −0,50, `centroid_mmr*` −0,28, `lsa_steinberger` −0,23); fra gli LLM allungati
+`qwen` +0,15 supera `mistral` −0,13 (tutto sulla consistency: costretto a scrivere di più,
+mistral aggiunge cose che nella fonte non ci sono), `gpt5mini` non si muove. Tabella e grafico
+prima/dopo nella Vista 3 del notebook 05.
 
 ## Parametri principali (cella di configurazione di ogni notebook)
 
@@ -909,7 +921,14 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   un IC 95% di ±0,03 — ma va tenuto presente prima di leggere le differenze di `n_geval` come se
   dicessero qualcosa sui metodi. Riallineare i tredici alla nuova versione del filtro
   costerebbe una nuova corsa completa (~€70) e cambierebbe numeri già pubblicati: non è stato
-  fatto.
+  fatto. È stato invece fatto, il 2026-09-19 per €2,09, **il ritentativo dei soli giudizi
+  falliti** (`run_geval.py --scope test --riprova-errori`): i 5.855 fallimenti stavano su 457
+  righe, 381 delle quali erano passate due giorni prima nella corsa `test_budgetref` sulla
+  stessa risorsa. Nessun giudizio esistente è stato toccato; i fallimenti sono scesi a 1.071, i
+  riusciti a **99.550 su 100.621 (98,9%)**, le righe giudicate per tutti e 18 da 5.091 a
+  **5.363**. Graduatoria invariata, spostamento massimo delle medie 0,010 (pegasus): le righe
+  che il filtro aveva bloccato non sono sistematicamente diverse dalle altre. Il divario di
+  copertura «tredici contro cinque» descritto sopra è quindi storico.
 - **La logica «sottoinsieme» del notebook 05 va lasciata com'è**: ogni grafico BERTScore/G-Eval
   disegna i metodi che hanno quella metrica, elencando gli esclusi in un avviso, invece di
   pretenderla da tutti. Adesso che tutti e 18 le hanno l'avviso non compare mai, ma è ciò che

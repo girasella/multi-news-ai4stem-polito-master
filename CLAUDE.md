@@ -197,7 +197,13 @@ respect:
   is negligible: restricted to the 5,091 rows judged for all 18, no mean moves by more than
   0.010 (95% CI is ±0.03). Do not read `n_geval` differences as saying anything about the
   methods, and do not "fix" it by re-judging the 13 — that is a fresh ~€70 run that would change
-  published numbers.
+  published numbers. **What WAS done (2026-09-19, €2.09): the 5,855 failed judgments — 457
+  rows, of which 381 had passed the same filter two days earlier in the budgetref run — were
+  retried with `run_geval.py --scope test --riprova-errori`.** That fills gaps without touching
+  any existing judgment: failures fell to 1,071, success to **99,550/100,621 (98.9%)**, coverage
+  per method **96.8–99.0%**, rows judged for all 18 **5,091 → 5,363**. Ranking unchanged, max
+  mean shift 0.010 (pegasus) — the rows the filter had flagged are not systematically different.
+  The old "13 vs 5" coverage gap described above is therefore historical.
 - Notebook 05 charts BERTScore/G-Eval over the *subset* of methods that have the column (naming
   the excluded ones) instead of requiring it from all — keep that even now that all 18 have both;
   don't "fix" it into an `all(...)` gate.
@@ -346,7 +352,8 @@ respect:
     once per 13, and the cached-input share fell from 59% to 56% cumulative.
   - Source truncated to **3,500 words**, which leaves 91.5% of test-split clusters intact
     (p90 = 3,244 words, max = 35,362). Scope is 100,621 judgments (not 18x5,610 — coverage is
-    uneven), all of them run, for €95.19 total (94,766 succeeded, 5,855 hit the content filter).
+    uneven), all of them run, for €95.19 (94,766 succeeded, 5,855 hit the content filter); after the 2026-09-19 retry of
+    the failures, €97.28 and 99,550 succeeded, 1,071 failed.
   - **Cost is entirely input-bound.** Measured: `reasoning_effort='minimal'` emits **zero**
     reasoning tokens, so output is ~30 tokens/judgment (~$10 total). Everything else rides on the
     prompt-cache hit rate. Two things cap it, and neither is the truncation limit:
@@ -371,20 +378,20 @@ respect:
   - **The judge was validated against a second judge of different lineage, and it held**
     (notebook 19 + `scripts/pilota_giudice_deepseek.py`, 2026-09-17/18). The concern was real:
     `gpt-5.4-mini` is GPT-5-family and so is one of the *judged* methods, `gpt5mini`, which is
-    3rd of four LLMs on BERTScore/ROUGE-1 F1 but 1st overall on G-Eval (4.89). 6,577 paired
-    judgments over 950 clusters were re-judged by `DeepSeek-V3.2-Speciale` with an identical
+    3rd of four LLMs on BERTScore/ROUGE-1 F1 but 1st overall on G-Eval (4.89). 6,799 paired
+    judgments over 983 clusters were re-judged by `DeepSeek-V3.2-Speciale` with an identical
     prompt, on the 4 LLMs plus **3 non-LLM controls** (the controls are what separate "the judge
     likes LLM prose" from "the judge likes its own family" — without them the design concludes
     nothing). Result: **rank order identical, Spearman rho = 1.000, zero inversions over seven
     positions**, and the family-bias contrast (`delta(gpt5mini) - mean(delta of the other 3
-    LLMs)`, computed per row) is **+0.051, 95% CI [+0.024, +0.078]**. Family bias predicted a
+    LLMs)`, computed per row) is **+0.049, 95% CI [+0.022, +0.076]**. Family bias predicted a
     **negative** contrast, so the sign is wrong for the hypothesis — correcting for this effect
     would *widen* gpt5mini's G-Eval lead, not shrink it. Two things not to get wrong when
-    quoting this: (a) **zero is outside the CI** — with ~940 paired clusters the SE is 0.014 and
+    quoting this: (a) **zero is outside the CI** — with ~970 paired clusters the SE is 0.014 and
     five hundredths of a point is statistically detectable, so do NOT write "compatible with
     zero"; what makes the result conclusive is the sign, not the significance; (b) the two
-    judges are **not interchangeable** — DeepSeek is harsher on non-LLM methods (−0.277 vs
-    +0.003 on LLMs), widening the LLM-vs-extractive gap by 0.28, concentrated in `coherence`
+    judges are **not interchangeable** — DeepSeek is harsher on non-LLM methods (−0.276 vs
+    +0.005 on LLMs), widening the LLM-vs-extractive gap by 0.28, concentrated in `coherence`
     (−0.32) and `relevance` (−0.30, almost all of it on the controls: −0.675 vs −0.017), while
     `fluency` is identical and `consistency` moves the other way (+0.19). The LLM-prose
     preference is a property of the LLM-as-a-Judge paradigm, shared by both, not a family
@@ -407,6 +414,35 @@ respect:
     tokens; `--costo` excludes them from the per-judgment cost): 15,061 of 100,712 — bart 94%,
     pegasus 84%, primera 74%. The notebook executes to `results/notebook_runs/test_budgetref/`,
     not in place, so the committed notebook 14 keeps its `test` outputs.
+    **Outcome (run 2026-09-18/19, 100,712 judgments, 99,040 succeeded, €76.26 useful spend):
+    length was NOT G-Eval's confound.** Where matched length overturned ROUGE recall and
+    reshuffled the ROUGE ranking, **the top 11 G-Eval positions are identical** before/after
+    and the largest move is 0.34 on a 5-point scale — consistent with G-Eval scoring against
+    the *source*, not overlap with the reference, and retroactively justifying the choice not
+    to recompute it for lda. Specifics worth quoting: the two longest extractives *gain* from
+    being cut (`lexrank` +0.34 at 450→216 words, `textrank` +0.27 at 368→215; coherence /
+    consistency / fluency all +0.4–0.6, relevance slightly down — they remain last);
+    **relevance is the only length-sensitive dimension**, the counterpart of recall (`lda`
+    −0.50, `centroid_mmr*` −0.27/−0.29, `lsa_steinberger` −0.23 on relevance while their other
+    three dimensions rise) — the two effects ROUGE F1 sums into one number, here separated;
+    the lengthened LLMs diverge: `qwen` (140→216) +0.15 and **overtakes `mistral`** (the only
+    inversion in the top 11), `mistral` (161→233) −0.13 entirely on consistency (−0.24) — forced
+    to write more, qwen adds pertinent content, mistral adds things not in the source; `gpt5mini`
+    (241→209) +0.001. Coverage is *higher* than in `test` (5,483–5,554 vs 5,215–5,401 per
+    method): same resource and filter, the content filter simply varies run to run, favourably
+    this time. Notebook 05 Vista 3 now includes `geval_media` and a before/after chart.
+  - **Never advise "Ctrl-C and restart" on a running G-Eval without confirming the kernel died.**
+    On Windows, Ctrl-C to the driver did NOT kill its `jupyter nbconvert` kernel (separate
+    process group); on 2026-09-18 the orphan kept judging for 10 h alongside the relaunched run,
+    both walking the same `--casuale` seed-42 order → **50,275 judgments paid twice (€44.42
+    wasted; €116.40 billed vs €71.99 useful)** and a cache corrupted by interleaved appends. The
+    driver now (a) kills the whole process tree on Ctrl-C (`termina_albero`, `taskkill /T`) and
+    (b) holds a per-cache PID lock (`geval_cache_{scope}.lock`) and refuses to start while
+    another live run owns it. The committed budgetref cache is the deduplicated rewrite (one
+    entry per pair, success beats error, else first occurrence); `--costo` on it therefore
+    reports the *useful* spend, not the bill. Judgments are not bitwise reproducible, so the two
+    runs' duplicates could differ — the kept one is the first written, which is arbitrary but
+    deterministic.
 
 ## Working with the data files
 

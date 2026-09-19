@@ -122,8 +122,8 @@ Driver non presidiato per il backfill **G-Eval (LLM-as-a-Judge)** — notebook 1
 riassunto generato sulla split test da `gpt-5.4-mini` su Azure, con punteggi 1–5 su coherence,
 consistency, fluency e relevance. **100.621 giudizi** sui 18 metodi, ore di chiamate API a
 pagamento; per la metodologia vedi la sezione *G-Eval* di `notebooks/README.md`. La corsa è
-completa e l'intera cache è committata (€95,19, 94,2% dei giudizi riusciti — il resto è finito nel
-content filter di Azure); un rilancio giudica solo ciò che manca, quindi non costa nulla a meno
+completa e l'intera cache è committata (€97,28; 98,9% dei giudizi riusciti dopo il ritentativo dei
+fallimenti del 2026-09-19 con `--riprova-errori`, il resto è finito nel content filter di Azure); un rilancio giudica solo ciò che manca, quindi non costa nulla a meno
 che non si aggiungano metodi o righe.
 
 ### Uso
@@ -168,6 +168,22 @@ cambiano rispetto all'ambito `test`, tutte nel notebook 14:
 
 L'eseguito del notebook va in `results/notebook_runs/test_budgetref/` (ignorato da git), non
 in-place: gli output committati del notebook 14 restano quelli dell'ambito `test`.
+
+#### Una corsa per cache, e Ctrl-C uccide tutto l'albero
+
+Il driver scrive un lock (`geval_cache_{ambito}.lock`, col proprio PID) e **rifiuta di partire
+se un'altra corsa viva sta scrivendo sulla stessa cache**; un lock lasciato da un processo morto
+(riavvio, kill) viene ignorato. Su Ctrl-C termina l'intero albero di processi (`taskkill /T`),
+non solo se stesso. Entrambe le cose nascono da un incidente reale (2026-09-18): un Ctrl-C su
+Windows aveva ucciso il driver ma **non il kernel Jupyter** (jupyter_client lo avvia in un
+process group separato), che ha continuato a giudicare per dieci ore in parallelo alla corsa
+rilanciata. Le due corse — stesso seme di `--casuale`, quindi stesse righe nello stesso ordine —
+hanno pagato **50.275 giudizi due volte (€44,42 buttati, €116,40 spesi in tutto contro i €71,99
+utili)** e hanno corrotto la cache con scritture intrecciate (30 righe rotte, 51.301 doppioni).
+La cache committata è quella deduplicata (una voce per coppia, un successo batte un errore,
+altrimenti la prima occorrenza); l'originale corrotto è stato conservato fuori da git. Prima di
+rilanciare una corsa, **verificare con `tasklist` che non resti un `python.exe` del kernel**, o
+lasciar fare al lock.
 
 ### Che cosa fa
 
@@ -285,7 +301,7 @@ di validazione e non diventa la metrica.
 ### Esito
 
 Nessun family bias: ordinamento identico (ρ di Spearman 1,000, nessuna inversione su 7
-posizioni) e contrasto `gpt5mini` vs altri LLM pari a **+0,051** — di **segno opposto** a quello
+posizioni) e contrasto `gpt5mini` vs altri LLM pari a **+0,049** — di **segno opposto** a quello
 che l'ipotesi del bias prevedeva. Dettagli e avvertenze nel notebook 19.
 
 ## `import_llm_results.py`
