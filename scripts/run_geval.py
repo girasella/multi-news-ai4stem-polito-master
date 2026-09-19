@@ -240,6 +240,63 @@ def rapporto_costo(scope, prezzi=None, valuta='USD'):
 # Esecuzione notebook
 # ---------------------------------------------------------------------------
 
+def termina_albero(proc):
+    """Uccide `proc` e tutti i suoi discendenti (il kernel Jupyter e' un nipote)."""
+    if os.name == 'nt':
+        subprocess.run(['taskkill', '/T', '/F', '/PID', str(proc.pid)],
+                       capture_output=True)
+    else:
+        proc.terminate()
+    try:
+        proc.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
+def percorso_lock(scope):
+    return percorso_cache(scope).with_suffix('.lock')
+
+
+def pid_vivo(pid):
+    if os.name == 'nt':
+        out = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
+                             capture_output=True, text=True).stdout
+        return str(pid) in out
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def acquisisci_lock(scope):
+    """Una sola corsa per cache. Un lock lasciato da un processo morto (riavvio,
+    kill) viene ignorato; uno di un processo vivo blocca l'avvio: due corse sullo
+    stesso file si pagano i giudizi a vicenda e lo corrompono a righe intrecciate."""
+    lock = percorso_lock(scope)
+    if lock.exists():
+        try:
+            pid = int(lock.read_text().strip())
+        except ValueError:
+            pid = None
+        if pid == os.getpid():
+            return True
+        if pid and pid_vivo(pid):
+            log(f"Un'altra corsa (pid {pid}) sta gia' scrivendo su {percorso_cache(scope).name}: "
+                f"fermarla prima (taskkill /T /F /PID {pid}) o attendere che finisca.")
+            return False
+        log(f"Lock stantio di un processo non piu' vivo ({pid}): ignorato.")
+    lock.write_text(str(os.getpid()))
+    return True
+
+
+def rilascia_lock(scope):
+    try:
+        percorso_lock(scope).unlink()
+    except FileNotFoundError:
+        pass
+
+
 def esegui_notebook(nome, env_extra=None, scope=None):
     """Esegue un notebook via nbconvert con le variabili GEVAL_* impostate.
 
@@ -258,16 +315,27 @@ def esegui_notebook(nome, env_extra=None, scope=None):
         destinazione = ['--output-dir', str(out_dir), '--output', nome]
     else:
         destinazione = ['--inplace']
-    risultato = subprocess.run(
+    # Popen + kill dell'INTERO albero su Ctrl-C. Con subprocess.run un Ctrl-C su Windows
+    # uccideva il driver ma non il kernel Jupyter (jupyter_client lo avvia in un process
+    # group separato): il 2026-09-18 un kernel orfano ha continuato a giudicare per 10 ore
+    # in parallelo alla corsa rilanciata, scrivendo sulla stessa cache -> 50.275 giudizi
+    # pagati due volte (EUR 44) e file corrotto dalle scritture intrecciate.
+    proc = subprocess.Popen(
         [sys.executable, '-m', 'jupyter', 'nbconvert', '--to', 'notebook', '--execute',
          *destinazione, '--ExecutePreprocessor.timeout=-1', nome],
-        cwd=NOTEBOOKS_DIR, env=env, capture_output=True, text=True)
+        cwd=NOTEBOOKS_DIR, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        _, stderr = proc.communicate()
+    except KeyboardInterrupt:
+        log(f'Ctrl-C: termino {nome} e tutto il suo albero di processi (pid {proc.pid})')
+        termina_albero(proc)
+        raise
     durata = time.time() - inizio
 
-    if risultato.returncode != 0:
-        log(f'*** ERRORE in {nome} dopo {durata:.0f}s (returncode={risultato.returncode}) ***')
+    if proc.returncode != 0:
+        log(f'*** ERRORE in {nome} dopo {durata:.0f}s (returncode={proc.returncode}) ***')
         log('--- stderr (ultime 40 righe) ---')
-        for riga in risultato.stderr.splitlines()[-40:]:
+        for riga in stderr.splitlines()[-40:]:
             log(f'    {riga}')
         return False
 
@@ -358,7 +426,12 @@ def main():
     if args.solo_metriche:
         env['GEVAL_SOLO_METRICHE'] = '1'
 
-    ok = esegui_notebook(NOTEBOOK, env, scope=args.scope)
+    if not acquisisci_lock(args.scope):
+        sys.exit(1)
+    try:
+        ok = esegui_notebook(NOTEBOOK, env, scope=args.scope)
+    finally:
+        rilascia_lock(args.scope)
 
     dopo = conta_cache(args.scope)
     log(f'Giudizi in cache: {prima:,} -> {dopo:,} (+{dopo - prima:,})')
