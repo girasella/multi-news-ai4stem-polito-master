@@ -77,7 +77,7 @@ macchina resterà occupata per diversi giorni: lo script non limita l'uso di GPU
 
 ## `applica_budget.py`
 
-Soffitto e rivalutazione per l'ambito **`test_budgetref`** (issue #16, protocollo
+Tetto e rivalutazione per l'ambito **`test_budgetref`** (issue #16, protocollo
 *length-matched* / *oracle-length*): per ciascuno dei 18 metodi tronca ogni riassunto a
 `1,25 × B_i` parole, dove `B_i` è la lunghezza del riassunto di riferimento di quel cluster
 (`su.budget_riferimento`), e ricalcola le metriche sul testo troncato.
@@ -95,26 +95,34 @@ python scripts/applica_budget.py --forza              # ricalcola anche i metodi
 
 1. **Sorgente dei riassunti**: `{metodo}_test_budgetref.tsv` se esiste (gli 11 estrattivi
    rigenerati dal driver, e gli LLM una volta rigenerati col budget nel prompt), altrimenti il
-   `{metodo}_test.tsv` committato (i metodi che ricevono il solo soffitto; `textrank`/`lexrank`
+   `{metodo}_test.tsv` committato (i metodi che ricevono il solo tetto; `textrank`/`lexrank`
    ripiegano sul `_full.tsv` se non c'è la corsa a budget). Quale file è stato usato, e se il
    metodo è stato rigenerato o solo troncato, finisce nel JSON aggregato
    (`config.ambito_budget`).
-2. **Soffitto**: `su.tronca_parole(testo, round(1,25 × B_i))`, riga per riga.
+2. **Tetto**: `su.tronca_parole(testo, round(1,25 × B_i))`, riga per riga.
 3. **Rivalutazione**: ROUGE-1/2/L, BLEU, METEOR e `parole_generate` via `su.valuta_e_salva`, più
    BERTScore (`su.calcola_bertscore_batch`) salvo `--senza-bertscore`.
 
 I notebook che rigenerano a budget scrivono già `{metodo}_test_budgetref_*` sull'output grezzo:
-questo script li **sovrascrive** con i numeri post-soffitto, che sono quelli da leggere.
-Riprendibile per metodo: un metodo il cui JSON aggregato porta già il marcatore del soffitto
+questo script li **sovrascrive** con i numeri post-troncamento, che sono quelli da leggere. La
+`config` del JSON aggregato viene invece **conservata** dal file scritto dal notebook (è lì che
+stanno i parametri specifici del budget: `budget_parole`, il prompt a budget, `n_sentences:
+null`…), togliendo il solo blocco `ambito_budget` prima di riaggiungerlo, così un `--forza` è
+idempotente; per i metodi a solo tetto, che non hanno un aggregato scritto da un notebook,
+si ripiega sulla `config` dell'ambito `test`. Fino al 2026-09-19 lo script leggeva sempre
+quest'ultima, e i quindici aggregati a budget documentavano i parametri dell'ambito `test`
+(`lda` con «n_sentences: 11», `qwen` col vecchio prompt e `max_tokens` 200): riparati una
+tantum ricatturando la `config` dai notebook, senza toccare le metriche.
+Riprendibile per metodo: un metodo il cui JSON aggregato porta già il marcatore del tetto
 viene saltato salvo `--forza`. I file `*_test_*` committati non vengono mai toccati.
 
 ### Che cosa NON fa
 
-Il troncamento installa solo il **soffitto**: i metodi più corti del riferimento (`bart` su
+Il troncamento installa solo il **tetto**: i metodi più corti del riferimento (`bart` su
 tutti) restano corti, e la loro quota di righe in banda — riportata dal notebook 18 sull'ambito
 `test_budgetref` e dalla Vista 3 del notebook 05 — è un risultato, non un difetto da correggere
-qui. G-Eval non viene ricalcolato (giudizio a pagamento; misura la fedeltà alla fonte, non la
-sovrapposizione col riferimento).
+qui. G-Eval non viene ricalcolato **da questo script**: lo fa, separatamente,
+`run_geval.py --scope test_budgetref`, riapplicando lo stesso tetto (vedi sotto).
 
 ## `run_geval.py`
 
@@ -156,10 +164,10 @@ cambiano rispetto all'ambito `test`, tutte nel notebook 14:
 
 - le **righe** si leggono dalla split base (`su.split_base`: `test_budgetref` → `test`) e i
   riassunti dalla corsa a budget quando esiste (`{m}_test_budgetref.tsv`, i 15 rigenerati),
-  altrimenti da `_test.tsv` (bart/pegasus/primera, a solo soffitto);
-- il **soffitto a 1,25 × riferimento** (`su.soffitto_riferimento`, lo stesso fattore di
+  altrimenti da `_test.tsv` (bart/pegasus/primera, a solo tetto);
+- il **tetto a 1,25 × riferimento** (`su.tetto_riferimento`, lo stesso fattore di
   `applica_budget.py`) viene riapplicato riga per riga prima di giudicare: i TSV a budget sono
-  pre-soffitto, e il giudice deve vedere esattamente il testo su cui sono state calcolate le
+  pre-troncamento, e il giudice deve vedere esattamente il testo su cui sono state calcolate le
   metriche dell'ambito;
 - i giudizi dei testi **rimasti identici** all'ambito `test` vengono **copiati dalla cache
   `test`** invece di essere ripagati (voci con `riuso_da`, zero token): 15.061 su 100.712 — bart

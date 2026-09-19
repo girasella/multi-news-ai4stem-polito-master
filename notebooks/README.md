@@ -612,9 +612,9 @@ viene toccato. Due interventi distinti, perché il solo troncamento non basta (p
 max/min mediano per cluster da 8,5× a ~4×: `bart` resta sotto banda nel 100% dei cluster, `qwen`
 nel 99%, e un riassunto corto non si tronca verso l'alto):
 
-- **Soffitto, tutti e 18 i metodi** — `scripts/applica_budget.py` tronca ogni riassunto a
+- **Tetto, tutti e 18 i metodi** — `scripts/applica_budget.py` tronca ogni riassunto a
   `1,25 × budget` e ricalcola le metriche (ROUGE/BLEU/METEOR + BERTScore).
-- **Pavimento, gli 11 estrattivi** (notebook 01, 02, 10, 11, 15, 16, 17; driver
+- **Rigenerazione a budget, gli 11 estrattivi** (notebook 01, 02, 10, 11, 15, 16, 17; driver
   `scripts/run_benchmark_test.py --scope test_budgetref`) — rigenerati con il budget in **parole**
   al posto del budget in **frasi**. Il criterio di ordinamento di ciascun metodo è invariato;
   cambia solo *dove* ci si ferma (`su.seleziona_per_budget`: si accumulano frasi nell'ordine del
@@ -625,16 +625,16 @@ nel 99%, e un riassunto corto non si tronca verso l'alto):
   (`K_LATENTE`, `N_CLUSTER`) resta 11 — vincolo segnalato nella issue #14 — e in 16 l'ordine è a
   giri (medoide di ogni cluster, poi la seconda frase più vicina al centroide, …); in 17
   l'allocazione proporzionale ai topic ripartisce parole invece di frasi.
-- **Pavimento, gli LLM** (notebook 07, 08, 09, 12) — rigenerati con il budget **nel prompt**: alla
+- **Rigenerazione a budget, gli LLM** (notebook 07, 08, 09, 12) — rigenerati con il budget **nel prompt**: alla
   stessa richiesta zero-shot si aggiunge la sola frase «of approximately *N* words»
-  (`PROMPT_USER_BUDGET`, derivato meccanicamente da `PROMPT_USER`), il cap in token sale a
+  (`PROMPT_USER_BUDGET`, derivato meccanicamente da `PROMPT_USER`), il limite di token sale a
   `MAX_TOKENS_BUDGET = 1500` (con 200/300 un bersaglio da 300 parole sarebbe irraggiungibile). Un
-  LLM segue l'istruzione di lunghezza solo **approssimativamente**: il pavimento è installato
-  *circa*, il soffitto si applica comunque dopo, e la quota in banda è un risultato misurato. Non
+  LLM segue l'istruzione di lunghezza solo **approssimativamente**: la lunghezza obiettivo è raggiunta
+  *circa*, il tetto si applica comunque dopo, e la quota in banda è un risultato misurato. Non
   sono nella lista del driver: si lanciano singolarmente, pilota su poche righe prima della corsa
   (ore per modello).
-- **Solo soffitto per `bart`, `pegasus`, `primera`** — decisione deliberata, non solo di costo
-  (pur essendo 2 h + 5–9 h + 28–56 h di GPU). Il pavimento qui passerebbe da `min_length` in
+- **Solo tetto per `bart`, `pegasus`, `primera`** — decisione deliberata, non solo di costo
+  (pur essendo 2 h + 5–9 h + 28–56 h di GPU). La rigenerazione a budget qui passerebbe da `min_length` in
   token, che costringe il beam search a generare oltre la lunghezza naturale del modello: e' il
   meccanismo dei loop di ripetizione gia' documentati per PEGASUS (riga 51178, METEOR −1959, alla
   lunghezza *naturale*). Su `bart`, che dovrebbe quadruplicare l'output, si misurerebbe il degrado
@@ -647,18 +647,18 @@ la fedeltà alla fonte, non la sovrapposizione col riferimento). Il confronto pr
 **Vista 3 del notebook 05**; la dispersione per cluster «dopo» si ottiene rieseguendo il notebook
 18 con `SUMM_SCOPE='test_budgetref'`.
 
-**Esito finale (corse 2026-09-13/17: 15 slug su 18 rigenerati, soffitto su tutti e 18).** I 15
+**Esito finale (corse 2026-09-13/17: 15 slug su 18 rigenerati, tetto su tutti e 18).** I 15
 rigenerati cadono in banda nel **71–100%** dei cluster (gli 11 estrattivi 93–99%, `gpt5mini` 100%,
 `gemma` 99%, `qwen` 79%, `mistral` 71%), con lunghezza mediana pari al riferimento (~215 parole).
 Il rapporto max/min dentro il cluster passa da 8,5× a 4,7× sui 18 — ma quel 4,7 è quasi tutto
-`bart`, che a 0,26× è il minimo in quasi ogni cluster mentre il soffitto tiene il massimo a 1,25×:
+`bart`, che a 0,26× è il minimo in quasi ogni cluster mentre il tetto tiene il massimo a 1,25×:
 **senza `bart` si passa da 3,8× a 1,6×, e sui soli 15 rigenerati da 3,7× a 1,4×**. Fra i metodi
 effettivamente riportati a lunghezza pari la dispersione è quindi quasi annullata — il numero sui
 18 sottostima il contenimento.
 
 La graduatoria si riassesta: `lda` perde tutto il vantaggio (recall 0,499 → 0,348, ultimo fra gli
 estrattivi in F1, 0,338); le baseline `firstk_*` salgono dal 9°–10° al **5°–6° posto** (F1 0,368),
-sopra metodi di selezione molto più elaborati; i metodi corti **guadagnano**, perché il pavimento
+sopra metodi di selezione molto più elaborati; i metodi corti **guadagnano**, perché la rigenerazione a budget
 dà loro lo spazio che non usavano (`qwen` 0,344 → 0,351, `mistral` 0,354 → 0,365) — prova che il
 confondente tagliava in entrambe le direzioni, non solo a favore dei lunghi; `primera` (0,446) e
 `pegasus` (0,424), già a lunghezza di riferimento e non rigenerati, restano in testa: il loro
@@ -740,8 +740,8 @@ validazione appaiata come garanzia metodologica.
 
 Il notebook 14 accetta `GEVAL_SCOPE=test_budgetref` (driver: `scripts/run_geval.py --scope
 test_budgetref`). Legge le righe della split base, prende i riassunti dalla corsa a budget quando
-esiste e da `_test.tsv` altrimenti, e **riapplica il soffitto a 1,25 × riferimento**
-(`su.soffitto_riferimento`, lo stesso di `applica_budget.py`) prima di giudicare, così il giudice
+esiste e da `_test.tsv` altrimenti, e **riapplica il tetto a 1,25 × riferimento**
+(`su.tetto_riferimento`, lo stesso di `applica_budget.py`) prima di giudicare, così il giudice
 vede esattamente il testo su cui sono state calcolate le metriche dell'ambito. I giudizi dei testi
 rimasti identici all'ambito `test` — bart 94 %, pegasus 84 %, primera 74 % — vengono copiati dalla
 cache `test` invece di essere ripagati (voci con `riuso_da`, zero token). Il giudice è lo stesso
@@ -811,7 +811,7 @@ results/
   metrics/confronto_giudici_test.json        # esito del confronto fra i due giudici (19_confronto_giudici.ipynb)
   summaries/{metodo}_test_budgetref.tsv      # riassunti rigenerati a lunghezza del riferimento (issue #16):
                                               # gli 11 estrattivi via driver --scope, gli LLM col budget nel prompt
-  metrics/{metodo}_test_budgetref_*          # metriche post-soffitto per tutti e 18 (scripts/applica_budget.py)
+  metrics/{metodo}_test_budgetref_*          # metriche post-troncamento per tutti e 18 (scripts/applica_budget.py)
   notebook_runs/{ambito}/*.ipynb             # notebook eseguiti dal driver negli ambiti a budget (in .gitignore)
 scripts/
   budget_lunghezza.json                      # T(n_articoli): budget per-cluster (18_analisi_lunghezze.ipynb)

@@ -145,7 +145,12 @@ respect:
   of the project work itself — keep new documentation in Italian. Two exceptions, both
   deliberate: **this file** (`CLAUDE.md`, agent-facing) stays in English, and
   `Multi-News_paper.md` stays in English because it is a verbatim copy of the published paper,
-  cited as a primary source — never translate it. `LICENSE` likewise stays in its original
+  cited as a primary source — never translate it. **Italian terminology for the length
+  containment (issue #16)**: the truncation at 1.25x the reference is the **«tetto»** and the
+  regeneration of short methods up to the budget is the **«rigenerazione a budget»** — never
+  «soffitto»/«pavimento», which are calques of ceiling/floor the author rejected (2026-09-19;
+  code identifiers follow: `FATTORE_TETTO_BUDGET`, `su.tetto_riferimento`, JSON key `tetto`).
+  Likewise «limite» rather than «cap». This file, being English, keeps ceiling/floor. `LICENSE` likewise stays in its original
   English as the binding text; `README.md` carries only an Italian courtesy summary of it.
 - All method notebooks default to the same shared sample (`results/sample/sample_{N}_seed{S}.tsv`,
   default N=100 seed=42, drawn from `data/tab/complete.tab` by notebook 00, `split` column kept)
@@ -406,7 +411,7 @@ respect:
   - **`GEVAL_SCOPE=test_budgetref` is supported** (`run_geval.py --scope test_budgetref`).
     Three things differ from `test`, all in notebook 14: rows come from `su.split_base(SCOPE)`;
     `percorso_riassunti` prefers `{m}_{scope}.tsv`, then `_test`, then `_full`; and the
-    **1.25x ceiling is re-applied per row** (`su.soffitto_riferimento`, the factor now lives in
+    **1.25x ceiling is re-applied per row** (`su.tetto_riferimento`, the factor now lives in
     `summ_utils` and `applica_budget.py` imports it) because the budget TSVs are pre-ceiling and
     bart/pegasus/primera have none — the judge must see the exact text the metrics were scored
     on. Judgments whose post-ceiling text is byte-identical to the `test` text are **copied from
@@ -414,6 +419,12 @@ respect:
     tokens; `--costo` excludes them from the per-judgment cost): 15,061 of 100,712 — bart 94%,
     pegasus 84%, primera 74%. The notebook executes to `results/notebook_runs/test_budgetref/`,
     not in place, so the committed notebook 14 keeps its `test` outputs.
+    `applica_budget.py::config_base` carries the *notebook's* config into the budget-scope
+    aggregate (stripping its own `ambito_budget` block so `--forza` is idempotent) and falls
+    back to the `test` config only for the ceiling-only methods; until 2026-09-19 it read the
+    `test` config unconditionally, so the 15 budget aggregates documented test-scope params
+    (fixed one-off by re-capturing each notebook's `config` via a stubbed `valuta_e_salva`;
+    metrics untouched).
     **Outcome (run 2026-09-18/19, 100,712 judgments, 99,040 succeeded, €76.26 useful spend):
     length was NOT G-Eval's confound.** Where matched length overturned ROUGE recall and
     reshuffled the ROUGE ranking, **the top 11 G-Eval positions are identical** before/after
