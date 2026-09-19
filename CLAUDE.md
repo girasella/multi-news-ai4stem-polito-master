@@ -23,7 +23,7 @@ scripts/
   dataset_stats.json   # Its output: one aggregated JSON over train+val+test (committed)
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
   import_llm_results.py  # One-off importer of the archived LM Studio LLM runs (notebooks/llm/*.csv) into results/ — superseded by the ollama re-runs, kept for provenance
-  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11/15-17 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs notebook 05; --scope test_budgetref runs the 7 extractive notebooks at reference-length budget (issue #16)
+  run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11/15-17 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs 05b/05d; --scope test_budgetref runs the 7 extractive notebooks at reference-length budget (issue #16)
   applica_budget.py    # Ceiling (1.25x reference length) + re-scoring of all 18 methods into the test_budgetref scope (issue #16)
   budget_lunghezza.json  # T(n_articoli) table from notebook 18 — an analysis artifact, NOT the containment budget (which is the reference length)
   pilota_giudice_deepseek.py  # Paired second-judge pilot (DeepSeek vs gpt-5.4-mini) — tests the family-bias
@@ -32,8 +32,9 @@ scripts/
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
   README.md            # Run order, parameters, runtimes, Colab instructions (Italian)
-  summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics
-  0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each, 05 comparison
+  summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics, G-Eval, and the comparison helpers of 05a-d (METODI_BENCHMARK, COLORI_METODI, carica_scope, tabella_medie, barre_metriche, viste_metriche)
+  0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each; 05a/b/c/d comparison
+                       # (full / test / test_budgetref / before-after), helpers in summ_utils
   1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill, 15 LSA (2 variants), 16 SBERT clustering (2 variants), 17 LDA, 18 per-cluster length analysis (issue #15, generates nothing), 19 second-judge
                        # validation of the G-Eval judge (generates nothing, spends nothing); ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
@@ -209,9 +210,20 @@ respect:
   per method **96.8–99.0%**, rows judged for all 18 **5,091 → 5,363**. Ranking unchanged, max
   mean shift 0.010 (pegasus) — the rows the filter had flagged are not systematically different.
   The old "13 vs 5" coverage gap described above is therefore historical.
-- Notebook 05 charts BERTScore/G-Eval over the *subset* of methods that have the column (naming
+- The comparison notebooks (05b/05c via `su.viste_metriche`) chart BERTScore/G-Eval over the *subset* of methods that have the column (naming
   the excluded ones) instead of requiring it from all — keep that even now that all 18 have both;
   don't "fix" it into an `all(...)` gate.
+- **Notebook 05 was split into 05a/05b/05c/05d on 2026-09-19** (full / test / test_budgetref /
+  before-after) because it had grown past 13 cells and 1 MB of outputs. Everything they share
+  lives in `summ_utils` (section *Confronto fra metodi*): `METODI_BENCHMARK` (the 18 slugs in
+  canonical order), `COLORI_METODI` + `INK/INK2/MUTED/GRID/SURFACE`, `METRICHE_CHIAVE`,
+  `carica_scope(metrics_dir, scope, metodi)` (LEFT-merges the G-Eval files, intersects row_ids
+  over methods with >= `COPERTURA_MINIMA`), `tabella_medie`, `con_metrica`, `barre_metriche`,
+  and `viste_metriche` — the one function that renders the standard table + charts, called by
+  05b and 05c so the two scopes are presented identically. 05c is deliberately "05b on the
+  budget scope", 05d holds the before/after (the old Vista 3). Drivers re-run 05b+05d after a
+  `test` run and 05c+05d after a `test_budgetref` run (`run_geval.py --no-05` skips both). Keep
+  new comparison views in the notebook of their scope, not in a fifth file.
 - **Notebook 13 is incremental**: it lists all 18 slugs and skips any method whose per-example
   CSV already has the `bertscore_*` columns, because `valuta_e_salva` rewrites that method's CSV
   and JSON wholesale. `BERTSCORE_FORZA=1` forces a full recompute. This is what let the five new
@@ -245,7 +257,7 @@ respect:
   length); on bart, which would have to quadruple its output, that would measure
   forced-lengthening damage rather than content selection, while pegasus (0.83x) and primera
   (0.97x) already sit at or inside the band unaided. bart (0.26x, 0% in band) is the declared
-  exception of the comparison — do not "fix" it by regenerating; G-Eval is not recomputed. Notebook 05 Vista 3 is the before/after view. Outcome of
+  exception of the comparison — do not "fix" it by regenerating; G-Eval IS recomputed (see below). Notebook 05d is the before/after view, 05c the budget scope on its own. Outcome of
   the 2026-09-13/17 runs (15 of 18 regenerated, ceiling on all 18): the 15 are in band in
   71-100% of clusters (11 extractives 93-99%, gpt5mini 100%, gemma 99%, qwen 79%, mistral 71%).
   Per-cluster max/min goes 8.5x → 4.7x across all 18, but that 4.7 is almost entirely `bart`
@@ -315,7 +327,7 @@ respect:
   Studio run had 81/100 empty responses (only 19 evaluated): Gemma 4 emits reasoning tokens
   that exhaust `max_tokens=300` before any visible content (`finish_reason=length`, empty
   content) — reproduced via ollama, and still occasionally seen even at 1500 (one `test`-scope
-  retry needed on 2026-07-24). Notebook 05 still computes the shared row_id intersection only
+  retry needed on 2026-07-24). `su.carica_scope` still computes the shared row_id intersection only
   over methods with ≥`COPERTURA_MINIMA` (50) rows, as protection against future low-coverage
   runs (which are shown with their own `n_esempi`).
 - **METEOR unreliable for degenerate output**: pyAutoSummarizer's `meteor()` formula
@@ -324,7 +336,7 @@ respect:
   -1959.12) and a likely source/summary mismatch (row_id 56099, meteor -2.10) — dragging its
   reported mean METEOR from a true ≈0.42 down to 0.079; ROUGE/BLEU/row counts are unaffected.
   LexRank has one much milder case (row_id 55805, meteor -1.24 out of 5,588 rows), negligible
-  effect on its mean. Documented as a caveat in notebook 05 and the README — no per-example CSV
+  effect on its mean. Documented as a caveat in notebook 05b and the README — no per-example CSV
   or aggregate JSON was altered to compensate for it.
 
 - **G-Eval / LLM-as-a-Judge (notebook 14 + `scripts/run_geval.py`)**: adds coherence /
@@ -347,7 +359,7 @@ respect:
     mean sums *every* column over *every* row, and the judge leaves some rows uncovered (Azure
     content filter, parse failures) → `KeyError`; restricting the evaluated rows instead would
     rewrite the committed CSVs and change already-published `n_esempi` and means — drastically so
-    for the five notebook 15-17 methods, whose G-Eval coverage is only ~60%. Notebook 05
+    for the five notebook 15-17 methods, whose G-Eval coverage is only ~60%. `su.carica_scope`
     attaches them with a LEFT merge and reports coverage as `n_geval`.
   - **Message order is a contract**: constant `system`, then the truncated source (shared by a
     row's methods), summary last. That is what makes Azure's prompt cache hit; the work unit
@@ -441,7 +453,7 @@ respect:
     to write more, qwen adds pertinent content, mistral adds things not in the source; `gpt5mini`
     (241→209) +0.001. Coverage is *higher* than in `test` (5,483–5,554 vs 5,215–5,401 per
     method): same resource and filter, the content filter simply varies run to run, favourably
-    this time. Notebook 05 Vista 3 now includes `geval_media` and a before/after chart.
+    this time. Notebook 05d includes `geval_media` and a before/after chart.
   - **Never advise "Ctrl-C and restart" on a running G-Eval without confirming the kernel died.**
     On Windows, Ctrl-C to the driver did NOT kill its `jupyter nbconvert` kernel (separate
     process group); on 2026-09-18 the orphan kept judging for 10 h alongside the relaunched run,

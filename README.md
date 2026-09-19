@@ -51,7 +51,7 @@ davanti gli LLM generalisti: GPT-5-mini 4,89 su 5, Gemma 4,78, Mistral 4,72, con
 PRIMERA e 4,04 di PEGASUS. In altre parole i modelli addestrati sul dataset riproducono bene lo
 *stile* dei riassunti di riferimento, che è ciò che ROUGE misura, mentre un giudice indipendente
 trova più leggibili e fedeli i riassunti degli LLM generalisti. Tabelle, grafici e avvertenze
-metodologiche sono in [notebooks/05_confronto.ipynb](notebooks/05_confronto.ipynb).
+metodologiche sono in [notebooks/05b_confronto_test.ipynb](notebooks/05b_confronto_test.ipynb).
 
 ## Contenuto del repository
 
@@ -62,7 +62,7 @@ metodologiche sono in [notebooks/05_confronto.ipynb](notebooks/05_confronto.ipyn
 | [data/tab/](data/) | Copie Orange `.tab` **pulite**: una per split più `complete.tab` (tutte le split unite, con una colonna `split`) ed `excluded_rows.tsv` (elenco delle 115 righe scartate) |
 | [scripts/convert_to_tab.py](scripts/convert_to_tab.py) | Rigenera `data/tab/` a partire da `data/text/` applicando i criteri di pulizia — documentato in [scripts/README.md](scripts/README.md) |
 | [multi_news_dashboard.html](multi_news_dashboard.html) | Dashboard EDA autoconsistente — si apre direttamente nel browser (testo del report in italiano) |
-| [notebooks/](notebooks/) | Notebook del benchmark di summarization: uno per metodo (18 slug), più il confronto (05) e i due backfill di metrica (13 BERTScore, 14 G-Eval), in italiano — vedi [notebooks/README.md](notebooks/README.md) |
+| [notebooks/](notebooks/) | Notebook del benchmark di summarization: uno per metodo (18 slug), più i quattro di confronto (05a–05d) e i due backfill di metrica (13 BERTScore, 14 G-Eval), in italiano — vedi [notebooks/README.md](notebooks/README.md) |
 | [scripts/run_benchmark_test.py](scripts/run_benchmark_test.py) | Driver non presidiato della corsa `test`: esegue in sequenza i notebook dei metodi, dal più veloce al più lento — documentato in [scripts/README.md](scripts/README.md) |
 | [scripts/run_geval.py](scripts/run_geval.py) | Driver non presidiato del backfill G-Eval, con controllo di spesa e report di costo offline — documentato in [scripts/README.md](scripts/README.md) |
 | [results/](results/) | Output del benchmark: campione di valutazione condiviso, riassunti generati, metriche per esempio e aggregate (comprese quelle G-Eval, in file dedicati, e la cache dei giudizi) |

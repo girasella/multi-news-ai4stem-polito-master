@@ -49,7 +49,10 @@ automaticamente e la usano se disponibile.
 | 02 | [02_lexrank.ipynb](02_lexrank.ipynb) | LexRank (estrattivo, TF-IDF + PageRank). Ambiti `sample` e `full`. |
 | 03 | [03_bart.ipynb](03_bart.ipynb) | BART (`facebook/bart-large-cnn`, abstractive). Ambiti `sample` e `test`. |
 | 04 | [04_pegasus.ipynb](04_pegasus.ipynb) | PEGASUS (`google/pegasus-multi_news`, abstractive). Ambiti `sample` e `test`. |
-| 05 | [05_confronto.ipynb](05_confronto.ipynb) | Confronto: tabelle e grafici dalle metriche salvate. Eseguibile su qualunque sottoinsieme di risultati. |
+| 05a | [05a_confronto_full.ipynb](05a_confronto_full.ipynb) | Confronto sull'ambito `full`: TextRank vs LexRank sull'intero dataset (56.101 esempi), medie per split e distribuzione del ROUGE-1 F1. Non genera nulla. |
+| 05b | [05b_confronto_test.ipynb](05b_confronto_test.ipynb) | **Il confronto principale del benchmark**: i 18 metodi sulla split test (ROUGE/BLEU/METEOR, BERTScore, G-Eval), con le avvertenze metodologiche e la sezione sulla metodologia G-Eval. Non genera nulla. |
+| 05c | [05c_confronto_test_budgetref.ipynb](05c_confronto_test_budgetref.ipynb) | Gli stessi 18 metodi sull'ambito `test_budgetref` (lunghezza del riferimento, issue #16), **stessa presentazione di 05b**. Non genera nulla. |
+| 05d | [05d_confronto_prima_dopo.ipynb](05d_confronto_prima_dopo.ipynb) | Prima/dopo il riallineamento: tabella e grafici `test` → `test_budgetref`, dispersione per cluster, G-Eval a lunghezza pari. Non genera nulla. |
 | 06 | [06_primera.ipynb](06_primera.ipynb) | PRIMERA (`allenai/PRIMERA-multinews`, abstractive multi-documento, input 4096 token). Ambiti `sample` e `test`. |
 | 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Ambiti `sample` e `test`. |
 | 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Ambiti `sample` e `test`. |
@@ -246,7 +249,7 @@ uno tra una corsa e l'altra:
 ```bash
 python scripts/run_benchmark_test.py             # corsa completa (~3,5-5 giorni su questa macchina)
 python scripts/run_benchmark_test.py --limit 2   # prova end-to-end economica, 2 righe per metodo
-python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (il 05 viene comunque rieseguito)
+python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (05b e 05d vengono comunque rieseguiti)
 ```
 
 `--only` accetta i prefissi numerici dei notebook separati da virgola: utile quando gli altri
@@ -260,7 +263,7 @@ se aperto a mano in Jupyter senza questa variabile d'ambiente si comporta come s
 ed esegue ciascun notebook via `jupyter nbconvert --execute --inplace`, salvando l'output
 eseguito nel notebook stesso. TextRank e LexRank **non vengono rieseguiti**: le loro metriche
 `test` sono derivate filtrando la corsa `full` già committata (stesso risultato numerico, perché
-le metriche sono calcolate per esempio). Il notebook 05 viene poi rieseguito automaticamente per
+le metriche sono calcolate per esempio). I notebook 05b e 05d vengono poi rieseguiti automaticamente per
 aggiornare le viste di confronto.
 
 Un notebook fallito viene **registrato e non blocca** i successivi (`run_benchmark_test.log`
@@ -315,7 +318,7 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
 - **Content filter di Azure**: alcuni cluster di cronaca (hate/violence a severità media)
   vengono respinti dal filtro con errore `content_filter` prima di raggiungere il modello: le
   righe restano assenti dal TSV e non sono ritentabili (nella corsa test 2026-07-17: 139 righe
-  su 5.610). Il confronto nel notebook 05 resta equo (intersezione dei `row_id`); per coprirle
+  su 5.610). Il confronto nel notebook 05b resta equo (intersezione dei `row_id`); per coprirle
   serve un content filter personalizzato con soglie *high-only* associato al deployment.
 
 ## BERTScore (notebook 13, backfill)
@@ -478,7 +481,7 @@ I punteggi finiscono in `{metodo}_{scope}_geval_per_example.csv` e `..._geval_ag
 interna somma **ogni** colonna su **ogni** riga: il giudice lascia scoperte alcune righe e la
 media esploderebbe con un `KeyError`; e restringere le righe valutate riscriverebbe i CSV già
 committati, cambiando medie e `n_esempi` di ROUGE/BLEU/METEOR/BERTScore — in modo drastico per i
-cinque metodi dei notebook 15–17, giudicati solo al ~60%. Il notebook 05 aggancia
+cinque metodi dei notebook 15–17, giudicati solo al ~60%. I notebook 05b/05c agganciano
 le colonne con un merge **LEFT** (che non cambia il numero di righe) e riporta la copertura
 effettiva nella colonna `n_geval`.
 
@@ -563,7 +566,7 @@ disomogeneità significative, contenere la distribuzione dentro un intervallo co
 e decisioni in [issue #15](https://github.com/girasella/multi-news-ai4stem-polito-master/issues/15)
 (sostituisce la #14, limitata a `lda`/notebook 15–17).
 
-Le medie aggregate per metodo (55 parole per `bart` → 477 per `lda`, viste nel notebook 05)
+Le medie aggregate per metodo (55 parole per `bart` → 477 per `lda`, viste nel notebook 05b)
 nascondono la dispersione al livello a cui il confronto avviene davvero: **dentro un singolo
 cluster**, il riassunto più lungo dei 18 metodi è in mediana **8,5 volte** il più corto — una
 distanza pari a circa il doppio del riassunto di riferimento di quel cluster. Nessun metodo si
@@ -644,7 +647,7 @@ nel 99%, e un riassunto corto non si tronca verso l'alto):
 
 **G-Eval non è ricalcolato** (cache indicizzata su `(metodo, row_id)`, ri-giudizio ~€70–95; misura
 la fedeltà alla fonte, non la sovrapposizione col riferimento). Il confronto prima/dopo è la
-**Vista 3 del notebook 05**; la dispersione per cluster «dopo» si ottiene rieseguendo il notebook
+**notebook 05d**; la dispersione per cluster «dopo» si ottiene rieseguendo il notebook
 18 con `SUMM_SCOPE='test_budgetref'`.
 
 **Esito finale (corse 2026-09-13/17: 15 slug su 18 rigenerati, tetto su tutti e 18).** I 15
@@ -757,7 +760,7 @@ in lieve calo); la **pertinenza è l'unica dimensione sensibile alla lunghezza**
 recall (`lda` −0,50, `centroid_mmr*` −0,28, `lsa_steinberger` −0,23); fra gli LLM allungati
 `qwen` +0,15 supera `mistral` −0,13 (tutto sulla consistency: costretto a scrivere di più,
 mistral aggiunge cose che nella fonte non ci sono), `gpt5mini` non si muove. Tabella e grafico
-prima/dopo nella Vista 3 del notebook 05.
+prima/dopo nel notebook 05d.
 
 ## Parametri principali (cella di configurazione di ogni notebook)
 
@@ -874,7 +877,7 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   `google/pegasus-multi_news` sia `allenai/PRIMERA-multinews` sono stati addestrati sulla split
   train di questo dataset → i loro punteggi su righe train sono ottimistici. Gli aggregati
   riportano anche le medie per split; il confronto pulito è sulla sola split `test` (vista
-  dedicata nel notebook 05).
+  dedicata nel notebook 05b).
 - **ROUGE della libreria**: pyAutoSummarizer calcola ROUGE-N su insiemi di n-grammi *unici*
   (non i conteggi "clipped" dello standard): i valori sono coerenti tra i metodi di questo
   benchmark ma non confrontabili in assoluto con la letteratura.
@@ -886,13 +889,13 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
 - **Righe saltate dagli estrattivi**: su rari testi (22/5.610 nella split test, ~0,4%) il
   costruttore di `psr.summarization` solleva un `IndexError` (bug della libreria: dopo la pulizia
   le liste di frasi possono disallinearsi). Il ciclo registra l'errore e prosegue: la riga manca
-  dal file dei riassunti di quel metodo. Il notebook 05 confronta i metodi sull'**intersezione**
+  dal file dei riassunti di quel metodo. I notebook di confronto (05a–05d) confrontano i metodi sull'**intersezione**
   dei `row_id` valutati da tutti, quindi le medie restano eque.
 - **G-Eval, bias del giudice e copertura**: il G-Eval del notebook 14 è l'unica metrica non
   ancorata al riferimento umano, ma un LLM giudice ha bias noti — premia i testi **più lunghi** e
   quelli generati da altri LLM — quindi il confronto estrattivi vs astrattivi su questa metrica
   va preso con cautela. La copertura è inoltre **parziale** (content filter di Azure, risposte
-  non conformi): le medie vanno lette insieme alla colonna `n_geval` del notebook 05, che può
+  non conformi): le medie vanno lette insieme alla colonna `n_geval` dei notebook 05b/05c, che può
   essere minore di `n_esempi`. Il giudice è comunque **indipendente da tutti e 18 i metodi**
   valutati, quindi non c'è self-judging.
 - **Lunghezza dei riassunti LDA**: i notebook 15/16/17 condividono lo stesso budget nominale
@@ -903,8 +906,8 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   ROUGE-1 **recall** più alto del gruppo (0,499 contro 0,357 di `lsa`) e il METEOR più alto
   (0,511), ma in **F1** resta alla pari con `lsa` (0,351) e sotto `lsa_steinberger` (0,376). Su
   questi cinque metodi conviene quindi leggere l'F1, non il recall; la colonna `parole_generate`
-  del notebook 05 rende il confronto esplicito. Il confronto a lunghezza pari è stato poi
-  fatto (ambito `test_budgetref`, issue #16, Vista 3 del notebook 05) e **chiude la questione**:
+  del notebook 05b rende il confronto esplicito. Il confronto a lunghezza pari è stato poi
+  fatto (ambito `test_budgetref`, issue #16, notebook 05d) e **chiude la questione**:
   con il budget in parole `lda` scende all'ultimo posto degli estrattivi in F1 (0,338) e il suo
   recall cala da 0,499 a 0,348 — il vantaggio era interamente di lunghezza.
 - **Il content filter di Azure non è stabile nel tempo**: BERTScore e G-Eval ci sono ora per
@@ -929,7 +932,7 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   **5.363**. Graduatoria invariata, spostamento massimo delle medie 0,010 (pegasus): le righe
   che il filtro aveva bloccato non sono sistematicamente diverse dalle altre. Il divario di
   copertura «tredici contro cinque» descritto sopra è quindi storico.
-- **La logica «sottoinsieme» del notebook 05 va lasciata com'è**: ogni grafico BERTScore/G-Eval
+- **La logica «sottoinsieme» dei notebook di confronto va lasciata com'è** (`su.con_metrica`): ogni grafico BERTScore/G-Eval
   disegna i metodi che hanno quella metrica, elencando gli esclusi in un avviso, invece di
   pretenderla da tutti. Adesso che tutti e 18 le hanno l'avviso non compare mai, ma è ciò che
   evita di far sparire i grafici la prossima volta che si aggiunge un metodo prima del backfill.
@@ -938,4 +941,4 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   produce due riassunti patologici (un loop di ripetizione del beam search e un probabile
   mismatch sorgente/riferimento) con METEOR rispettivamente -1959.12 e -2.10, che trascinano la
   sua media riportata da ~0.42 a 0.079 — solo quella colonna va letta con questa avvertenza (vedi
-  il dettaglio nel notebook 05). LexRank ha un caso molto più lieve, con effetto trascurabile.
+  il dettaglio nel notebook 05b). LexRank ha un caso molto più lieve, con effetto trascurabile.

@@ -5,8 +5,7 @@ riallineate i modelli troncando ad una lunghezza massima comparabile per tutti»
 in: analizzare, **per ogni gruppo Multi-News (cluster)**, le differenze di lunghezza fra i
 riassunti dei diversi metodi, e contenere la distribuzione delle lunghezze dentro un intervallo.
 
-Riferimenti nel repository: `notebooks/18_analisi_lunghezze.ipynb` (analisi), Vista 3 di
-`notebooks/05_confronto.ipynb` (confronto prima/dopo, metriche e G-Eval),
+Riferimenti nel repository: `notebooks/18_analisi_lunghezze.ipynb` (analisi), `notebooks/05d_confronto_prima_dopo.ipynb` (confronto prima/dopo, metriche e G-Eval),
 `notebooks/19_confronto_giudici.ipynb` (validazione del giudice G-Eval), issue #15 e #16. Tutte
 le lunghezze sono conteggi di parole (`str.split()`, la convenzione del repository), sulla split
 test.
@@ -236,9 +235,3 @@ fatturate: costo €2,09), i fallimenti scendono a 1.071 e i giudizi riusciti a 
 (98,9%)**; le righe giudicate per tutti e 18 i metodi salgono da 5.091 a 5.363. Nessun giudizio
 esistente è stato toccato; la graduatoria è invariata e nessuna media si sposta più di 0,010:
 le righe che il filtro aveva bloccato non sono sistematicamente diverse dalle altre.
-
-## 8. Cosa resta
-
-Il lavoro delle issue #15 e #16 è completo: analisi per cluster, riallineamento, ricalcolo di
-tutte le metriche compreso il G-Eval, validazione del giudice. Resta la pull request di
-chiusura verso `master`.

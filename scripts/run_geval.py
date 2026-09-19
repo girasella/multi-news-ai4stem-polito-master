@@ -26,7 +26,7 @@ Usage (from the repo root or anywhere — paths are resolved relative to this sc
     python scripts/run_geval.py --solo-metriche  # rewrite CSV/JSON from the cache, ZERO calls
     python scripts/run_geval.py --costo          # cost report from the cache, ZERO calls
     python scripts/run_geval.py --riprova-errori # drop cached failures so they are retried
-    python scripts/run_geval.py --no-05          # skip re-running notebook 05 at the end
+    python scripts/run_geval.py --no-05          # skip re-running the 05x comparison notebooks
 
 --costo needs no notebook execution and touches no API: every cached judgment carries its own
 token counts, so it can be run from a SECOND TERMINAL while a long run is in progress to see
@@ -57,9 +57,12 @@ sys.path.insert(0, str(NOTEBOOKS_DIR))
 import summ_utils as su  # noqa: E402  (needs NOTEBOOKS_DIR on sys.path first)
 
 NOTEBOOK = '14_geval.ipynb'
-NOTEBOOK_CONFRONTO = '05_confronto.ipynb'
+# Notebook di confronto da rieseguire a fine corsa, per ambito (leggono solo i file).
+NOTEBOOK_CONFRONTO = {'test': ['05b_confronto_test.ipynb', '05d_confronto_prima_dopo.ipynb'],
+                      'test_budgetref': ['05c_confronto_test_budgetref.ipynb',
+                                         '05d_confronto_prima_dopo.ipynb']}
 
-# Gli stessi 18 slug del notebook 05 (Vista 2), 13 e 14. Gli ultimi cinque (notebook
+# Gli stessi 18 slug di su.METODI_BENCHMARK (notebook 05b, 13 e 14). Gli ultimi cinque (notebook
 # 15-17) sono stati aggiunti col backfill dell'issue #12: la cache e' per (metodo,
 # row_id), quindi allargare la lista fa giudicare SOLO i nuovi, senza ripagare i 13.
 METODI = ['firstk_psr', 'firstk_nltk', 'centroid_mmr', 'centroid_mmr_bert',
@@ -388,7 +391,7 @@ def main():
     parser.add_argument('--riprova-errori', action='store_true',
                         help='Rimuove dalla cache i giudizi falliti cosi\' vengono ritentati.')
     parser.add_argument('--no-05', action='store_true',
-                        help='Non rieseguire il notebook 05 al termine.')
+                        help='Non rieseguire i notebook di confronto (05b/05c/05d) al termine.')
     args = parser.parse_args()
 
     if args.costo:
@@ -438,8 +441,10 @@ def main():
     rapporto_costo(args.scope, valuta=args.valuta)
 
     if ok and not args.no_05 and args.pilota is None:
-        log('--- Riesecuzione notebook 05 (viste di confronto aggiornate) ---')
-        ok = esegui_notebook(NOTEBOOK_CONFRONTO) and ok
+        confronti = NOTEBOOK_CONFRONTO.get(args.scope, [])
+        log(f'--- Riesecuzione notebook di confronto: {", ".join(confronti) or "nessuno"} ---')
+        for nome in confronti:
+            ok = esegui_notebook(nome) and ok
 
     if not ok:
         log('Corsa terminata con errori. Rilanciare questo script per riprendere: '

@@ -7,8 +7,8 @@ SUMM_SCOPE=test, so each generates summaries and metrics for the full clean test
 (5,610 rows) without any manual babysitting between notebooks. TextRank/LexRank test-split
 metrics are derived by filtering their already-committed SCOPE='full' per-example CSVs (no
 need to rerun them: metrics are computed per example, so filtering is numerically identical
-to a fresh test-scope run). Notebook 05 is re-executed at the end so the comparison views
-reflect the new results.
+to a fresh test-scope run). The comparison notebooks are re-executed at the end so their
+views reflect the new results: 05b (test scope) and 05d (test vs test_budgetref).
 
 Usage (from the repo root or anywhere — paths are resolved relative to this script):
 
@@ -22,14 +22,14 @@ Usage (from the repo root or anywhere — paths are resolved relative to this sc
 ``*_budgetref`` scope (see summ_utils.budget_attivo) the notebook list switches to the
 seven extractive notebooks that support the word budget — 01/02 included, executed for real
 on the test split instead of being derived from their ``full`` run, since the budget changes
-the summaries — the textrank/lexrank derivation step is skipped, and notebook 05 is not
-re-executed (its budget view lives in a separate section that reads the files afterwards).
+the summaries — the textrank/lexrank derivation step is skipped, and the comparison
+notebooks re-executed are 05c (budget scope) and 05d (before/after).
 The LLM notebooks join this list once they support the budget in the prompt (issue #16).
 
 --only takes comma-separated notebook number prefixes and skips the others (useful when the
 rest already completed: re-executing them would reload models and recompute metrics for
 nothing). Preflight checks shrink accordingly (ollama only for 07-09, GPU for 03/04/06/11).
-Notebook 05 is always re-executed at the end.
+The comparison notebooks are always re-executed at the end.
 
 A failed notebook is logged and does NOT stop the run — thanks to the shared resumable
 generation loop (notebooks/summ_utils.py), simply re-running this script later completes
@@ -212,7 +212,7 @@ def esegui_notebook(nome, limit=None, scope='test'):
             log(f'    {riga}')
         return False
 
-    if nome == '05_confronto.ipynb':
+    if nome.startswith('05'):          # notebook di confronto: non generano riassunti
         log(f'=== Completato {nome} in {durata:.0f}s ===')
         return True
 
@@ -294,11 +294,11 @@ def main():
                         help='Limita ogni notebook a N esempi nuovi (smoke test end-to-end).')
     parser.add_argument('--only', default=None,
                         help='Prefissi numerici dei soli notebook da eseguire, separati da '
-                             'virgola (es. "10,11"). Il notebook 05 viene comunque rieseguito.')
+                             'virgola (es. "10,11"). I notebook di confronto vengono comunque rieseguiti.')
     parser.add_argument('--scope', default='test',
                         help="Ambito passato ai notebook come SUMM_SCOPE (default: test). "
                              "Con un ambito *_budgetref (issue #16) girano i soli notebook "
-                             "estrattivi a budget, senza derivazione ne' notebook 05.")
+                             "estrattivi a budget, senza derivazione; poi i notebook 05c e 05d.")
     args = parser.parse_args()
 
     a_budget = su.budget_attivo(args.scope)
@@ -324,15 +324,20 @@ def main():
         esiti[nome] = esegui_notebook(nome, limit=args.limit, scope=args.scope)
 
     if a_budget:
-        log(f'--- Ambito {args.scope}: textrank/lexrank eseguiti davvero, nessuna derivazione; '
-            'notebook 05 non rieseguito (la sua vista a budget legge i file a posteriori) ---')
+        log(f'--- Ambito {args.scope}: textrank/lexrank eseguiti davvero, nessuna derivazione ---')
+        confronti = ['05c_confronto_test_budgetref.ipynb', '05d_confronto_prima_dopo.ipynb']
     else:
         log('--- Derivazione metriche test per textrank/lexrank (da corse full esistenti) ---')
         for metodo in DERIVED_FROM_FULL:
             deriva_metriche_test(metodo)
+        confronti = ['05b_confronto_test.ipynb', '05d_confronto_prima_dopo.ipynb']
 
-        log('--- Riesecuzione notebook 05 (viste di confronto aggiornate) ---')
-        esiti['05_confronto.ipynb'] = esegui_notebook('05_confronto.ipynb')
+    # I notebook di confronto (05a-05d) leggono solo i file di metriche: si rieseguono
+    # in-place quelli toccati dall'ambito appena corso, cosi' le viste committate
+    # riflettono i risultati nuovi. Le metriche 'full' (05a) non cambiano qui.
+    log(f'--- Riesecuzione notebook di confronto: {", ".join(confronti)} ---')
+    for nome in confronti:
+        esiti[nome] = esegui_notebook(nome)
 
     falliti = [n for n, ok in esiti.items() if not ok]
     log('--- Riepilogo ---')

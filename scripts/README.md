@@ -15,7 +15,7 @@ a mano ogni notebook. I notebook 10, 11, 15 e 16 generano ciascuno due varianti 
 ```
 python scripts/run_benchmark_test.py             # corsa completa, tutte le righe (~3,5-5 giorni su GPU CUDA)
 python scripts/run_benchmark_test.py --limit 2   # smoke test: 2 righe per metodo, da capo a fondo
-python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (il 05 viene comunque rieseguito)
+python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (05b e 05d vengono comunque rieseguiti)
 python scripts/run_benchmark_test.py --scope test_budgetref   # issue #16: gli estrattivi a budget di parole
 ```
 
@@ -23,8 +23,8 @@ python scripts/run_benchmark_test.py --scope test_budgetref   # issue #16: gli e
 `*_budgetref` (vedi `su.budget_attivo`) la lista dei notebook diventa quella dei sette
 estrattivi che supportano il budget in parole — 01 e 02 **compresi**, eseguiti davvero sulla split
 test invece di essere derivati dalla corsa `full`, perché il budget cambia i riassunti — la
-derivazione di textrank/lexrank viene saltata e il notebook 05 **non** viene rieseguito (la sua
-Vista 3 legge i file a posteriori). In questo ambito i notebook non vengono eseguiti in-place ma
+derivazione di textrank/lexrank viene saltata e alla fine si rieseguono i notebook 05c e 05d
+(invece di 05b e 05d). In questo ambito i notebook non vengono eseguiti in-place ma
 in `results/notebook_runs/{scope}/` (in `.gitignore`): gli output committati restano quelli della
 corsa `test`, l'evidenza della corsa a budget sono i suoi TSV e le sue metriche. Gli LLM (07-09,
 12) supportano lo stesso ambito ma non sono nella lista del driver: vanno lanciati singolarmente,
@@ -58,7 +58,8 @@ stesso. Servono le dipendenze dei notebook (`pip install -r requirements-noteboo
    per-esempio già committato con `SCOPE='full'`, invece di rieseguire i notebook 01/02 (che
    coprono già l'intero dataset, split test compresa). Il risultato è numericamente identico a una
    corsa dedicata sullo scope test, perché le metriche sono calcolate per esempio.
-4. **Riesegue il notebook 05**, così che le viste di confronto riflettano i nuovi risultati.
+4. **Riesegue i notebook di confronto** (05b e 05d per l'ambito `test`, 05c e 05d per
+   `test_budgetref`), così che le viste riflettano i nuovi risultati.
 
 ### Output
 
@@ -120,7 +121,7 @@ viene saltato salvo `--forza`. I file `*_test_*` committati non vengono mai tocc
 
 Il troncamento installa solo il **tetto**: i metodi più corti del riferimento (`bart` su
 tutti) restano corti, e la loro quota di righe in banda — riportata dal notebook 18 sull'ambito
-`test_budgetref` e dalla Vista 3 del notebook 05 — è un risultato, non un difetto da correggere
+`test_budgetref` e dal notebook 05d — è un risultato, non un difetto da correggere
 qui. G-Eval non viene ricalcolato **da questo script**: lo fa, separatamente,
 `run_geval.py --scope test_budgetref`, riapplicando lo stesso tetto (vedi sotto).
 
@@ -145,7 +146,7 @@ python scripts/run_geval.py --righe 500 --thread 12
 python scripts/run_geval.py --solo-metriche  # riscrive CSV/JSON dalla cache, ZERO chiamate API
 python scripts/run_geval.py --costo          # report di costo dalla cache, ZERO chiamate API
 python scripts/run_geval.py --riprova-errori # scarta i fallimenti in cache per ritentarli
-python scripts/run_geval.py --no-05          # non rieseguire il notebook 05 alla fine
+python scripts/run_geval.py --no-05          # non rieseguire i notebook di confronto alla fine
 ```
 
 Vanno eseguiti in quest'ordine: `--righe 1`, poi `--pilota 20`, poi la corsa completa. È il pilota
@@ -202,7 +203,8 @@ verità e l'artefatto documentale. Il preflight fallisce subito in caso di: `AZU
 o `AZURE_OPENAI_API_KEY` mancanti, esito negativo del **ping da 1 token sul deployment del
 giudice** (così un nome di deployment sbagliato costa secondi, non ore), `complete.tab` assente,
 TSV dei riassunti mancanti per uno qualsiasi dei 18 metodi, `nbconvert` non disponibile. Il
-notebook 05 viene rieseguito alla fine, a meno di `--pilota` o `--no-05`.
+i notebook di confronto (05b/05d per `test`, 05c/05d per `test_budgetref`) vengono rieseguiti
+alla fine, a meno di `--pilota` o `--no-05`.
 
 `run_benchmark_test.py` non viene toccato: il G-Eval non sta sul percorso di generazione.
 
