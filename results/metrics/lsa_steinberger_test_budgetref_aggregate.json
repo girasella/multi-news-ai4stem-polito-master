@@ -3,7 +3,8 @@
   "scope": "test_budgetref",
   "config": {
     "k_latente": 11,
-    "n_sentences": 11,
+    "n_sentences": null,
+    "budget_parole": "lunghezza del riferimento (issue #16)",
     "segmentazione": "psr.summarization",
     "vettorizzazione": "sklearn TfidfVectorizer (stop_words=english)",
     "modello": "sklearn TruncatedSVD (LSA)",
@@ -11,10 +12,10 @@
     "libreria_valutazione": "pyAutoSummarizer 1.2.0",
     "ambito_budget": {
       "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
-      "soffitto": "1.25 x budget, su.tronca_parole",
+      "tetto": "1.25 x budget, su.tronca_parole",
       "sorgente_riassunti": "lsa_steinberger_test_budgetref.tsv",
       "rigenerato_a_budget": true,
-      "righe_troncate_dal_soffitto": 44
+      "righe_troncate_dal_tetto": 44
     }
   },
   "timestamp": "2026-09-13T19:12:39+00:00",

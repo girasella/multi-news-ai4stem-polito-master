@@ -11,10 +11,10 @@
     "libreria": "transformers (parametri di generazione del repo allenai/PRIMER)",
     "ambito_budget": {
       "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
-      "soffitto": "1.25 x budget, su.tronca_parole",
+      "tetto": "1.25 x budget, su.tronca_parole",
       "sorgente_riassunti": "primera_test.tsv",
       "rigenerato_a_budget": false,
-      "righe_troncate_dal_soffitto": 1157
+      "righe_troncate_dal_tetto": 1157
     }
   },
   "timestamp": "2026-09-13T19:55:50+00:00",

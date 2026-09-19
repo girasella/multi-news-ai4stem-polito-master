@@ -45,7 +45,7 @@ sys.path.insert(0, str(NOTEBOOKS_DIR))
 import summ_utils as su  # noqa: E402  (needs NOTEBOOKS_DIR on sys.path first)
 
 SCOPE = 'test' + su.SUFFISSO_BUDGET          # test_budgetref
-FATTORE_SOFFITTO = su.FATTORE_SOFFITTO_BUDGET  # 1.25: shared with notebook 14 (G-Eval judges the same text)
+FATTORE_TETTO = su.FATTORE_TETTO_BUDGET  # 1.25: shared with notebook 14 (G-Eval judges the same text)
 
 # Same 18 slugs as notebooks 05/13, in the driver's fastest-first order.
 METODI = ['firstk_psr', 'firstk_nltk', 'lda', 'lsa', 'lsa_steinberger',
@@ -68,14 +68,32 @@ def gia_fatto(metrics_dir, metodo):
     if not path.exists():
         return False
     config = json.loads(path.read_text(encoding='utf-8')).get('config', {})
-    return 'soffitto' in config.get('ambito_budget', {})
+    return 'tetto' in config.get('ambito_budget', {})
 
 
-def config_storico(metrics_dir, metodo):
-    path = metrics_dir / f'{metodo}_test_aggregate.json'
-    if not path.exists():
-        return {}
-    return json.loads(path.read_text(encoding='utf-8')).get('config', {})
+def config_base(metrics_dir, metodo):
+    """The config to carry into the budget-scope aggregate, WITHOUT this script's own
+    `ambito_budget` block (added afterwards).
+
+    Preference order:
+    1. the `{metodo}_test_budgetref_aggregate.json` already on disk — written by the
+       regenerating notebook (its budget-specific params: `budget_parole`, the budget prompt,
+       `n_sentences: None`...), or by a previous run of this script, whose `ambito_budget`
+       block is stripped so a `--forza` re-run stays idempotent;
+    2. otherwise `{metodo}_test_aggregate.json`, correct for the ceiling-only methods
+       (bart/pegasus/primera), whose summaries ARE the test ones.
+
+    Until 2026-09-19 this read the `test` aggregate unconditionally, so every budget-scope
+    aggregate documented the test-scope params (lda "n_sentences: 11", qwen the old prompt and
+    max_tokens 200). Metrics were never affected — only this metadata.
+    """
+    for suffisso in (SCOPE, 'test'):
+        path = metrics_dir / f'{metodo}_{suffisso}_aggregate.json'
+        if path.exists():
+            config = dict(json.loads(path.read_text(encoding='utf-8')).get('config', {}))
+            config.pop('ambito_budget', None)
+            return config
+    return {}
 
 
 def main():
@@ -86,7 +104,7 @@ def main():
     parser.add_argument('--senza-bertscore', action='store_true',
                         help='solo metriche lessicali (minuti invece di ~1,5 h di GPU)')
     parser.add_argument('--forza', action='store_true',
-                        help='ricalcola anche i metodi che hanno gia\' il soffitto applicato')
+                        help='ricalcola anche i metodi che hanno gia\' il tetto applicato')
     parser.add_argument('--batch-size', type=int, default=64, help='batch del BERTScore')
     args = parser.parse_args()
 
@@ -96,11 +114,11 @@ def main():
     if sconosciuti:
         parser.error(f'--solo: slug sconosciuti {sorted(sconosciuti)}')
 
-    print(f'Ambito {SCOPE}: soffitto a {FATTORE_SOFFITTO} x lunghezza del riferimento, '
+    print(f'Ambito {SCOPE}: tetto a {FATTORE_TETTO} x lunghezza del riferimento, '
           f'{"senza" if args.senza_bertscore else "con"} BERTScore')
     print('Lettura dei riferimenti della split test...', flush=True)
     riferimenti = list(su.itera_split(percorsi['complete_tab'], 'test'))
-    soffitto = {es['row_id']: su.soffitto_riferimento(es) for es in riferimenti}
+    tetto = {es['row_id']: su.tetto_riferimento(es) for es in riferimenti}
     print(f'  {len(riferimenti)} righe')
 
     device = None if args.senza_bertscore else su.rileva_device()
@@ -114,21 +132,21 @@ def main():
             print(f'\n== {metodo}: nessun TSV di riassunti trovato, salto ==')
             continue
         t0 = time.time()
-        print(f'\n== {metodo} <- {path.name} ({"rigenerato a budget" if rigenerato else "solo soffitto"}) ==',
+        print(f'\n== {metodo} <- {path.name} ({"rigenerato a budget" if rigenerato else "solo tetto"}) ==',
               flush=True)
         riassunti = su.carica_riassunti(path)
-        troncati = {rid: su.tronca_parole(testo, soffitto[rid])
-                    for rid, testo in riassunti.items() if rid in soffitto}
-        n_tagliati = sum(len(riassunti[rid].split()) > soffitto[rid] for rid in troncati)
-        print(f'  {len(troncati)} righe, {n_tagliati} troncate dal soffitto')
+        troncati = {rid: su.tronca_parole(testo, tetto[rid])
+                    for rid, testo in riassunti.items() if rid in tetto}
+        n_tagliati = sum(len(riassunti[rid].split()) > tetto[rid] for rid in troncati)
+        print(f'  {len(troncati)} righe, {n_tagliati} troncate dal tetto')
 
-        config = dict(config_storico(percorsi['metrics_dir'], metodo))
+        config = config_base(percorsi['metrics_dir'], metodo)
         config['ambito_budget'] = {
             'budget': 'lunghezza del riassunto di riferimento (oracle-length, issue #16)',
-            'soffitto': f'{FATTORE_SOFFITTO} x budget, su.tronca_parole',
+            'tetto': f'{FATTORE_TETTO} x budget, su.tronca_parole',
             'sorgente_riassunti': path.name,
             'rigenerato_a_budget': rigenerato,
-            'righe_troncate_dal_soffitto': n_tagliati,
+            'righe_troncate_dal_tetto': n_tagliati,
         }
 
         extra, colonne_extra = None, None

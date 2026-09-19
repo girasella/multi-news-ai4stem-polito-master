@@ -4,18 +4,50 @@
   "config": {
     "modello": "gpt-5-mini",
     "deployment": "gpt-5-mini",
+    "content_filter": {
+      "nome": "Guardrails760",
+      "tipo": "UserManaged, derivato da Microsoft.DefaultV2",
+      "categorie": {
+        "Hate": {
+          "prompt": "High",
+          "completion": "High"
+        },
+        "Sexual": {
+          "prompt": "High",
+          "completion": "High"
+        },
+        "Selfharm": {
+          "prompt": "High",
+          "completion": "High"
+        },
+        "Violence": {
+          "prompt": "High",
+          "completion": "High"
+        }
+      },
+      "soglia": "severityThreshold 'High' = blocca SOLO la severita' alta (filtraggio minimo); il default Microsoft blocca da 'Medium' in su",
+      "filtri_aggiuntivi_disattivati": [
+        "Jailbreak",
+        "Indirect Attack",
+        "Protected Material Code",
+        "Protected Material Text",
+        "Indirect Attack Spotlighting"
+      ],
+      "effetto": "copertura 5.562/5.610 = 99,1% contro 5.250 (93,6%) con la policy di default; le 48 righe residue sono severita' alta e restano respinte"
+    },
     "backend": "Azure OpenAI (chat completions, API v1)",
     "max_completion_tokens": 1500,
     "reasoning_effort": "minimal",
     "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
-    "prompt_user": "Summarize the following document into a comprehensive summary: {documento}",
+    "prompt_user": "Summarize the following document into a comprehensive summary of about {richiesto} words. The summary must be at least {richiesto} words long: {documento}",
+    "budget_parole": "lunghezza del riferimento nel prompt x 0.9 (issue #16)",
     "note": "prompt zero-shot in inglese identico ai notebook 07-09 (senza /no_think); modello con reasoning: niente temperature, max_completion_tokens=1500 con reasoning_effort='minimal' (caso gemma); ambiti sample, test e full (full sequenziale: la Batch API non offre gpt-5-mini)",
     "ambito_budget": {
       "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
-      "soffitto": "1.25 x budget, su.tronca_parole",
+      "tetto": "1.25 x budget, su.tronca_parole",
       "sorgente_riassunti": "gpt5mini_test_budgetref.tsv",
       "rigenerato_a_budget": true,
-      "righe_troncate_dal_soffitto": 23
+      "righe_troncate_dal_tetto": 23
     }
   },
   "timestamp": "2026-09-17T09:42:51+00:00",
