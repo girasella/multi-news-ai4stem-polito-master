@@ -6,8 +6,10 @@ in: analizzare, **per ogni gruppo Multi-News (cluster)**, le differenze di lungh
 riassunti dei diversi metodi, e contenere la distribuzione delle lunghezze dentro un intervallo.
 
 Riferimenti nel repository: `notebooks/18_analisi_lunghezze.ipynb` (analisi), Vista 3 di
-`notebooks/05_confronto.ipynb` (confronto prima/dopo), issue #15 e #16. Tutte le lunghezze sono
-conteggi di parole (`str.split()`, la convenzione del repository), sulla split test.
+`notebooks/05_confronto.ipynb` (confronto prima/dopo, metriche e G-Eval),
+`notebooks/19_confronto_giudici.ipynb` (validazione del giudice G-Eval), issue #15 e #16. Tutte
+le lunghezze sono conteggi di parole (`str.split()`, la convenzione del repository), sulla split
+test.
 
 ---
 
@@ -59,31 +61,31 @@ contenuti a parità di lunghezza», non a «cosa otterrebbe il metodo in produzi
 sostituiscono i numeri di testa del benchmark: sono il controllo che li rende leggibili senza il
 confondente della lunghezza.
 
-## 3. Riallineamento: soffitto e pavimento
+## 3. Riallineamento: un tetto per tutti, una rigenerazione a budget per chi è corto
 
 Il solo troncamento non basta: porta il rapporto max/min mediano da 8,5× a ~4×, perché un
 riassunto *corto* non si tronca verso l'alto (`bart` resta sotto banda nel 100% dei cluster,
 `qwen` nel 99%). Servono due interventi:
 
-- **Soffitto, tutti e 18 i metodi** — troncamento a 1,25 × budget e ricalcolo delle metriche.
-- **Pavimento, gli 11 estrattivi** — rigenerati con un budget in **parole** al posto del budget
-  in **frasi**: il criterio di ordinamento di ciascun metodo è invariato, cambia solo dove ci si
-  ferma (la frase che sfora entra se ne entra più della metà).
-- **Pavimento, gli LLM** (`qwen`, `gemma`, `mistral`, `gpt5mini`) — rigenerabili con il budget
-  nel prompt. Un LLM lo segue solo approssimativamente: con «of approximately *N* words» `qwen`
-  scrive ~0,65 N; con «about *N* words, at least *N* words» e *N* = 1,2 × budget (fattore
-  calibrato su un pilota di 30 righe) arriva a 1,01 × riferimento. **Eseguito per tutti e
-  quattro.** Il fattore è calibrato **per modello**, con un pilota da 30 righe ciascuno, perché
-  i modelli sbagliano in direzioni opposte: `qwen` sotto-genera (1,2), `gemma` e `gpt5mini`
-  eccedono il vincolo «at least» (0,9), `mistral` è centrato ma dispersivo (1,0).
-- **Solo soffitto per `bart`, `pegasus`, `primera`**, per scelta e non solo per costo. Per questi
-  tre il pavimento passerebbe da `min_length` in token, cioe' costringendo il beam search a
-  continuare a generare oltre la lunghezza naturale del modello: e' il meccanismo che produce i
-  loop di ripetizione gia' osservati in questo benchmark (PEGASUS, riga 51178, METEOR −1959 alla
+- **Tetto, tutti e 18 i metodi** — troncamento a 1,25 × budget e ricalcolo delle metriche.
+- **Rigenerazione a budget, gli 11 estrattivi** — rigenerati con un budget in **parole** al
+  posto del budget in **frasi**: il criterio di ordinamento di ciascun metodo è invariato,
+  cambia solo dove ci si ferma (la frase che sfora entra se ne entra più della metà).
+- **Rigenerazione a budget, gli LLM** (`qwen`, `gemma`, `mistral`, `gpt5mini`) — rigenerati con
+  il budget nel prompt. Un LLM lo segue solo approssimativamente: con «of approximately *N*
+  words» `qwen` scrive ~0,65 N; con «about *N* words, at least *N* words» e *N* = 1,2 × budget
+  (fattore calibrato su un pilota di 30 righe) arriva a 1,01 × riferimento. Il fattore è
+  calibrato **per modello**, con un pilota da 30 righe ciascuno, perché i modelli sbagliano in
+  direzioni opposte: `qwen` sotto-genera (1,2), `gemma` e `gpt5mini` eccedono il vincolo «at
+  least» (0,9), `mistral` è centrato ma dispersivo (1,0).
+- **Solo tetto per `bart`, `pegasus`, `primera`**, per scelta e non solo per costo. Per questi
+  tre la rigenerazione passerebbe da `min_length` in token, cioè costringendo il beam search a
+  continuare a generare oltre la lunghezza naturale del modello: è il meccanismo che produce i
+  loop di ripetizione già osservati in questo benchmark (PEGASUS, riga 51178, METEOR −1959 alla
   sua lunghezza *naturale*). Applicato a `bart`, che dovrebbe quadruplicare l'output, il rischio
-  e' di misurare il degrado da allungamento forzato invece della qualita' della selezione.
-  `pegasus` (0,83×) e `primera` (0,97×) sono inoltre gia' dentro o al bordo della banda senza
-  alcun intervento — una proprieta' dei modelli, non del contenimento. `bart` (0,26×, 0% in
+  è di misurare il degrado da allungamento forzato invece della qualità della selezione.
+  `pegasus` (0,83×) e `primera` (0,97×) sono inoltre già dentro o al bordo della banda senza
+  alcun intervento — una proprietà dei modelli, non del contenimento. `bart` (0,26×, 0% in
   banda) resta l'**eccezione dichiarata** del confronto.
 
 ## 4. Risultato
@@ -115,7 +117,7 @@ lunghezza entro [0,80, 1,25] × riferimento).
 **Il contenimento ha funzionato, e il numero complessivo lo nasconde.** Il rapporto fra il
 riassunto più lungo e il più corto dentro lo stesso cluster passa da 8,5× a 4,7× se si contano
 tutti e 18 i metodi — ma quel 4,7 è quasi interamente `bart`, che con 0,26× il riferimento è il
-minimo in quasi ogni cluster mentre il soffitto tiene il massimo a 1,25× (1,25/0,26 ≈ 4,8):
+minimo in quasi ogni cluster mentre il tetto tiene il massimo a 1,25× (1,25/0,26 ≈ 4,8):
 
 | insieme di metodi | prima | dopo |
 |---|---:|---:|
@@ -136,10 +138,10 @@ quasi annullata. I 15 rigenerati stanno in banda nel **71–100%** dei cluster (
   articolo regge il confronto con metodi di selezione molto più elaborati — il risultato più
   scomodo dell'esercizio, ma anche il più interessante.
 - **I metodi corti guadagnano**: `qwen` (F1 0,344 → 0,351), `mistral` (0,354 → 0,365) e le due
-  `firstk_*` migliorano, perché il pavimento dà loro lo spazio che prima non usavano. È la prova
+  `firstk_*` migliorano, perché la rigenerazione a budget dà loro lo spazio che prima non usavano. È la prova
   che il confondente tagliava in entrambe le direzioni, non solo a favore dei lunghi.
 - **Chi era già a lunghezza di riferimento resta in testa**: `primera` (0,446) e `pegasus`
-  (0,424), non rigenerati e appena toccati dal soffitto, restano primo e secondo del benchmark.
+  (0,424), non rigenerati e appena toccati dal tetto, restano primo e secondo del benchmark.
   Il loro vantaggio non era di lunghezza.
 
 **Avvertenze.**
@@ -161,11 +163,82 @@ quasi annullata. I 15 rigenerati stanno in banda nel **71–100%** dei cluster (
   pyAutoSummarizer esplode per `lda` e `lexrank`; stessa patologia già documentata per PEGASUS,
   stessa scelta: nessun numero alterato, la riga è segnalata.
 
-## 5. Prossimi passi
+## 5. G-Eval a lunghezza pari: la lunghezza non era il suo confondente
 
-1. Valutare se rigiudicare il **G-Eval** a lunghezza pari: è la metrica più contaminata dalla
-   lunghezza (il giudice premia i testi lunghi), quindi quella che guadagnerebbe di più dal
-   confronto a parità di parole. Riutilizzando i giudizi già in cache per le righe rimaste
-   identiche (`bart` 100%, `pegasus` 90%, `primera` 79%) e campionando le righe in ordine
-   casuale, il costo scende da ~€95 a ~€25–30. Dettagli e due bug da correggere prima: issue #16.
-2. PR di chiusura della issue #16.
+Il G-Eval (giudice LLM: coerenza, consistenza, fluenza e pertinenza *rispetto alla fonte*, 1–5)
+è stato ricalcolato sull'ambito a budget con lo stesso giudice dei numeri pubblicati,
+`gpt-5.4-mini`, sui testi **dopo il tetto** — esattamente quelli su cui sono calcolate le altre
+metriche — riusando i giudizi già in cache per i testi rimasti identici (`bart` 94%, `pegasus`
+84%, `primera` 74%). 100.712 giudizi, 99.040 riusciti.
+
+L'aspettativa era che fosse la metrica più contaminata dalla lunghezza. **È vero il contrario.**
+Dove il riallineamento ha ribaltato il recall ROUGE e rimescolato la sua graduatoria, **le prime
+undici posizioni del G-Eval restano identiche** e lo spostamento massimo è di 0,34 punti su 5:
+
+| metodo | parole prima → dopo | G-Eval prima → dopo | Δ |
+|---|---:|---:|---:|
+| gpt5mini | 241 → 209 | 4,89 → 4,89 | +0,00 |
+| gemma | 292 → 219 | 4,78 → 4,83 | +0,05 |
+| **qwen** | 140 → 216 | 4,54 → 4,68 | **+0,15** |
+| **mistral** | 161 → 233 | 4,72 → 4,59 | **−0,13** |
+| bart | 55 → 55 | 4,46 → 4,46 | +0,00 |
+| primera | 211 → 201 | 4,28 → 4,22 | −0,06 |
+| pegasus | 178 → 175 | 4,04 → 4,03 | −0,01 |
+| **textrank** | 368 → 215 | 2,31 → 2,57 | **+0,27** |
+| **lexrank** | 450 → 216 | 2,12 → 2,46 | **+0,34** |
+| lda | 477 → 230 | 2,58 → 2,54 | −0,05 |
+
+Tre osservazioni:
+
+- **I due estrattivi più lunghi guadagnano tagliando.** `lexrank` e `textrank` salgono su
+  coerenza, consistenza e fluenza (+0,4/+0,6 ciascuna) e perdono poco in pertinenza: per il
+  giudice un riassunto estrattivo da 450 parole è un testo *meno* coerente, non più completo.
+  Restano comunque ultimi.
+- **La pertinenza è l'unica dimensione sensibile alla lunghezza**, ed è la controparte del
+  recall: chi ha dovuto tagliare di più la perde (`lda` −0,50, `centroid_mmr` −0,27/−0,29,
+  `lsa_steinberger` −0,23) mentre le altre tre dimensioni salgono. Sono i due effetti che il
+  ROUGE F1 somma in un numero solo, qui separati.
+- **Gli LLM allungati divergono.** `qwen` aggiunge contenuto pertinente e **supera `mistral`**
+  — l'unica inversione nelle prime undici posizioni; `mistral`, costretto a scrivere di più,
+  perde tutto sulla *consistenza* (−0,24), cioè aggiunge cose che nella fonte non ci sono.
+  `gpt5mini` non si muove.
+
+## 6. Il giudice è imparziale?
+
+Un dubbio legittimo prima di usare il G-Eval: il giudice `gpt-5.4-mini` è un modello OpenAI
+della serie GPT-5, e fra i metodi giudicati c'è `gpt5mini`, della stessa famiglia — che è terzo
+su quattro LLM sulle metriche ancorate al riferimento e primo assoluto su G-Eval. Due
+spiegazioni si adattano ugualmente: un *family bias* del giudice, oppure il fatto che G-Eval
+misura una cosa diversa (qualità della prosa rispetto alla fonte, non sovrapposizione col
+riferimento).
+
+Per separarle, gli stessi riassunti già giudicati sono stati rigiudicati da un secondo giudice
+di lignaggio completamente diverso, **DeepSeek-V3.2-Speciale**, con prompt identico, su 983
+cluster: i 4 LLM più 3 controlli non-LLM (`primera`, `firstk_psr`, `lexrank`), che servono a
+distinguere «al giudice piace la prosa LLM» da «al giudice piace la propria famiglia».
+
+- **Ordinamento identico** fra i due giudici sui sette metodi (ρ di Spearman 1,000, nessuna
+  inversione).
+- Il contrasto che misurerebbe il bias — quanto `gpt5mini` perde con il giudice estraneo
+  rispetto agli altri tre LLM — vale **+0,049** (IC 95% [+0,022, +0,076]): il family bias
+  prevedeva un valore **negativo**. Con un giudice estraneo `gpt5mini` *guadagna* sugli altri
+  LLM, non perde. L'ipotesi è respinta nella sua stessa direzione.
+- I due giudici non sono intercambiabili: DeepSeek è più severo con i metodi non-LLM (−0,28)
+  su coerenza e pertinenza. La preferenza per la prosa LLM è una proprietà del paradigma
+  *LLM-as-a-Judge*, condivisa dai due giudici, non una distorsione di famiglia — e va tenuta
+  presente leggendo qualunque G-Eval.
+
+## 7. Copertura del G-Eval sull'ambito `test`
+
+Nella corsa di agosto il content filter di Azure aveva respinto 5.855 giudizi su 100.621
+(5,8%), concentrati su 457 righe. Ritentati il 19 settembre (le richieste respinte non sono
+fatturate: costo €2,09), i fallimenti scendono a 1.071 e i giudizi riusciti a **99.550
+(98,9%)**; le righe giudicate per tutti e 18 i metodi salgono da 5.091 a 5.363. Nessun giudizio
+esistente è stato toccato; la graduatoria è invariata e nessuna media si sposta più di 0,010:
+le righe che il filtro aveva bloccato non sono sistematicamente diverse dalle altre.
+
+## 8. Cosa resta
+
+Il lavoro delle issue #15 e #16 è completo: analisi per cluster, riallineamento, ricalcolo di
+tutte le metriche compreso il G-Eval, validazione del giudice. Resta la pull request di
+chiusura verso `master`.
