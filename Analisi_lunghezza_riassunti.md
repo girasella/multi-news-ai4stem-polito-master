@@ -5,8 +5,8 @@ riallineate i modelli troncando ad una lunghezza massima comparabile per tutti»
 in: analizzare, **per ogni gruppo Multi-News (cluster)**, le differenze di lunghezza fra i
 riassunti dei diversi metodi, e contenere la distribuzione delle lunghezze dentro un intervallo.
 
-Riferimenti nel repository: `notebooks/18_analisi_lunghezze.ipynb` (analisi), `notebooks/05d_confronto_prima_dopo.ipynb` (confronto prima/dopo, metriche e G-Eval),
-`notebooks/19_confronto_giudici.ipynb` (validazione del giudice G-Eval), issue #15 e #16. Tutte
+Riferimenti nel repository: [`18_analisi_lunghezze.ipynb`](notebooks/18_analisi_lunghezze.ipynb) (analisi), [`05d_confronto_prima_dopo.ipynb`](notebooks/05d_confronto_prima_dopo.ipynb) (confronto prima/dopo, metriche e G-Eval),
+[`19_confronto_giudici.ipynb`](notebooks/19_confronto_giudici.ipynb) (validazione del giudice G-Eval), issue #15 e #16. Tutte
 le lunghezze sono conteggi di parole (`str.split()`, la convenzione del repository), sulla split
 test.
 

@@ -2,11 +2,11 @@
 
 ## `run_benchmark_test.py`
 
-Driver non presidiato per la sessione di benchmark con `SCOPE='test'`: esegue i notebook 10
+Driver non presidiato per la sessione di benchmark con `SCOPE='test'`: esegue i notebook [10](../notebooks/10_firstk.ipynb)
 (First-k), 17 (LDA), 15 (LSA), 16 (clustering SBERT), 11 (Centroid+MMR), 03 (BART), 04 (PEGASUS),
 07 (Qwen), 09 (Mistral), 08 (Gemma) e 06 (PRIMERA) — in quest'ordine, dal più veloce al più lento
 — sull'intera split test pulita (5.610 righe), uno dopo l'altro, senza dover riaprire e rilanciare
-a mano ogni notebook. I notebook 10, 11, 15 e 16 generano ciascuno due varianti di metodo
+a mano ogni notebook. I notebook [10](../notebooks/10_firstk.ipynb), [11](../notebooks/11_centroid_mmr.ipynb), [15](../notebooks/15_lsa.ipynb) e [16](../notebooks/16_sbert_clustering.ipynb) generano ciascuno due varianti di metodo
 (`firstk_psr`/`firstk_nltk`, `centroid_mmr`/`centroid_mmr_bert`, `lsa`/`lsa_steinberger` e
 `sbert_kmeans`/`sbert_agglom`).
 
@@ -23,7 +23,7 @@ python scripts/run_benchmark_test.py --scope test_budgetref   # issue #16: gli e
 `*_budgetref` (vedi `su.budget_attivo`) la lista dei notebook diventa quella dei sette
 estrattivi che supportano il budget in parole — 01 e 02 **compresi**, eseguiti davvero sulla split
 test invece di essere derivati dalla corsa `full`, perché il budget cambia i riassunti — la
-derivazione di textrank/lexrank viene saltata e alla fine si rieseguono i notebook 05c e 05d
+derivazione di textrank/lexrank viene saltata e alla fine si rieseguono i notebook [05c](../notebooks/05c_confronto_test_budgetref.ipynb) e [05d](../notebooks/05d_confronto_prima_dopo.ipynb)
 (invece di 05b e 05d). In questo ambito i notebook non vengono eseguiti in-place ma
 in `results/notebook_runs/{scope}/` (in `.gitignore`): gli output committati restano quelli della
 corsa `test`, l'evidenza della corsa a budget sono i suoi TSV e le sue metriche. Gli LLM (07-09,
@@ -55,7 +55,7 @@ stesso. Servono le dipendenze dei notebook (`pip install -r requirements-noteboo
    riprendibile condiviso (`notebooks/summ_utils.py`), rilanciare più tardi questo script
    completa semplicemente le righe ancora mancanti.
 3. **Deriva le metriche `test` di TextRank/LexRank** filtrando su `split == 'test'` il loro CSV
-   per-esempio già committato con `SCOPE='full'`, invece di rieseguire i notebook 01/02 (che
+   per-esempio già committato con `SCOPE='full'`, invece di rieseguire i notebook [01](../notebooks/01_textrank.ipynb)/[02](../notebooks/02_lexrank.ipynb) (che
    coprono già l'intero dataset, split test compresa). Il risultato è numericamente identico a una
    corsa dedicata sullo scope test, perché le metriche sono calcolate per esempio.
 4. **Riesegue i notebook di confronto** (05b e 05d per l'ambito `test`, 05c e 05d per
@@ -120,14 +120,14 @@ viene saltato salvo `--forza`. I file `*_test_*` committati non vengono mai tocc
 ### Che cosa NON fa
 
 Il troncamento installa solo il **tetto**: i metodi più corti del riferimento (`bart` su
-tutti) restano corti, e la loro quota di righe in banda — riportata dal notebook 18 sull'ambito
-`test_budgetref` e dal notebook 05d — è un risultato, non un difetto da correggere
+tutti) restano corti, e la loro quota di righe in banda — riportata dal notebook [18](../notebooks/18_analisi_lunghezze.ipynb) sull'ambito
+`test_budgetref` e dal notebook [05d](../notebooks/05d_confronto_prima_dopo.ipynb) — è un risultato, non un difetto da correggere
 qui. G-Eval non viene ricalcolato **da questo script**: lo fa, separatamente,
 `run_geval.py --scope test_budgetref`, riapplicando lo stesso tetto (vedi sotto).
 
 ## `run_geval.py`
 
-Driver non presidiato per il backfill **G-Eval (LLM-as-a-Judge)** — notebook 14. Fa giudicare ogni
+Driver non presidiato per il backfill **G-Eval (LLM-as-a-Judge)** — notebook [14](../notebooks/14_geval.ipynb). Fa giudicare ogni
 riassunto generato sulla split test da `gpt-5.4-mini` su Azure, con punteggi 1–5 su coherence,
 consistency, fluency e relevance. **100.621 giudizi** sui 18 metodi, ore di chiamate API a
 pagamento; per la metodologia vedi la sezione *G-Eval* di `notebooks/README.md`. La corsa è
@@ -161,7 +161,7 @@ python scripts/run_geval.py --scope test_budgetref --costo --valuta EUR
 ```
 
 Stesso giudice, stessa cache per-ambito (`geval_cache_test_budgetref.jsonl`), ma tre cose
-cambiano rispetto all'ambito `test`, tutte nel notebook 14:
+cambiano rispetto all'ambito `test`, tutte nel notebook [14](../notebooks/14_geval.ipynb):
 
 - le **righe** si leggono dalla split base (`su.split_base`: `test_budgetref` → `test`) e i
   riassunti dalla corsa a budget quando esiste (`{m}_test_budgetref.tsv`, i 15 rigenerati),
@@ -176,7 +176,7 @@ cambiano rispetto all'ambito `test`, tutte nel notebook 14:
   giudizio. Restano 85.651 giudizi da comprare, ~€50–60 a 2 thread (18 h).
 
 L'eseguito del notebook va in `results/notebook_runs/test_budgetref/` (ignorato da git), non
-in-place: gli output committati del notebook 14 restano quelli dell'ambito `test`.
+in-place: gli output committati del notebook [14](../notebooks/14_geval.ipynb) restano quelli dell'ambito `test`.
 
 #### Una corsa per cache, e Ctrl-C uccide tutto l'albero
 
@@ -291,12 +291,12 @@ DeepSeek (`--deployment`, default `deepseek-giudice`, oppure `AZURE_GEVAL_DEPLOY
 - **Righe estratte con seme fisso** (42) fra quelle coperte da tutti i metodi del pilota, così
   una corsa interrotta a metà resta comunque un campione non distorto — la stessa proprietà che
   ha salvato la corsa di agosto quando il tetto di spesa l'ha fermata al 60%.
-- **Chiamata identica** a quella del notebook 14 (stessi messaggi, stesse rubriche, stesso
+- **Chiamata identica** a quella del notebook [14](../notebooks/14_geval.ipynb) (stessi messaggi, stesse rubriche, stesso
   `response_format` json_schema strict): l'unica variabile che cambia è il giudice. Senza
   `response_format` DeepSeek discorre invece di emettere JSON.
 - Scrive su **cache e JSON separati** (`geval_cache_test_deepseek.jsonl`,
   `confronto_giudici_test.json`): nulla di committato viene toccato e i due giudici restano
-  indipendentemente ispezionabili. La cache è riprendibile come quella del notebook 14.
+  indipendentemente ispezionabili. La cache è riprendibile come quella del notebook [14](../notebooks/14_geval.ipynb).
 
 ### Portata, non qualità
 
@@ -312,7 +312,7 @@ di validazione e non diventa la metrica.
 
 Nessun family bias: ordinamento identico (ρ di Spearman 1,000, nessuna inversione su 7
 posizioni) e contrasto `gpt5mini` vs altri LLM pari a **+0,049** — di **segno opposto** a quello
-che l'ipotesi del bias prevedeva. Dettagli e avvertenze nel notebook 19.
+che l'ipotesi del bias prevedeva. Dettagli e avvertenze nel notebook [19](../notebooks/19_confronto_giudici.ipynb).
 
 ## `import_llm_results.py`
 
@@ -321,7 +321,7 @@ archiviate in [`notebooks/llm/`](../notebooks/llm/README.md)) nella struttura co
 `results/`.
 
 > **Nota storica:** i file in `results/` committati per `qwen`/`gemma`/`mistral` sono stati poi
-> rigenerati da zero con corse locali su ollama dei notebook 07–09 (qwen/gemma 2026-07-16,
+> rigenerati da zero con corse locali su ollama dei notebook [07](../notebooks/07_qwen.ipynb)–[09](../notebooks/09_mistral.ipynb) (qwen/gemma 2026-07-16,
 > mistral 2026-07-17) e non corrispondono più a questa importazione. Lo script è conservato per
 > documentare e riprodurre l'import originale da LM Studio; la sua protezione contro la
 > sovrascrittura (sotto) gli impedisce di calpestare i risultati ollama.
@@ -357,7 +357,7 @@ Per ciascuno di `qwen`, `gemma`, `mistral`:
 
 Lo script **si rifiuta di partire** se un file di destinazione
 `results/summaries/{nome}_sample.tsv` esiste già: quel file potrebbe nel frattempo contenere righe
-rigenerate via ollama (notebook 07–09), e reimportare mescolerebbe silenziosamente due backend.
+rigenerate via ollama (notebook [07](../notebooks/07_qwen.ipynb)–[09](../notebooks/09_mistral.ipynb)), e reimportare mescolerebbe silenziosamente due backend.
 Per reimportare, cancellare prima il file.
 
 ## `convert_to_tab.py`
