@@ -1095,3 +1095,196 @@ def mostra_esempi(riferimenti, riassunti, quanti=2, larghezza=500):
         mostrati += 1
         if mostrati >= quanti:
             break
+
+
+# ---------------------------------------------------------------------------
+# Confronto fra metodi — helper condivisi dai notebook 05a/05b/05c/05d
+# ---------------------------------------------------------------------------
+# Il notebook 05 e' stato diviso in quattro (2026-09-19: un ambito per notebook,
+# piu' il prima/dopo). Cio' che avevano in comune — l'elenco dei 18 slug, la
+# palette, il caricamento con intersezione dei row_id, la tabella delle medie e i
+# grafici a barre — vive qui, una volta sola. Nessun notebook di generazione li usa.
+
+# I 18 slug del benchmark nell'ordine canonico delle tabelle di confronto.
+METODI_BENCHMARK = ['firstk_psr', 'firstk_nltk',            # notebook 10 (First-k)
+                    'centroid_mmr', 'centroid_mmr_bert',    # notebook 11 (Centroid+MMR)
+                    'textrank', 'lexrank',                  # notebook 01/02
+                    'bart', 'pegasus', 'primera',           # notebook 03/04/06
+                    'qwen', 'gemma', 'mistral',             # notebook 07/08/09 (ollama)
+                    'gpt5mini',                             # notebook 12 (Azure)
+                    'lsa', 'lsa_steinberger',               # notebook 15
+                    'sbert_kmeans', 'sbert_agglom',         # notebook 16
+                    'lda']                                  # notebook 17
+
+# Colori fissi per metodo: il colore segue il metodo in tutti i grafici, mai la
+# posizione. I cinque colori dei notebook 15-17 sono stati scelti massimizzando la
+# distanza minima (OKLab dE, con penalita' per protanopia/deutanopia) rispetto ai 13
+# gia' in uso e fra loro. A 18 serie il colore da solo non basta piu' a distinguere
+# i metodi: l'identita' e' portata dalle etichette sull'asse y e dai valori
+# annotati — per questo `barre_metriche` non disegna legenda.
+COLORI_METODI = {'firstk_psr': '#5f6b7a', 'firstk_nltk': '#c2410c',
+                 'centroid_mmr': '#0d9488', 'centroid_mmr_bert': '#4338ca',
+                 'textrank': '#2a78d6', 'lexrank': '#1baf7a',
+                 'bart': '#eda100', 'pegasus': '#008300', 'primera': '#8250df',
+                 'qwen': '#d6336c', 'gemma': '#15aabf', 'mistral': '#846358',
+                 'gpt5mini': '#e8590c',
+                 'lsa': '#900090', 'lsa_steinberger': '#b840b0',
+                 'sbert_kmeans': '#8088f8', 'sbert_agglom': '#803860',
+                 'lda': '#a01018'}
+INK, INK2, MUTED, GRID, SURFACE = '#0b0b0b', '#52514e', '#898781', '#e1e0d9', '#fcfcfb'
+
+METRICHE_CHIAVE = ['rouge1_f1', 'rouge2_f1', 'rougeL_f1', 'bleu', 'meteor',
+                   'bertscore_f1', 'geval_media', 'parole_generate']
+# Le quattro dimensioni G-Eval (scala 1-5), in file separati dalle metriche standard
+METRICHE_GEVAL = ['geval_coherence', 'geval_consistency', 'geval_fluency', 'geval_relevance']
+
+# Sotto questa copertura un metodo non concorre all'intersezione dei row_id comuni
+# (es. un modello con risposte vuote su una frazione consistente degli esempi).
+COPERTURA_MINIMA = 50
+
+
+def stile_grafici():
+    """rcParams condivisi dai notebook di confronto (chiamare una volta per notebook)."""
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({'font.family': 'sans-serif', 'text.color': INK,
+                         'axes.edgecolor': GRID, 'axes.labelcolor': INK2,
+                         'xtick.color': MUTED, 'ytick.color': MUTED})
+
+
+def carica_scope(metrics_dir, scope, metodi, copertura_minima=COPERTURA_MINIMA):
+    """{metodo: {'df': per-esempio, 'agg': aggregato}} per ogni metodo disponibile.
+
+    Per un confronto equo i DataFrame vengono ristretti all'INTERSEZIONE dei row_id
+    valutati dai metodi con copertura >= `copertura_minima` (un raro bug della
+    libreria fa saltare qualche riga ai metodi estrattivi — vedi README). I metodi
+    sotto soglia non restringono gli altri: vengono solo filtrati agli esempi comuni
+    che hanno, e vanno letti con il loro n_esempi.
+
+    I punteggi G-Eval (14_geval.ipynb) stanno in file separati e vengono agganciati
+    con un merge LEFT: non cambia il numero di righe, quindi copertura e intersezione
+    restano quelle delle metriche standard; le righe non giudicate restano NaN e le
+    medie di pandas le ignorano.
+    """
+    import pandas as pd
+    metrics_dir = Path(metrics_dir)
+    dati = {}
+    for metodo in metodi:
+        csv_path = metrics_dir / f'{metodo}_{scope}_per_example.csv'
+        json_path = metrics_dir / f'{metodo}_{scope}_aggregate.json'
+        if not (csv_path.exists() and json_path.exists()):
+            print(f'({metodo}/{scope}: metriche non trovate, saltato)')
+            continue
+        with open(json_path, encoding='utf-8') as f:
+            dati[metodo] = {'df': pd.read_csv(csv_path), 'agg': json.load(f)}
+        geval_path = metrics_dir / f'{metodo}_{scope}_geval_per_example.csv'
+        if geval_path.exists():
+            dati[metodo]['df'] = dati[metodo]['df'].merge(
+                pd.read_csv(geval_path), on='row_id', how='left')
+    pieni = [m for m, d in dati.items() if len(d['df']) >= copertura_minima]
+    if len(pieni) > 1:
+        comuni = set.intersection(*(set(dati[m]['df']['row_id']) for m in pieni))
+        for metodo, d in dati.items():
+            d['df'] = d['df'][d['df']['row_id'].isin(comuni)]
+            if metodo not in pieni:
+                print(f'ATTENZIONE {metodo}: copertura parziale ({len(d["df"])} esempi '
+                      f'nell\'intersezione) — medie non confrontabili direttamente')
+        print(f'{scope}: confronto su {len(comuni)} esempi comuni a {len(pieni)} metodi '
+              f'con copertura piena')
+    return dati
+
+
+def tabella_medie(dati, solo_split=None):
+    """Medie di METRICHE_CHIAVE per metodo, con n_esempi e n_geval espliciti.
+
+    `n_geval` e' il numero di righe su cui e' calcolata la media G-Eval: `.mean()`
+    ignora i NaN, quindi le righe non giudicate non falsano il valore, ma il
+    denominatore va dichiarato perche' e' diverso da n_esempi.
+    """
+    import pandas as pd
+    righe = {}
+    for metodo, d in dati.items():
+        df = d['df'] if solo_split is None else d['df'][d['df']['split'] == solo_split]
+        if len(df) == 0:
+            continue
+        presenti = [c for c in METRICHE_CHIAVE if c in df.columns]
+        n_geval = int(df['geval_media'].notna().sum()) if 'geval_media' in df.columns else 0
+        righe[metodo] = {**df[presenti].mean().to_dict(),
+                         'n_esempi': len(df), 'n_geval': n_geval}
+    return pd.DataFrame(righe).T.round(4)
+
+
+def con_metrica(dati, colonna):
+    """(sottoinsieme dei metodi che hanno `colonna`, elenco di chi non ce l'ha).
+
+    BERTScore e G-Eval arrivano da backfill separati: i grafici si limitano ai
+    metodi che HANNO la colonna invece di sparire appena uno la manca.
+    """
+    presenti = {m: d for m, d in dati.items() if colonna in d['df'].columns}
+    return presenti, [m for m in dati if m not in presenti]
+
+
+def barre_metriche(dati, metriche, etichette, titolo, fmt='{:.3f}', ordine=None):
+    """Piccoli multipli: un pannello a barre orizzontali per metrica, metodi ordinati
+    per valore ed etichettati direttamente sull'asse y (con 18 metodi una legenda
+    non ci sta: niente legenda, ordinamento ed etichette dirette bastano)."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+    metodi = [m for m in (ordine or METODI_BENCHMARK) if m in dati]
+    fig, axes = plt.subplots(1, len(metriche), facecolor=SURFACE,
+                             figsize=(4.2 * len(metriche), 0.32 * len(metodi) + 1.2))
+    axes = np.atleast_1d(axes)
+    for ax, metrica, etichetta in zip(axes, metriche, etichette):
+        ax.set_facecolor(SURFACE)
+        medie = {m: dati[m]['df'][metrica].mean() for m in metodi}
+        ordinati = sorted(medie, key=medie.get)     # barh: indice 0 in basso
+        valori = [medie[m] for m in ordinati]
+        ax.barh(range(len(ordinati)), valori, color=[COLORI_METODI[m] for m in ordinati],
+                zorder=2)
+        for yi, v in enumerate(valori):
+            ax.annotate(fmt.format(v), (v, yi), xytext=(4, 0), textcoords='offset points',
+                        ha='left', va='center', fontsize=8, color=INK2)
+        ax.set_yticks(range(len(ordinati)), ordinati)
+        ax.set_title(etichetta, color=INK, loc='left', fontsize=10)
+        ax.grid(axis='x', color=GRID, linewidth=0.7, zorder=0)
+        ax.spines[['top', 'right', 'left']].set_visible(False)
+        ax.tick_params(length=0)
+        ax.margins(x=0.15)
+    fig.suptitle(titolo, color=INK, x=0.01, ha='left', fontsize=11)
+    fig.tight_layout(rect=[0, 0, 1, 0.94])
+    plt.show()
+
+
+def viste_metriche(dati, etichetta_ambito):
+    """Le tabelle e i grafici standard di un ambito: la stessa presentazione per
+    `test` (05b) e `test_budgetref` (05c), cosi' i due notebook restano confrontabili
+    a colpo d'occhio."""
+    from IPython.display import display
+    print(f'Medie — {etichetta_ambito}:')
+    display(tabella_medie(dati))
+    barre_metriche(dati, ['rouge1_f1', 'rouge2_f1', 'rougeL_f1'],
+                   ['ROUGE-1 F1', 'ROUGE-2 F1', 'ROUGE-L F1'],
+                   f'ROUGE medio per metodo — {etichetta_ambito}')
+    barre_metriche(dati, ['bleu', 'meteor'], ['BLEU', 'METEOR'],
+                   f'BLEU e METEOR medi per metodo — {etichetta_ambito}')
+    bert, senza = con_metrica(dati, 'bertscore_f1')
+    if bert:
+        if senza:
+            print(f"BERTScore assente per {', '.join(senza)}: esclusi dal grafico "
+                  f"(rieseguire 13_bertscore.ipynb per includerli).")
+        barre_metriche(bert, ['bertscore_f1'], ['BERTScore F1'],
+                       f'BERTScore F1 medio per metodo — {etichetta_ambito}')
+    else:
+        print('BERTScore non disponibile per nessun metodo: eseguire prima 13_bertscore.ipynb.')
+    geval, senza = con_metrica(dati, 'geval_media')
+    if geval:
+        if senza:
+            print(f"G-Eval assente per {', '.join(senza)}: esclusi dai grafici "
+                  f"(rieseguire 14_geval.ipynb / scripts/run_geval.py per includerli).")
+        barre_metriche(geval, ['geval_media'], ['G-Eval (media 4 dimensioni)'],
+                       f'G-Eval medio per metodo — {etichetta_ambito}', fmt='{:.2f}')
+        barre_metriche(geval, METRICHE_GEVAL,
+                       ['Coherence', 'Consistency', 'Fluency', 'Relevance'],
+                       f'G-Eval per dimensione (scala 1-5) — {etichetta_ambito}', fmt='{:.2f}')
+    else:
+        print('G-Eval non disponibile per nessun metodo: eseguire prima 14_geval.ipynb '
+              '(o scripts/run_geval.py).')
