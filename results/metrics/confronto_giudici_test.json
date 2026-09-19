@@ -2,86 +2,86 @@
   "scope": "test",
   "giudice_a": "gpt-5.4-mini",
   "giudice_b": "DeepSeek-V3.2-Speciale",
-  "n_giudizi_appaiati": 6577,
-  "n_cluster": 950,
+  "n_giudizi_appaiati": 6799,
+  "n_cluster": 983,
   "per_metodo": {
     "gpt5mini": {
-      "n": 950,
+      "n": 983,
       "famiglia": "LLM",
       "gpt-5.4-mini": 4.876,
-      "DeepSeek-V3.2-Speciale": 4.919,
-      "delta": 0.044,
-      "ic95_basso": 0.024,
+      "DeepSeek-V3.2-Speciale": 4.921,
+      "delta": 0.045,
+      "ic95_basso": 0.025,
       "ic95_alto": 0.064
     },
     "gemma": {
-      "n": 948,
+      "n": 980,
       "famiglia": "LLM",
-      "gpt-5.4-mini": 4.776,
-      "DeepSeek-V3.2-Speciale": 4.85,
-      "delta": 0.075,
-      "ic95_basso": 0.047,
+      "gpt-5.4-mini": 4.774,
+      "DeepSeek-V3.2-Speciale": 4.849,
+      "delta": 0.076,
+      "ic95_basso": 0.048,
       "ic95_alto": 0.103
     },
     "qwen": {
-      "n": 942,
+      "n": 974,
       "famiglia": "LLM",
-      "gpt-5.4-mini": 4.537,
-      "DeepSeek-V3.2-Speciale": 4.551,
-      "delta": 0.014,
-      "ic95_basso": -0.027,
-      "ic95_alto": 0.055
+      "gpt-5.4-mini": 4.532,
+      "DeepSeek-V3.2-Speciale": 4.55,
+      "delta": 0.018,
+      "ic95_basso": -0.023,
+      "ic95_alto": 0.058
     },
     "mistral": {
-      "n": 938,
+      "n": 970,
       "famiglia": "LLM",
       "gpt-5.4-mini": 4.708,
-      "DeepSeek-V3.2-Speciale": 4.585,
-      "delta": -0.123,
-      "ic95_basso": -0.162,
-      "ic95_alto": -0.084
+      "DeepSeek-V3.2-Speciale": 4.589,
+      "delta": -0.119,
+      "ic95_basso": -0.157,
+      "ic95_alto": -0.081
     },
     "primera": {
-      "n": 935,
+      "n": 967,
       "famiglia": "controllo",
-      "gpt-5.4-mini": 4.273,
-      "DeepSeek-V3.2-Speciale": 4.01,
-      "delta": -0.263,
-      "ic95_basso": -0.315,
-      "ic95_alto": -0.21
+      "gpt-5.4-mini": 4.275,
+      "DeepSeek-V3.2-Speciale": 4.011,
+      "delta": -0.264,
+      "ic95_basso": -0.316,
+      "ic95_alto": -0.212
     },
     "firstk_psr": {
-      "n": 933,
+      "n": 964,
       "famiglia": "controllo",
       "gpt-5.4-mini": 2.834,
-      "DeepSeek-V3.2-Speciale": 2.539,
-      "delta": -0.295,
-      "ic95_basso": -0.363,
-      "ic95_alto": -0.227
+      "DeepSeek-V3.2-Speciale": 2.543,
+      "delta": -0.291,
+      "ic95_basso": -0.357,
+      "ic95_alto": -0.224
     },
     "lexrank": {
-      "n": 931,
+      "n": 961,
       "famiglia": "controllo",
-      "gpt-5.4-mini": 2.151,
-      "DeepSeek-V3.2-Speciale": 1.879,
+      "gpt-5.4-mini": 2.149,
+      "DeepSeek-V3.2-Speciale": 1.878,
       "delta": -0.272,
-      "ic95_basso": -0.32,
+      "ic95_basso": -0.319,
       "ic95_alto": -0.224
     }
   },
   "contrasto_famiglia": {
     "definizione": "delta(gpt5mini) - media(delta degli altri 3 LLM), per riga",
-    "n_cluster": 938,
-    "valore": 0.051,
+    "n_cluster": 970,
+    "valore": 0.049,
     "ic95": [
-      0.024,
-      0.078
+      0.022,
+      0.076
     ],
-    "effetto_minimo_rilevabile": 0.039,
+    "effetto_minimo_rilevabile": 0.038,
     "segno_previsto_dal_bias": "negativo",
     "family_bias_confermato": false,
     "esito": "FAMILY BIAS ESCLUSO, e nella direzione OPPOSTA: con un giudice estraneo gpt5mini guadagna rispetto agli altri LLM, non perde",
-    "distacco_gpt5mini_sul_2o_llm": 0.1
+    "distacco_gpt5mini_sul_2o_llm": 0.102
   },
   "ordinamento": {
     "giudice_a": [
@@ -107,23 +107,23 @@
   },
   "delta_per_dimensione": {
     "coherence": {
-      "tutti": -0.321,
-      "LLM": -0.193,
+      "tutti": -0.32,
+      "LLM": -0.192,
       "controlli": -0.493
     },
     "consistency": {
-      "tutti": 0.185,
-      "LLM": 0.248,
-      "controlli": 0.101
+      "tutti": 0.191,
+      "LLM": 0.255,
+      "controlli": 0.104
     },
     "fluency": {
       "tutti": -0.032,
-      "LLM": -0.026,
-      "controlli": -0.04
+      "LLM": -0.027,
+      "controlli": -0.038
     },
     "relevance": {
-      "tutti": -0.297,
-      "LLM": -0.017,
+      "tutti": -0.296,
+      "LLM": -0.015,
       "controlli": -0.675
     }
   },
