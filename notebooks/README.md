@@ -569,7 +569,7 @@ Il notebook gira sui **due ambiti** insieme — `test` (prima) e `test_budgetref
 contenimento, sezione seguente) — e li presenta uno accanto all'altro: dispersione dentro il
 cluster (anche senza `bart` e sui soli 15 rigenerati), rapporto col riferimento e quota in banda
 per metodo, adattamento alla lunghezza del cluster. **Le lunghezze «dopo» sono post-tetto** (i CSV
-di `test_budgetref` li scrive `applica_budget.py` dopo il troncamento a 1,25×); la Vista 3b legge
+di `test_budgetref` li scrive `applica_budget.py` dopo il troncamento a 1,25×); la Vista 3a legge
 i TSV di riassunti pre-tetto dei 15 metodi rigenerati e misura quanto ciascuno rispetta il budget
 *da solo* — quota sotto banda (che il tetto non corregge) e sopra tetto (le righe tagliate):
 `mistral` eccede nel 46 % dei cluster, `qwen` è sotto nel 15 % e sopra nel 16 %, `lda` sopra nel
