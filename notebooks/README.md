@@ -65,7 +65,7 @@ automaticamente e la usano se disponibile.
 | 15 | [15_lsa.ipynb](15_lsa.ipynb) | LSA / SVD (estrattivo non supervisionato: TF-IDF + `TruncatedSVD`). Genera **due varianti** — `lsa` (top-k per norma latente, come `sumy`) e `lsa_steinberger` (greedy con deflazione, anti-ridondanza MDS) — che differiscono solo per la regola di selezione. Ambiti `sample`, `test` e `full`. |
 | 16 | [16_sbert_clustering.ipynb](16_sbert_clustering.ipynb) | Clustering su sentence embeddings SBERT (`all-MiniLM-L6-v2`) con selezione del **medoide** di ogni cluster. Genera **due varianti** — `sbert_kmeans` (KMeans, distanza euclidea su embedding L2-normalizzati) e `sbert_agglom` (Agglomerative, cosine + average linkage) — che differiscono solo per l'algoritmo di clustering. Ambiti `sample`, `test` e `full`. |
 | 17 | [17_lda.ipynb](17_lda.ipynb) | Topic modeling con LDA (`CountVectorizer` + `LatentDirichletAllocation`): le frasi vengono allocate ai topic in proporzione al peso di ciascuno. Slug `lda`. Ambiti `sample`, `test` e `full`. |
-| 18 | [18_analisi_lunghezze.ipynb](18_analisi_lunghezze.ipynb) | Analisi **per cluster** delle lunghezze dei riassunti generati dai 18 metodi (issue #15): non genera nulla, legge le metriche `test` già salvate e la mediana del riferimento per numero di articoli. |
+| 18 | [18_analisi_lunghezze.ipynb](18_analisi_lunghezze.ipynb) | Analisi **per cluster** delle lunghezze dei riassunti generati dai 18 metodi, **prima e dopo** il contenimento (issue #15/#16): non genera nulla, legge le metriche `test` e `test_budgetref` già salvate e la mediana del riferimento per numero di articoli. |
 | 19 | [19_confronto_giudici.ipynb](19_confronto_giudici.ipynb) | **Validazione del giudice** G-Eval: rigiudica un campione appaiato di riassunti gia' valutati con un secondo giudice di lignaggio diverso (DeepSeek-V3.2-Speciale) per verificare che il primato di `gpt5mini` non sia family bias. Non genera nulla e non spende nulla: legge le due cache di giudizi. |
 
 I notebook dei metodi (01–04, 06–12 e 15–17) sono indipendenti tra loro e condividono le routine di
@@ -565,9 +565,15 @@ stesso, cluster per cluster** (protocollo *length-matched* / *oracle-length*, es
 a «quanto è buona la selezione dei contenuti a parità di lunghezza», non a «cosa otterrebbe il
 metodo in produzione». La sua applicazione ai 18 metodi è documentata in una issue dedicata.
 
-Output: `results/metrics/analisi_lunghezze_{ambito}.json` (committato, stesso pattern di
-`scripts/dataset_stats.json`; include la tabella del confronto fra predittori) e
-`scripts/budget_lunghezza.json` (scritto solo se mancante).
+Il notebook gira sui **due ambiti** insieme — `test` (prima) e `test_budgetref` (dopo il
+contenimento, sezione seguente) — e li presenta uno accanto all'altro: dispersione dentro il
+cluster (anche senza `bart` e sui soli 15 rigenerati), rapporto col riferimento e quota in banda
+per metodo, adattamento alla lunghezza del cluster.
+
+Output: `results/metrics/analisi_lunghezze_{ambito}.json`, uno per ambito (committati, stesso
+pattern di `scripts/dataset_stats.json`; includono la tabella del confronto fra predittori e i
+rapporti max/min per sottoinsieme di metodi) e `scripts/budget_lunghezza.json` (scritto solo se
+mancante).
 
 ## Ambito `test_budgetref` — confronto a lunghezza del riferimento (issue #16)
 
@@ -624,8 +630,8 @@ nel 99%, e un riassunto corto non si tronca verso l'alto):
 test_budgetref`, riapplicando lo stesso tetto): inizialmente escluso perché misura la fedeltà alla
 fonte e non la sovrapposizione col riferimento, è servito proprio a verificarlo — vedi
 [G-Eval nell'ambito `test_budgetref`](#g-eval-nellambito-test_budgetref). Il confronto prima/dopo è la
-**notebook [05d](05d_confronto_prima_dopo.ipynb)**; la dispersione per cluster «dopo» si ottiene rieseguendo il notebook
-18 con `SUMM_SCOPE='test_budgetref'`.
+**notebook [05d](05d_confronto_prima_dopo.ipynb)**; la dispersione per cluster «dopo» è nel notebook [18](18_analisi_lunghezze.ipynb), che
+analizza i due ambiti uno accanto all'altro.
 
 **Esito finale (corse 2026-09-13/17: 15 slug su 18 rigenerati, tetto su tutti e 18).** I 15
 rigenerati cadono in banda nel **71–100%** dei cluster (gli 11 estrattivi 93–99%, `gpt5mini` 100%,
