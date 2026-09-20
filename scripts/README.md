@@ -2,11 +2,11 @@
 
 ## `run_benchmark_test.py`
 
-Driver non presidiato per la sessione di benchmark con `SCOPE='test'`: esegue i notebook 10
+Driver non presidiato per la sessione di benchmark con `SCOPE='test'`: esegue i notebook [10](../notebooks/10_firstk.ipynb)
 (First-k), 17 (LDA), 15 (LSA), 16 (clustering SBERT), 11 (Centroid+MMR), 03 (BART), 04 (PEGASUS),
 07 (Qwen), 09 (Mistral), 08 (Gemma) e 06 (PRIMERA) — in quest'ordine, dal più veloce al più lento
 — sull'intera split test pulita (5.610 righe), uno dopo l'altro, senza dover riaprire e rilanciare
-a mano ogni notebook. I notebook 10, 11, 15 e 16 generano ciascuno due varianti di metodo
+a mano ogni notebook. I notebook [10](../notebooks/10_firstk.ipynb), [11](../notebooks/11_centroid_mmr.ipynb), [15](../notebooks/15_lsa.ipynb) e [16](../notebooks/16_sbert_clustering.ipynb) generano ciascuno due varianti di metodo
 (`firstk_psr`/`firstk_nltk`, `centroid_mmr`/`centroid_mmr_bert`, `lsa`/`lsa_steinberger` e
 `sbert_kmeans`/`sbert_agglom`).
 
@@ -15,8 +15,20 @@ a mano ogni notebook. I notebook 10, 11, 15 e 16 generano ciascuno due varianti 
 ```
 python scripts/run_benchmark_test.py             # corsa completa, tutte le righe (~3,5-5 giorni su GPU CUDA)
 python scripts/run_benchmark_test.py --limit 2   # smoke test: 2 righe per metodo, da capo a fondo
-python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (il 05 viene comunque rieseguito)
+python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (05b e 05d vengono comunque rieseguiti)
+python scripts/run_benchmark_test.py --scope test_budgetref   # issue #16: gli estrattivi a budget di parole
 ```
+
+`--scope` è l'ambito passato ai notebook come `SUMM_SCOPE` (default `test`). Con un ambito
+`*_budgetref` (vedi `su.budget_attivo`) la lista dei notebook diventa quella dei sette
+estrattivi che supportano il budget in parole — 01 e 02 **compresi**, eseguiti davvero sulla split
+test invece di essere derivati dalla corsa `full`, perché il budget cambia i riassunti — la
+derivazione di textrank/lexrank viene saltata e alla fine si rieseguono i notebook [05c](../notebooks/05c_confronto_test_budgetref.ipynb) e [05d](../notebooks/05d_confronto_prima_dopo.ipynb)
+(invece di 05b e 05d). In questo ambito i notebook non vengono eseguiti in-place ma
+in `results/notebook_runs/{scope}/` (in `.gitignore`): gli output committati restano quelli della
+corsa `test`, l'evidenza della corsa a budget sono i suoi TSV e le sue metriche. Gli LLM (07-09,
+12) supportano lo stesso ambito ma non sono nella lista del driver: vanno lanciati singolarmente,
+pilota prima (vedi issue #16).
 
 `--only` accetta i prefissi numerici dei notebook separati da virgola; è utile quando gli altri
 notebook hanno già completato la loro corsa `test` (rieseguirli ricaricherebbe i modelli e
@@ -43,10 +55,11 @@ stesso. Servono le dipendenze dei notebook (`pip install -r requirements-noteboo
    riprendibile condiviso (`notebooks/summ_utils.py`), rilanciare più tardi questo script
    completa semplicemente le righe ancora mancanti.
 3. **Deriva le metriche `test` di TextRank/LexRank** filtrando su `split == 'test'` il loro CSV
-   per-esempio già committato con `SCOPE='full'`, invece di rieseguire i notebook 01/02 (che
+   per-esempio già committato con `SCOPE='full'`, invece di rieseguire i notebook [01](../notebooks/01_textrank.ipynb)/[02](../notebooks/02_lexrank.ipynb) (che
    coprono già l'intero dataset, split test compresa). Il risultato è numericamente identico a una
    corsa dedicata sullo scope test, perché le metriche sono calcolate per esempio.
-4. **Riesegue il notebook 05**, così che le viste di confronto riflettano i nuovi risultati.
+4. **Riesegue i notebook di confronto** (05b e 05d per l'ambito `test`, 05c e 05d per
+   `test_budgetref`), così che le viste riflettano i nuovi risultati.
 
 ### Output
 
@@ -63,14 +76,63 @@ Disattivare la sospensione di Windows (`powercfg /change standby-timeout-ac 0`),
 `ollama serve` sia in esecuzione con i tag richiesti (`ollama list`) e mettere in conto che la
 macchina resterà occupata per diversi giorni: lo script non limita l'uso di GPU e CPU.
 
+## `applica_budget.py`
+
+Tetto e rivalutazione per l'ambito **`test_budgetref`** (issue #16, protocollo
+*length-matched* / *oracle-length*): per ciascuno dei 18 metodi tronca ogni riassunto a
+`1,25 × B_i` parole, dove `B_i` è la lunghezza del riassunto di riferimento di quel cluster
+(`su.budget_riferimento`), e ricalcola le metriche sul testo troncato.
+
+### Uso
+
+```
+python scripts/applica_budget.py                      # 18 metodi, con BERTScore (GPU, ~1,5 h)
+python scripts/applica_budget.py --senza-bertscore    # solo metriche lessicali (minuti)
+python scripts/applica_budget.py --solo lda,lexrank   # sottoinsieme
+python scripts/applica_budget.py --forza              # ricalcola anche i metodi già fatti
+```
+
+### Che cosa fa
+
+1. **Sorgente dei riassunti**: `{metodo}_test_budgetref.tsv` se esiste (gli 11 estrattivi
+   rigenerati dal driver, e gli LLM una volta rigenerati col budget nel prompt), altrimenti il
+   `{metodo}_test.tsv` committato (i metodi che ricevono il solo tetto; `textrank`/`lexrank`
+   ripiegano sul `_full.tsv` se non c'è la corsa a budget). Quale file è stato usato, e se il
+   metodo è stato rigenerato o solo troncato, finisce nel JSON aggregato
+   (`config.ambito_budget`).
+2. **Tetto**: `su.tronca_parole(testo, round(1,25 × B_i))`, riga per riga.
+3. **Rivalutazione**: ROUGE-1/2/L, BLEU, METEOR e `parole_generate` via `su.valuta_e_salva`, più
+   BERTScore (`su.calcola_bertscore_batch`) salvo `--senza-bertscore`.
+
+I notebook che rigenerano a budget scrivono già `{metodo}_test_budgetref_*` sull'output grezzo:
+questo script li **sovrascrive** con i numeri post-troncamento, che sono quelli da leggere. La
+`config` del JSON aggregato viene invece **conservata** dal file scritto dal notebook (è lì che
+stanno i parametri specifici del budget: `budget_parole`, il prompt a budget, `n_sentences:
+null`…), togliendo il solo blocco `ambito_budget` prima di riaggiungerlo, così un `--forza` è
+idempotente; per i metodi a solo tetto, che non hanno un aggregato scritto da un notebook,
+si ripiega sulla `config` dell'ambito `test`. Fino al 2026-09-19 lo script leggeva sempre
+quest'ultima, e i quindici aggregati a budget documentavano i parametri dell'ambito `test`
+(`lda` con «n_sentences: 11», `qwen` col vecchio prompt e `max_tokens` 200): riparati una
+tantum ricatturando la `config` dai notebook, senza toccare le metriche.
+Riprendibile per metodo: un metodo il cui JSON aggregato porta già il marcatore del tetto
+viene saltato salvo `--forza`. I file `*_test_*` committati non vengono mai toccati.
+
+### Che cosa NON fa
+
+Il troncamento installa solo il **tetto**: i metodi più corti del riferimento (`bart` su
+tutti) restano corti, e la loro quota di righe in banda — riportata dal notebook [18](../notebooks/18_analisi_lunghezze.ipynb) sull'ambito
+`test_budgetref` e dal notebook [05d](../notebooks/05d_confronto_prima_dopo.ipynb) — è un risultato, non un difetto da correggere
+qui. G-Eval non viene ricalcolato **da questo script**: lo fa, separatamente,
+`run_geval.py --scope test_budgetref`, riapplicando lo stesso tetto (vedi sotto).
+
 ## `run_geval.py`
 
-Driver non presidiato per il backfill **G-Eval (LLM-as-a-Judge)** — notebook 14. Fa giudicare ogni
+Driver non presidiato per il backfill **G-Eval (LLM-as-a-Judge)** — notebook [14](../notebooks/14_geval.ipynb). Fa giudicare ogni
 riassunto generato sulla split test da `gpt-5.4-mini` su Azure, con punteggi 1–5 su coherence,
 consistency, fluency e relevance. **100.621 giudizi** sui 18 metodi, ore di chiamate API a
 pagamento; per la metodologia vedi la sezione *G-Eval* di `notebooks/README.md`. La corsa è
-completa e l'intera cache è committata (€95,19, 94,2% dei giudizi riusciti — il resto è finito nel
-content filter di Azure); un rilancio giudica solo ciò che manca, quindi non costa nulla a meno
+completa e l'intera cache è committata (€97,28; 98,9% dei giudizi riusciti dopo il ritentativo dei
+fallimenti del 2026-09-19 con `--riprova-errori`, il resto è finito nel content filter di Azure); un rilancio giudica solo ciò che manca, quindi non costa nulla a meno
 che non si aggiungano metodi o righe.
 
 ### Uso
@@ -84,11 +146,53 @@ python scripts/run_geval.py --righe 500 --thread 12
 python scripts/run_geval.py --solo-metriche  # riscrive CSV/JSON dalla cache, ZERO chiamate API
 python scripts/run_geval.py --costo          # report di costo dalla cache, ZERO chiamate API
 python scripts/run_geval.py --riprova-errori # scarta i fallimenti in cache per ritentarli
-python scripts/run_geval.py --no-05          # non rieseguire il notebook 05 alla fine
+python scripts/run_geval.py --no-05          # non rieseguire i notebook di confronto alla fine
 ```
 
 Vanno eseguiti in quest'ordine: `--righe 1`, poi `--pilota 20`, poi la corsa completa. È il pilota
 a trasformare la stima di costo in un numero misurato.
+
+#### Ambito `test_budgetref` (issue #16)
+
+```
+python scripts/run_geval.py --scope test_budgetref --pilota 2 --valuta EUR --no-05
+python scripts/run_geval.py --scope test_budgetref --casuale --budget 45 --valuta EUR
+python scripts/run_geval.py --scope test_budgetref --costo --valuta EUR
+```
+
+Stesso giudice, stessa cache per-ambito (`geval_cache_test_budgetref.jsonl`), ma tre cose
+cambiano rispetto all'ambito `test`, tutte nel notebook [14](../notebooks/14_geval.ipynb):
+
+- le **righe** si leggono dalla split base (`su.split_base`: `test_budgetref` → `test`) e i
+  riassunti dalla corsa a budget quando esiste (`{m}_test_budgetref.tsv`, i 15 rigenerati),
+  altrimenti da `_test.tsv` (bart/pegasus/primera, a solo tetto);
+- il **tetto a 1,25 × riferimento** (`su.tetto_riferimento`, lo stesso fattore di
+  `applica_budget.py`) viene riapplicato riga per riga prima di giudicare: i TSV a budget sono
+  pre-troncamento, e il giudice deve vedere esattamente il testo su cui sono state calcolate le
+  metriche dell'ambito;
+- i giudizi dei testi **rimasti identici** all'ambito `test` vengono **copiati dalla cache
+  `test`** invece di essere ripagati (voci con `riuso_da`, zero token): 15.061 su 100.712 — bart
+  94 %, pegasus 84 %, primera 74 %, briciole dagli estrattivi. `--costo` li esclude dal costo per
+  giudizio. Restano 85.651 giudizi da comprare, ~€50–60 a 2 thread (18 h).
+
+L'eseguito del notebook va in `results/notebook_runs/test_budgetref/` (ignorato da git), non
+in-place: gli output committati del notebook [14](../notebooks/14_geval.ipynb) restano quelli dell'ambito `test`.
+
+#### Una corsa per cache, e Ctrl-C uccide tutto l'albero
+
+Il driver scrive un lock (`geval_cache_{ambito}.lock`, col proprio PID) e **rifiuta di partire
+se un'altra corsa viva sta scrivendo sulla stessa cache**; un lock lasciato da un processo morto
+(riavvio, kill) viene ignorato. Su Ctrl-C termina l'intero albero di processi (`taskkill /T`),
+non solo se stesso. Entrambe le cose nascono da un incidente reale (2026-09-18): un Ctrl-C su
+Windows aveva ucciso il driver ma **non il kernel Jupyter** (jupyter_client lo avvia in un
+process group separato), che ha continuato a giudicare per dieci ore in parallelo alla corsa
+rilanciata. Le due corse — stesso seme di `--casuale`, quindi stesse righe nello stesso ordine —
+hanno pagato **50.275 giudizi due volte (€44,42 buttati, €116,40 spesi in tutto contro i €71,99
+utili)** e hanno corrotto la cache con scritture intrecciate (30 righe rotte, 51.301 doppioni).
+La cache committata è quella deduplicata (una voce per coppia, un successo batte un errore,
+altrimenti la prima occorrenza); l'originale corrotto è stato conservato fuori da git. Prima di
+rilanciare una corsa, **verificare con `tasklist` che non resti un `python.exe` del kernel**, o
+lasciar fare al lock.
 
 ### Che cosa fa
 
@@ -99,7 +203,8 @@ verità e l'artefatto documentale. Il preflight fallisce subito in caso di: `AZU
 o `AZURE_OPENAI_API_KEY` mancanti, esito negativo del **ping da 1 token sul deployment del
 giudice** (così un nome di deployment sbagliato costa secondi, non ore), `complete.tab` assente,
 TSV dei riassunti mancanti per uno qualsiasi dei 18 metodi, `nbconvert` non disponibile. Il
-notebook 05 viene rieseguito alla fine, a meno di `--pilota` o `--no-05`.
+i notebook di confronto (05b/05d per `test`, 05c/05d per `test_budgetref`) vengono rieseguiti
+alla fine, a meno di `--pilota` o `--no-05`.
 
 `run_benchmark_test.py` non viene toccato: il G-Eval non sta sul percorso di generazione.
 
@@ -157,6 +262,58 @@ Disattivare la sospensione di Windows (`powercfg /change standby-timeout-ac 0`),
 bottiglia) e ricordare che qui si spendono soldi veri: tenere d'occhio il contatore di costo
 stampato e impostare `--budget`.
 
+## `pilota_giudice_deepseek.py`
+
+Pilota diagnostico: verifica che la graduatoria G-Eval non sia un artefatto della **parentela
+fra giudice e giudicato**. Il G-Eval committato è prodotto da `gpt-5.4-mini` (OpenAI, serie
+GPT-5) e fra i metodi giudicati c'è `gpt5mini`, della stessa famiglia. Lo script rigiudica gli
+**stessi riassunti già valutati** con `DeepSeek-V3.2-Speciale`, di lignaggio diverso, e confronta
+i due giudici metodo per metodo. L'analisi e le figure stanno in
+[`notebooks/19_confronto_giudici.ipynb`](../notebooks/19_confronto_giudici.ipynb).
+
+### Uso
+
+```bash
+python scripts/pilota_giudice_deepseek.py --righe 1000
+python scripts/pilota_giudice_deepseek.py --righe 1000 --budget 12   # tetto di spesa in EUR
+python scripts/pilota_giudice_deepseek.py --solo-metriche            # riepilogo, zero chiamate
+```
+
+Servono `AZURE_OPENAI_ENDPOINT` e `AZURE_OPENAI_API_KEY` dell'account che ospita il deployment
+DeepSeek (`--deployment`, default `deepseek-giudice`, oppure `AZURE_GEVAL_DEPLOYMENT`).
+
+### Che cosa fa
+
+- **7 metodi**: i 4 LLM (dove il bias si vedrebbe) più 3 controlli non-LLM (`primera`,
+  `firstk_psr`, `lexrank`) presi a quote diverse della graduatoria. I controlli sono ciò che
+  separa un effetto generico «al giudice piace la prosa LLM» da un effetto **specifico della
+  famiglia** OpenAI: senza di loro il confronto non conclude nulla.
+- **Righe estratte con seme fisso** (42) fra quelle coperte da tutti i metodi del pilota, così
+  una corsa interrotta a metà resta comunque un campione non distorto — la stessa proprietà che
+  ha salvato la corsa di agosto quando il tetto di spesa l'ha fermata al 60%.
+- **Chiamata identica** a quella del notebook [14](../notebooks/14_geval.ipynb) (stessi messaggi, stesse rubriche, stesso
+  `response_format` json_schema strict): l'unica variabile che cambia è il giudice. Senza
+  `response_format` DeepSeek discorre invece di emettere JSON.
+- Scrive su **cache e JSON separati** (`geval_cache_test_deepseek.jsonl`,
+  `confronto_giudici_test.json`): nulla di committato viene toccato e i due giudici restano
+  indipendentemente ispezionabili. La cache è riprendibile come quella del notebook [14](../notebooks/14_geval.ipynb).
+
+### Portata, non qualità
+
+`--thread` è deliberatamente basso (2) e **alzarlo non accelera**: il deployment è a 20 RPM e
+la resa effettiva misurata è **6,5 giudizi/min**, cioè il 32% del nominale, il resto essendo
+attesa di backoff sui 429. Sul pilota: 6.997 giudizi in **17,99 h** per **€9,16** (€0,00131 per
+giudizio). Estrapolato a un ambito intero (100.621 giudizi) fa **10,8 giorni e €132** — contro
+le 3–12 h e i €93 di `gpt-5.4-mini`, che è più veloce **e** più economico per giudizio grazie
+alla prompt cache, assente sui deployment MaaS. Per questo il secondo giudice resta un pilota
+di validazione e non diventa la metrica.
+
+### Esito
+
+Nessun family bias: ordinamento identico (ρ di Spearman 1,000, nessuna inversione su 7
+posizioni) e contrasto `gpt5mini` vs altri LLM pari a **+0,049** — di **segno opposto** a quello
+che l'ipotesi del bias prevedeva. Dettagli e avvertenze nel notebook [19](../notebooks/19_confronto_giudici.ipynb).
+
 ## `import_llm_results.py`
 
 Importatore una tantum dei risultati del benchmark LLM locale di Federica (corse con LM Studio,
@@ -164,7 +321,7 @@ archiviate in [`notebooks/llm/`](../notebooks/llm/README.md)) nella struttura co
 `results/`.
 
 > **Nota storica:** i file in `results/` committati per `qwen`/`gemma`/`mistral` sono stati poi
-> rigenerati da zero con corse locali su ollama dei notebook 07–09 (qwen/gemma 2026-07-16,
+> rigenerati da zero con corse locali su ollama dei notebook [07](../notebooks/07_qwen.ipynb)–[09](../notebooks/09_mistral.ipynb) (qwen/gemma 2026-07-16,
 > mistral 2026-07-17) e non corrispondono più a questa importazione. Lo script è conservato per
 > documentare e riprodurre l'import originale da LM Studio; la sua protezione contro la
 > sovrascrittura (sotto) gli impedisce di calpestare i risultati ollama.
@@ -200,7 +357,7 @@ Per ciascuno di `qwen`, `gemma`, `mistral`:
 
 Lo script **si rifiuta di partire** se un file di destinazione
 `results/summaries/{nome}_sample.tsv` esiste già: quel file potrebbe nel frattempo contenere righe
-rigenerate via ollama (notebook 07–09), e reimportare mescolerebbe silenziosamente due backend.
+rigenerate via ollama (notebook [07](../notebooks/07_qwen.ipynb)–[09](../notebooks/09_mistral.ipynb)), e reimportare mescolerebbe silenziosamente due backend.
 Per reimportare, cancellare prima il file.
 
 ## `convert_to_tab.py`

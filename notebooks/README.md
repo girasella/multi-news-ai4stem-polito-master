@@ -2,14 +2,14 @@
 
 Questa cartella contiene i notebook (documentati in italiano) che applicano e valutano i
 metodi di summarization sul dataset Multi-News pulito ([data/tab/complete.tab](../data/tab/complete.tab)):
-la baseline posizionale First-k / Lead (notebook 10, in due varianti di segmentazione), tre
+la baseline posizionale First-k / Lead (notebook [10](10_firstk.ipynb), in due varianti di segmentazione), tre
 estrattivi (TextRank, LexRank e Centroid-based + MMR *custom* in due varianti di vettorizzazione,
-TF-IDF e BERT — notebook 11), tre abstractive specializzati (BART, PEGASUS, PRIMERA), tre
+TF-IDF e BERT — notebook [11](11_centroid_mmr.ipynb)), tre abstractive specializzati (BART, PEGASUS, PRIMERA), tre
 LLM generalisti eseguiti in locale (Qwen2.5-7B, Gemma 4 E4B, Mistral-7B — notebook
 07–09, via [ollama](https://ollama.com)), un LLM cloud su **Azure AI Foundry**
-(GPT-5-mini — notebook 12) e cinque estrattivi **non supervisionati** basati su riduzione di
-dimensionalità, clustering e topic modeling (LSA in due varianti di selezione — notebook 15;
-clustering su sentence embeddings SBERT in due varianti — notebook 16; LDA — notebook 17),
+(GPT-5-mini — notebook [12](12_azure_gpt.ipynb)) e cinque estrattivi **non supervisionati** basati su riduzione di
+dimensionalità, clustering e topic modeling (LSA in due varianti di selezione — notebook [15](15_lsa.ipynb);
+clustering su sentence embeddings SBERT in due varianti — notebook [16](16_sbert_clustering.ipynb); LDA — notebook [17](17_lda.ipynb)),
 usando la libreria
 [pyAutoSummarizer](https://github.com/Valdecy/pyAutoSummarizer) (PRIMERA usa direttamente
 `transformers`, gli LLM il client `openai`; le metriche sono comunque quelle di
@@ -19,7 +19,7 @@ restano recuperabili dalla history git se si riproverà con un altro approccio.
 
 La sottocartella [llm/](llm/README.md) è un **archivio**: i notebook e i risultati originali di
 Federica (LM Studio), da cui erano stati inizialmente importati i risultati committati dei metodi
-`qwen`/`gemma`/`mistral` — poi sostituiti dalle corse ollama dei notebook 07–09 (vedi sotto).
+`qwen`/`gemma`/`mistral` — poi sostituiti dalle corse ollama dei notebook [07](07_qwen.ipynb)–[09](09_mistral.ipynb) (vedi sotto).
 
 > ⚠️ **L'ambito `sample` non è più pubblicato.** Fino a luglio 2026 ogni metodo veniva anche
 > valutato sul campione condiviso da 100 esempi e i risultati (`results/summaries/{metodo}_sample.tsv`
@@ -49,7 +49,10 @@ automaticamente e la usano se disponibile.
 | 02 | [02_lexrank.ipynb](02_lexrank.ipynb) | LexRank (estrattivo, TF-IDF + PageRank). Ambiti `sample` e `full`. |
 | 03 | [03_bart.ipynb](03_bart.ipynb) | BART (`facebook/bart-large-cnn`, abstractive). Ambiti `sample` e `test`. |
 | 04 | [04_pegasus.ipynb](04_pegasus.ipynb) | PEGASUS (`google/pegasus-multi_news`, abstractive). Ambiti `sample` e `test`. |
-| 05 | [05_confronto.ipynb](05_confronto.ipynb) | Confronto: tabelle e grafici dalle metriche salvate. Eseguibile su qualunque sottoinsieme di risultati. |
+| 05a | [05a_confronto_full.ipynb](05a_confronto_full.ipynb) | Confronto sull'ambito `full`: TextRank vs LexRank sull'intero dataset (56.101 esempi), medie per split e distribuzione del ROUGE-1 F1. Non genera nulla. |
+| 05b | [05b_confronto_test.ipynb](05b_confronto_test.ipynb) | **Il confronto principale del benchmark**: i 18 metodi sulla split test (ROUGE/BLEU/METEOR, BERTScore, G-Eval), con le avvertenze metodologiche e la sezione sulla metodologia G-Eval. Non genera nulla. |
+| 05c | [05c_confronto_test_budgetref.ipynb](05c_confronto_test_budgetref.ipynb) | Gli stessi 18 metodi sull'ambito `test_budgetref` (lunghezza del riferimento, issue #16), **stessa presentazione di 05b**. Non genera nulla. |
+| 05d | [05d_confronto_prima_dopo.ipynb](05d_confronto_prima_dopo.ipynb) | Prima/dopo il riallineamento: tabella e grafici `test` → `test_budgetref`, dispersione per cluster, G-Eval a lunghezza pari. Non genera nulla. |
 | 06 | [06_primera.ipynb](06_primera.ipynb) | PRIMERA (`allenai/PRIMERA-multinews`, abstractive multi-documento, input 4096 token). Ambiti `sample` e `test`. |
 | 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Ambiti `sample` e `test`. |
 | 08 | [08_gemma.ipynb](08_gemma.ipynb) | Gemma 4 E4B (LLM locale via ollama). Ambiti `sample` e `test`. |
@@ -62,11 +65,13 @@ automaticamente e la usano se disponibile.
 | 15 | [15_lsa.ipynb](15_lsa.ipynb) | LSA / SVD (estrattivo non supervisionato: TF-IDF + `TruncatedSVD`). Genera **due varianti** — `lsa` (top-k per norma latente, come `sumy`) e `lsa_steinberger` (greedy con deflazione, anti-ridondanza MDS) — che differiscono solo per la regola di selezione. Ambiti `sample`, `test` e `full`. |
 | 16 | [16_sbert_clustering.ipynb](16_sbert_clustering.ipynb) | Clustering su sentence embeddings SBERT (`all-MiniLM-L6-v2`) con selezione del **medoide** di ogni cluster. Genera **due varianti** — `sbert_kmeans` (KMeans, distanza euclidea su embedding L2-normalizzati) e `sbert_agglom` (Agglomerative, cosine + average linkage) — che differiscono solo per l'algoritmo di clustering. Ambiti `sample`, `test` e `full`. |
 | 17 | [17_lda.ipynb](17_lda.ipynb) | Topic modeling con LDA (`CountVectorizer` + `LatentDirichletAllocation`): le frasi vengono allocate ai topic in proporzione al peso di ciascuno. Slug `lda`. Ambiti `sample`, `test` e `full`. |
+| 18 | [18_analisi_lunghezze.ipynb](18_analisi_lunghezze.ipynb) | Analisi **per cluster** delle lunghezze dei riassunti generati dai 18 metodi (issue #15): non genera nulla, legge le metriche `test` già salvate e la mediana del riferimento per numero di articoli. |
+| 19 | [19_confronto_giudici.ipynb](19_confronto_giudici.ipynb) | **Validazione del giudice** G-Eval: rigiudica un campione appaiato di riassunti gia' valutati con un secondo giudice di lignaggio diverso (DeepSeek-V3.2-Speciale) per verificare che il primato di `gpt5mini` non sia family bias. Non genera nulla e non spende nulla: legge le due cache di giudizi. |
 
 I notebook dei metodi (01–04, 06–12 e 15–17) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
 
-## Baseline First-k (notebook 10)
+## Baseline First-k (notebook [10](10_firstk.ipynb))
 
 First-k / Lead è la baseline posizionale del paper Multi-News (con `k=3` = "First-3"): per ogni
 articolo del cluster prende le prime `K_SENTENCES` frasi e le concatena. Il notebook produce
@@ -81,7 +86,7 @@ misurare se una segmentazione più raffinata cambia le metriche MDS:
 I due segmentatori sono alternative (una per variante); la valutazione resta quella condivisa di
 pyAutoSummarizer. È una baseline senza modelli né ranking, quindi rapidissima anche su CPU.
 
-## Centroid-based + MMR (notebook 11)
+## Centroid-based + MMR (notebook [11](11_centroid_mmr.ipynb))
 
 Primo metodo **nativo MDS** del benchmark, che gestisce esplicitamente la **ridondanza tra fonti**
 (§3.4 del [documento-guida](../Tecniche_MDS_non_LLM_MultiNews.md); MMR è trattato a lezione con
@@ -116,7 +121,7 @@ in `results/figures/centroid_mmr/`. La sezione è puramente illustrativa: `anali
 gli artefatti intermedi) è la stessa funzione usata in produzione da `make_genera`, quindi le figure
 riflettono esattamente ciò che il metodo calcola.
 
-## LSA / SVD (notebook 15)
+## LSA / SVD (notebook [15](15_lsa.ipynb))
 
 Estrattivo non supervisionato classico (§3.5 del [documento-guida](../Tecniche_MDS_non_LLM_MultiNews.md)):
 le frasi del cluster, vettorizzate TF-IDF, vengono proiettate in uno spazio **latente** da una
@@ -144,12 +149,12 @@ Sulla split test la variante con deflazione è la migliore dei cinque metodi non
 (ROUGE-1 F1 0,376 contro 0,351 di `lsa`): la conferma che, su MDS, gestire esplicitamente la
 ridondanza tra fonti paga.
 
-Come i notebook 11/16/17, include una sezione **"Come funziona, passo per passo"** che apre la
+Come i notebook [11](11_centroid_mmr.ipynb)/[16](16_sbert_clustering.ipynb)/[17](17_lda.ipynb), include una sezione **"Come funziona, passo per passo"** che apre la
 pipeline su un documento-esempio (`RIGA_DEMO`), con figure salvate in `results/figures/lsa/`
 quando `SALVA_FIGURE` è attivo. Le figure usano `analizza_lsa`, la stessa funzione della
 produzione, quindi riflettono esattamente ciò che il metodo calcola.
 
-## Clustering su sentence embeddings SBERT (notebook 16)
+## Clustering su sentence embeddings SBERT (notebook [16](16_sbert_clustering.ipynb))
 
 §3.7 del [documento-guida](../Tecniche_MDS_non_LLM_MultiNews.md). Le frasi del cluster vengono
 codificate con **`all-MiniLM-L6-v2`** (lo stesso encoder di TextRank
@@ -174,7 +179,7 @@ L'encoding è l'unico passo pesante: il notebook rileva il device con `su.rileva
 corsa committata è stata fatta **su CPU**, quindi il metodo non richiede GPU.
 Figure della sezione esplicativa in `results/figures/sbert_clustering/`.
 
-## Topic modeling con LDA (notebook 17)
+## Topic modeling con LDA (notebook [17](17_lda.ipynb))
 
 §3.6 del [documento-guida](../Tecniche_MDS_non_LLM_MultiNews.md). Le frasi vengono vettorizzate
 con `CountVectorizer(stop_words='english')` e date in pasto a una
@@ -192,7 +197,7 @@ presente leggendo le metriche sensibili alla lunghezza.
 
 Figure della sezione esplicativa in `results/figures/lda/`.
 
-## LLM locali (notebook 07–09)
+## LLM locali (notebook [07](07_qwen.ipynb)–[09](09_mistral.ipynb))
 
 > Nota storica: le informazioni sotto descrivono la validazione originale sull'ambito `sample`
 > (100 esempi). I risultati committati oggi sono quelli dell'ambito `test` (sezione dedicata più
@@ -204,7 +209,7 @@ provenivano dalle **corse ollama di questi notebook** (qwen/gemma 2026-07-16, mi
 Federica via **LM Studio** (Mac M4, 2026-07-16), a suo tempo importati con
 [`scripts/import_llm_results.py`](../scripts/README.md) dai CSV archiviati in
 [llm/](llm/README.md). Una prima corsa ollama di mistral (2026-07-16) aveva usato per errore
-Mistral Small ~24B ed è stata scartata e rifatta con il modello corretto (vedi notebook 09).
+Mistral Small ~24B ed è stata scartata e rifatta con il modello corretto (vedi notebook [09](09_mistral.ipynb)).
 Modelli usati:
 
 ```bash
@@ -232,7 +237,7 @@ all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
   presente nei CSV di Federica non è stato portato in `results/` (la pipeline condivisa non
   lo calcola).
 
-## Corsa completa sulla split test (notebook 03-04, 06-11, 15-17)
+## Corsa completa sulla split test (notebook [03](03_bart.ipynb)-[04](04_pegasus.ipynb), [06](06_primera.ipynb)-[11](11_centroid_mmr.ipynb), [15](15_lsa.ipynb)-[17](17_lda.ipynb))
 
 `scripts/run_benchmark_test.py` esegue in **un'unica sessione non presidiata** gli undici notebook
 dei metodi non coperti dalla derivazione da `full` (10 First-k, 17 LDA, 15 LSA, 16 SBERT
@@ -244,7 +249,7 @@ uno tra una corsa e l'altra:
 ```bash
 python scripts/run_benchmark_test.py             # corsa completa (~3,5-5 giorni su questa macchina)
 python scripts/run_benchmark_test.py --limit 2   # prova end-to-end economica, 2 righe per metodo
-python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (il 05 viene comunque rieseguito)
+python scripts/run_benchmark_test.py --only 10,11  # solo i notebook indicati (05b e 05d vengono comunque rieseguiti)
 ```
 
 `--only` accetta i prefissi numerici dei notebook separati da virgola: utile quando gli altri
@@ -258,7 +263,7 @@ se aperto a mano in Jupyter senza questa variabile d'ambiente si comporta come s
 ed esegue ciascun notebook via `jupyter nbconvert --execute --inplace`, salvando l'output
 eseguito nel notebook stesso. TextRank e LexRank **non vengono rieseguiti**: le loro metriche
 `test` sono derivate filtrando la corsa `full` già committata (stesso risultato numerico, perché
-le metriche sono calcolate per esempio). Il notebook 05 viene poi rieseguito automaticamente per
+le metriche sono calcolate per esempio). I notebook [05b](05b_confronto_test.ipynb) e [05d](05d_confronto_prima_dopo.ipynb) vengono poi rieseguiti automaticamente per
 aggiornare le viste di confronto.
 
 Un notebook fallito viene **registrato e non blocca** i successivi (`run_benchmark_test.log`
@@ -267,13 +272,13 @@ solo le righe mancanti. Prima di una corsa lunga: disattivare la sospensione di 
 (`powercfg /change standby-timeout-ac 0`), tenere `ollama serve` attivo e verificare i tag con
 `ollama list` (`qwen2.5:7b-instruct`, `gemma4:latest`, `mistral:7b-instruct-v0.3-q4_K_M`).
 
-## LLM su Azure AI Foundry (notebook 12)
+## LLM su Azure AI Foundry (notebook [12](12_azure_gpt.ipynb))
 
-Il notebook 12 replica il protocollo dei notebook 07–09 (stesso prompt zero-shot in inglese,
+Il notebook [12](12_azure_gpt.ipynb) replica il protocollo dei notebook [07](07_qwen.ipynb)–[09](09_mistral.ipynb) (stesso prompt zero-shot in inglese,
 documento passato da `prepara_documento`; senza il prefisso `/no_think`, artefatto di qwen) su
 **GPT-5-mini** servito da Azure AI Foundry. GPT-5-mini è un modello con *reasoning* e devia in
 modo documentato (niente `temperature`, `max_completion_tokens=1500` con
-`reasoning_effort='minimal'` — il caso gemma del notebook 08; la famiglia gpt-4o-mini è ritirata
+`reasoning_effort='minimal'` — il caso gemma del notebook [08](08_gemma.ipynb); la famiglia gpt-4o-mini è ritirata
 da Azure e non è più deployabile). Tre ambiti:
 
 - `sample` — il campione condiviso da 100 esempi (confronto con tutti gli altri metodi, costo di
@@ -305,7 +310,7 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
 
 ### Avvertenze
 
-- **Ripresa = rischio di mescolare corse**, come per i notebook 07–09: ogni ambito scrive su un
+- **Ripresa = rischio di mescolare corse**, come per i notebook [07](07_qwen.ipynb)–[09](09_mistral.ipynb): ogni ambito scrive su un
   TSV separato e rieseguire sopra un file esistente aggiunge solo le righe mancanti; con un
   deployment o una configurazione diversi eliminare prima il TSV.
 - **Smoke test**: prima di una corsa `test` o `full` lanciare con `LIMIT = 3` per verificare
@@ -313,14 +318,14 @@ Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2
 - **Content filter di Azure**: alcuni cluster di cronaca (hate/violence a severità media)
   vengono respinti dal filtro con errore `content_filter` prima di raggiungere il modello: le
   righe restano assenti dal TSV e non sono ritentabili (nella corsa test 2026-07-17: 139 righe
-  su 5.610). Il confronto nel notebook 05 resta equo (intersezione dei `row_id`); per coprirle
+  su 5.610). Il confronto nel notebook [05b](05b_confronto_test.ipynb) resta equo (intersezione dei `row_id`); per coprirle
   serve un content filter personalizzato con soglie *high-only* associato al deployment.
 
-## BERTScore (notebook 13, backfill)
+## BERTScore (notebook [13](13_bertscore.ipynb), backfill)
 
 Aggiunge il **BERTScore** (Zhang et al., 2020 — similarità semantica su embedding contestuali
 BERT, `roberta-large`) alle metriche `test` di tutti e 18 i metodi, come **backfill**
-sui riassunti già generati: non tocca i notebook 01–04/06–12 e 15–17 né il loro ciclo di
+sui riassunti già generati: non tocca i notebook [01](01_textrank.ipynb)–[04](04_pegasus.ipynb)/[06](06_primera.ipynb)–[12](12_azure_gpt.ipynb) e [15](15_lsa.ipynb)–[17](17_lda.ipynb) né il loro ciclo di
 generazione/valutazione dal vivo.
 
 Il notebook è **incrementale**: salta i metodi che hanno già le colonne `bertscore_*` nel CSV
@@ -332,7 +337,7 @@ rigenererebbe file già pubblicati a parità di valori. È così che i cinque me
 `pyAutoSummarizer` espone un wrapper di comodo `bert_score()`, ma questo ricarica
 `roberta-large` da zero a **ogni chiamata** (nessuna cache tra chiamate nella libreria
 `bert-score` che chiama) — inutilizzabile dentro il ciclo per-esempio condiviso, che
-richiederebbe migliaia di ricaricamenti per metodo. Il notebook 13 usa invece
+richiederebbe migliaia di ricaricamenti per metodo. Il notebook [13](13_bertscore.ipynb) usa invece
 `bert_score.BERTScorer` **direttamente**: un solo caricamento del modello per metodo, poi
 tutte le coppie candidato/riferimento valutate in un'unica chiamata batched
 (`su.calcola_bertscore_batch`, `batch_size=64`).
@@ -347,7 +352,7 @@ derivati filtrando la corsa `full` — numericamente equivalente, ma più sempli
 unico ciclo uniforme su tutti i metodi. La configurazione storica di ciascun metodo (`config` nel
 JSON aggregato) viene preservata, non sovrascritta dal backfill.
 
-## G-Eval — LLM-as-a-Judge (notebook 14, backfill)
+## G-Eval — LLM-as-a-Judge (notebook [14](14_geval.ipynb), backfill)
 
 Aggiunge una metrica **LLM-as-a-Judge** (G-Eval, Liu et al., 2023): un modello giudice assegna
 a ogni riassunto quattro punteggi in scala **1–5** — *coherence*, *consistency* (fedeltà
@@ -375,10 +380,10 @@ G-Eval di pyAutoSummarizer, reimplementato per un endpoint non-OpenAI*.
 ### Scelta del giudice: `gpt-5.4-mini`
 
 Deployment **GlobalStandard** dedicato su Azure AI Foundry (swedencentral), distinto da quello
-del notebook 12. Due proprietà lo motivano:
+del notebook [12](12_azure_gpt.ipynb). Due proprietà lo motivano:
 
 1. **Indipendente da tutti e 18 i metodi valutati**: nessun self-judging. Usare `gpt-5-mini` (il
-   modello del notebook 12, presente nel benchmark come metodo `gpt5mini`) significherebbe
+   modello del notebook [12](12_azure_gpt.ipynb), presente nel benchmark come metodo `gpt5mini`) significherebbe
    fargli giudicare i propri output, con il noto bias di auto-preferenza.
 2. **Più recente di ogni generatore del benchmark** (`gpt-5-mini` è 2025-08-07, `gpt-5.4-mini`
    è 2026-03-17). Conta soprattutto per **consistency**: individuare un'allucinazione sottile
@@ -389,7 +394,7 @@ Verificato dal vivo sulla sottoscrizione: DeepSeek/Grok/Llama/Mistral **non sono
 su questo account AIServices (stessa ragione per cui i notebook Claude Haiku e DeepSeek furono
 abbandonati), e **`gpt-5.1-mini` non esiste** — la linea 5.1 è `gpt-5.1` / `-chat` / `-codex*`.
 
-Essendo un modello *reasoning* valgono le regole del notebook 12: **niente `temperature`**,
+Essendo un modello *reasoning* valgono le regole del notebook [12](12_azure_gpt.ipynb): **niente `temperature`**,
 `max_completion_tokens=1500` (non 200: i token di ragionamento consumano il budget **prima**
 dell'output visibile — stesso modo di fallire di gemma e gpt-5-mini) e
 `reasoning_effort='minimal'`. Le corse **non sono riproducibili bit-a-bit**: l'artefatto di
@@ -407,7 +412,7 @@ riproducibilità è la cache JSONL committata.
   76%) è di circa **$5 sull'intera corsa**, perché quasi tutte le parole in più finiscono nel
   prefisso condiviso, pagato a tariffa *cached*;
 - ambito: split `test` intera, **100.621 giudizi** (meno di 18 × 5.610 perché la copertura è
-  disomogenea: firstk_psr, le varianti centroid e i cinque metodi dei notebook 15–17 hanno 5.588
+  disomogenea: firstk_psr, le varianti centroid e i cinque metodi dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb) hanno 5.588
   righe, gpt5mini 5.471), tutti eseguiti: i 72.681 dei tredici metodi originali (2026-08-17) più
   i 27.940 dei cinque aggiunti col backfill dell'issue #12 (2026-08-31).
 
@@ -422,7 +427,7 @@ i giudizi di quella riga **in sequenza dentro lo stesso thread**: il primo popol
 di Azure e i successivi la riusano. Il parallelismo è **tra** righe diverse. Parallelizzare per
 singolo giudizio farebbe partire insieme tutte le chiamate della stessa riga, mancando la cache
 tutte quante. Nota che l'ammortamento peggiora quando i metodi da giudicare per riga sono pochi:
-nel backfill dei cinque metodi dei notebook 15–17 la chiamata che paga il prefisso intero si
+nel backfill dei cinque metodi dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb) la chiamata che paga il prefisso intero si
 divide su 5 giudizi invece che su 13, e la quota di input in cache scende (56% cumulativo contro
 il 59% della prima corsa).
 
@@ -476,21 +481,21 @@ I punteggi finiscono in `{metodo}_{scope}_geval_per_example.csv` e `..._geval_ag
 interna somma **ogni** colonna su **ogni** riga: il giudice lascia scoperte alcune righe e la
 media esploderebbe con un `KeyError`; e restringere le righe valutate riscriverebbe i CSV già
 committati, cambiando medie e `n_esempi` di ROUGE/BLEU/METEOR/BERTScore — in modo drastico per i
-cinque metodi dei notebook 15–17, giudicati solo al ~60%. Il notebook 05 aggancia
+cinque metodi dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb), giudicati solo al ~60%. I notebook [05b](05b_confronto_test.ipynb)/[05c](05c_confronto_test_budgetref.ipynb) agganciano
 le colonne con un merge **LEFT** (che non cambia il numero di righe) e riporta la copertura
 effettiva nella colonna `n_geval`.
 
 Effetto collaterale utile: G-Eval è immune al fatto che
 `scripts/run_benchmark_test.py::deriva_metriche_test` ricalcoli le medie di textrank/lexrank
 usando solo `su.COLONNE_METRICHE` — un rilancio del driver **fa cadere le colonne BERTScore**
-dagli aggregati di quei due metodi (problema preesistente, non introdotto qui; il notebook 13
+dagli aggregati di quei due metodi (problema preesistente, non introdotto qui; il notebook [13](13_bertscore.ipynb)
 lo aggira ricalcolandoli direttamente).
 
 ### Configurazione di Azure (una tantum, nel portale)
 
 Creare un deployment **GlobalStandard** di `gpt-5.4-mini` (versione 2026-03-17) sulla risorsa
 AI Foundry e annotarne la quota TPM. Le credenziali arrivano **solo** da variabili d'ambiente,
-le stesse del notebook 12 (`AZURE_OPENAI_ENDPOINT`, la radice della risorsa senza path, e
+le stesse del notebook [12](12_azure_gpt.ipynb) (`AZURE_OPENAI_ENDPOINT`, la radice della risorsa senza path, e
 `AZURE_OPENAI_API_KEY`); il nome del deployment si sovrascrive con `AZURE_GEVAL_DEPLOYMENT` se
 diverso da `gpt-5.4-mini`. `scripts/run_geval.py` verifica il deployment con un ping da 1 token
 **prima** di iniziare, così un nome sbagliato costa secondi e non ore.
@@ -537,10 +542,11 @@ i casi, cambia solo la cifra.
 ### Avvertenze
 
 - **Copertura parziale**: alcune righe vengono respinte dal content filter di Azure o producono
-  risposte non conformi — 5.855 giudizi su 100.621 (5,8%), per una copertura per metodo fra
-  93,5% e 96,7%. Le medie vanno lette insieme a `n_geval`, che può essere minore di `n_esempi`.
+  risposte non conformi — 1.071 giudizi su 100.621 (1,1%) dopo il ritentativo del 2026-09-19
+  (erano 5.855, il 5,8%, nella corsa di agosto), per una copertura per metodo fra 96,8% e
+  99,0%. Le medie vanno lette insieme a `n_geval`, che può essere minore di `n_esempi`.
   **Le righe respinte non sono le stesse in corse diverse** (vedi l'avvertenza dedicata più
-  sotto): la copertura più alta dei cinque metodi dei notebook 15–17 dipende dal filtro, non dai
+  sotto): la copertura più alta dei cinque metodi dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb) dipende dal filtro, non dai
   metodi.
 - **Bias del giudice**: un LLM giudice tende a premiare i testi **più lunghi** e quelli generati
   da altri LLM. Il confronto fra metodi estrattivi (che qui producono 216–450 parole) e
@@ -550,17 +556,227 @@ i casi, cambia solo la cifra.
 - Cambiare deployment, rubriche o troncamento **dopo** aver popolato la cache mescolerebbe corse
   diverse: in quel caso cancellare prima `geval_cache_{scope}.jsonl`.
 
+## Analisi per cluster delle lunghezze (notebook [18](18_analisi_lunghezze.ipynb))
+
+Non genera né rigenera nulla: legge la colonna `parole_generate` già presente nei CSV
+per-esempio committati e la incrocia, in un'unica scansione in streaming di
+`data/tab/complete.tab`, con la lunghezza del riassunto di riferimento e il numero di articoli
+di ogni cluster. Nasce dalla richiesta del relatore di verificare le lunghezze e, in caso di
+disomogeneità significative, contenere la distribuzione dentro un intervallo comune — dettagli
+e decisioni in [issue #15](https://github.com/girasella/multi-news-ai4stem-polito-master/issues/15)
+(sostituisce la #14, limitata a `lda`/notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb)).
+
+Le medie aggregate per metodo (55 parole per `bart` → 477 per `lda`, viste nel notebook [05b](05b_confronto_test.ipynb))
+nascondono la dispersione al livello a cui il confronto avviene davvero: **dentro un singolo
+cluster**, il riassunto più lungo dei 18 metodi è in mediana **8,5 volte** il più corto — una
+distanza pari a circa il doppio del riassunto di riferimento di quel cluster. Nessun metodo si
+adatta al cluster: la correlazione fra lunghezza generata e lunghezza del riferimento arriva al
+massimo a 0,51 (`primera`) ed è circa zero per gli estrattivi a budget di frasi (`lsa`,
+`lsa_steinberger`, `sbert_agglom`), che con "11 frasi" producono la stessa lunghezza qualunque
+sia la dimensione del cluster.
+
+Il riferimento inoltre non è costante: la sua mediana cresce con il numero di articoli, da ~164
+parole (1 articolo) a ~327 (8+). Il candidato naturale a budget per-cluster è quindi
+`T(n_articoli)`, la mediana del riferimento per bucket di articoli, **tarata sulla split train**
+e scritta in `scripts/budget_lunghezza.json`. La **Vista 5** del notebook mette però alla prova
+questo e altri candidati calcolabili dal solo input (decili di lunghezza della sorgente,
+regressioni log-log, combinazioni), tarandoli su train e valutandoli su test, e l'esito è
+netto: **nessuno prevede bene la lunghezza del riferimento**. Il migliore mette il riferimento
+entro ±25% del budget nel 58% dei cluster contro il 54% di un budget **costante**, con
+correlazione di rango mai sopra 0,46; la tendenza per numero di articoli è reale ma spiega
+poco del singolo cluster (l'81% dei cluster di test ha 2–3 articoli, dove `T` ≈ la costante).
+L'idea intuitiva «scala con la lunghezza della sorgente» va peggio di tutte (MAE ~138 parole),
+perché il rapporto di compressione varia di 5× fra cluster.
+
+Ne segue che il budget che davvero elimina la lunghezza come confondente è il **riferimento
+stesso, cluster per cluster** (protocollo *length-matched* / *oracle-length*, es. Sun et al.
+2019): usa la sola *lunghezza* gold, mai il contenuto, e va dichiarato come tale perché risponde
+a «quanto è buona la selezione dei contenuti a parità di lunghezza», non a «cosa otterrebbe il
+metodo in produzione». La sua applicazione ai 18 metodi è documentata in una issue dedicata.
+
+Output: `results/metrics/analisi_lunghezze_{ambito}.json` (committato, stesso pattern di
+`scripts/dataset_stats.json`; include la tabella del confronto fra predittori) e
+`scripts/budget_lunghezza.json` (scritto solo se mancante).
+
+## Ambito `test_budgetref` — confronto a lunghezza del riferimento (issue #16)
+
+Il seguito operativo del notebook [18](18_analisi_lunghezze.ipynb): un ambito in cui ogni metodo ha, per ogni cluster, **lo
+stesso budget di parole — la lunghezza del riassunto di riferimento** (`su.budget_riferimento`).
+È il protocollo *length-matched* / *oracle-length* (Sun et al., 2019): con
+`|candidato| ≈ |riferimento|` richiamo e precisione ROUGE coincidono e l'obiezione «i riassunti
+lunghi vincono sul recall» non può più nascere per costruzione. Usa un'informazione gold — la sola
+*lunghezza*, mai il contenuto — e va dichiarato come tale: i numeri rispondono a «quanto è buona la
+selezione dei contenuti a parità di lunghezza», **non** a «cosa otterrebbe il metodo in
+produzione», e non sostituiscono i numeri di testa dell'ambito `test`.
+
+Si attiva con `SUMM_SCOPE='test_budgetref'`: i notebook leggono le stesse righe dell'ambito `test`
+(`su.split_base`) e scrivono file con suffisso `_test_budgetref`; l'ambito `test` committato non
+viene toccato. Due interventi distinti, perché il solo troncamento non basta (porta il rapporto
+max/min mediano per cluster da 8,5× a ~4×: `bart` resta sotto banda nel 100% dei cluster, `qwen`
+nel 99%, e un riassunto corto non si tronca verso l'alto):
+
+- **Tetto, tutti e 18 i metodi** — `scripts/applica_budget.py` tronca ogni riassunto a
+  `1,25 × budget` e ricalcola le metriche (ROUGE/BLEU/METEOR + BERTScore).
+- **Rigenerazione a budget, gli 11 estrattivi** (notebook [01](01_textrank.ipynb), [02](02_lexrank.ipynb), [10](10_firstk.ipynb), [11](11_centroid_mmr.ipynb), [15](15_lsa.ipynb), [16](16_sbert_clustering.ipynb), [17](17_lda.ipynb); driver
+  `scripts/run_benchmark_test.py --scope test_budgetref`) — rigenerati con il budget in **parole**
+  al posto del budget in **frasi**. Il criterio di ordinamento di ciascun metodo è invariato;
+  cambia solo *dove* ci si ferma (`su.seleziona_per_budget`: si accumulano frasi nell'ordine del
+  metodo, la frase che sfora entra se ne entra più della metà). Adattamenti per notebook: in 01/02
+  si usa l'ordine di rank di `show_summary`; in 10 l'ordine è round-robin fra gli articoli (1ª
+  frase di ognuno, poi 2ª, …); in 11 e 15 il greedy produce un ordine lungo fino a
+  `K_ORDINE_BUDGET = 50` frasi poi tagliato; in 15 e 16 il parametro **strutturale**
+  (`K_LATENTE`, `N_CLUSTER`) resta 11 — vincolo segnalato nella issue #14 — e in 16 l'ordine è a
+  giri (medoide di ogni cluster, poi la seconda frase più vicina al centroide, …); in 17
+  l'allocazione proporzionale ai topic ripartisce parole invece di frasi.
+- **Rigenerazione a budget, gli LLM** (notebook [07](07_qwen.ipynb), [08](08_gemma.ipynb), [09](09_mistral.ipynb), [12](12_azure_gpt.ipynb)) — rigenerati con il budget **nel prompt**: alla
+  stessa richiesta zero-shot si aggiunge la sola frase «of approximately *N* words»
+  (`PROMPT_USER_BUDGET`, derivato meccanicamente da `PROMPT_USER`), il limite di token sale a
+  `MAX_TOKENS_BUDGET = 1500` (con 200/300 un bersaglio da 300 parole sarebbe irraggiungibile). Un
+  LLM segue l'istruzione di lunghezza solo **approssimativamente**: la lunghezza obiettivo è raggiunta
+  *circa*, il tetto si applica comunque dopo, e la quota in banda è un risultato misurato. Non
+  sono nella lista del driver: si lanciano singolarmente, pilota su poche righe prima della corsa
+  (ore per modello).
+- **Solo tetto per `bart`, `pegasus`, `primera`** — decisione deliberata, non solo di costo
+  (pur essendo 2 h + 5–9 h + 28–56 h di GPU). La rigenerazione a budget qui passerebbe da `min_length` in
+  token, che costringe il beam search a generare oltre la lunghezza naturale del modello: e' il
+  meccanismo dei loop di ripetizione gia' documentati per PEGASUS (riga 51178, METEOR −1959, alla
+  lunghezza *naturale*). Su `bart`, che dovrebbe quadruplicare l'output, si misurerebbe il degrado
+  da allungamento forzato invece della selezione dei contenuti. `pegasus` (mediana 0,83× il
+  riferimento) e `primera` (0,97×) sono comunque gia' al bordo o dentro la banda da soli; `bart`
+  (0,26×, 0% in banda) resta l'**eccezione dichiarata** del confronto e va letto come tale.
+
+**G-Eval non è ricalcolato** (cache indicizzata su `(metodo, row_id)`, ri-giudizio ~€70–95; misura
+la fedeltà alla fonte, non la sovrapposizione col riferimento). Il confronto prima/dopo è la
+**notebook [05d](05d_confronto_prima_dopo.ipynb)**; la dispersione per cluster «dopo» si ottiene rieseguendo il notebook
+18 con `SUMM_SCOPE='test_budgetref'`.
+
+**Esito finale (corse 2026-09-13/17: 15 slug su 18 rigenerati, tetto su tutti e 18).** I 15
+rigenerati cadono in banda nel **71–100%** dei cluster (gli 11 estrattivi 93–99%, `gpt5mini` 100%,
+`gemma` 99%, `qwen` 79%, `mistral` 71%), con lunghezza mediana pari al riferimento (~215 parole).
+Il rapporto max/min dentro il cluster passa da 8,5× a 4,7× sui 18 — ma quel 4,7 è quasi tutto
+`bart`, che a 0,26× è il minimo in quasi ogni cluster mentre il tetto tiene il massimo a 1,25×:
+**senza `bart` si passa da 3,8× a 1,6×, e sui soli 15 rigenerati da 3,7× a 1,4×**. Fra i metodi
+effettivamente riportati a lunghezza pari la dispersione è quindi quasi annullata — il numero sui
+18 sottostima il contenimento.
+
+La graduatoria si riassesta: `lda` perde tutto il vantaggio (recall 0,499 → 0,348, ultimo fra gli
+estrattivi in F1, 0,338); le baseline `firstk_*` salgono dal 9°–10° al **5°–6° posto** (F1 0,368),
+sopra metodi di selezione molto più elaborati; i metodi corti **guadagnano**, perché la rigenerazione a budget
+dà loro lo spazio che non usavano (`qwen` 0,344 → 0,351, `mistral` 0,354 → 0,365) — prova che il
+confondente tagliava in entrambe le direzioni, non solo a favore dei lunghi; `primera` (0,446) e
+`pegasus` (0,424), già a lunghezza di riferimento e non rigenerati, restano in testa: il loro
+vantaggio non era di lunghezza. Il fattore del prompt è calibrato **per modello** (`qwen` 1,2,
+`gemma` 0,9, `mistral` 1,0, `gpt5mini` 0,9): i modelli sbagliano in direzioni opposte, e `mistral`
+resta molto disperso (p10 0,76×, p90 1,98×) contro il 99–100% in banda di `gemma` e `gpt5mini`.
+
+⚠️ **Content filter di Azure e filtro custom.** La corsa `test` di `gpt5mini` (vecchio account,
+policy di default) copriva 5.471 righe su 5.610; la prima corsa `test_budgetref` sul nuovo
+account ne copriva solo **5.250** (360 rifiuti, tutti `content_filter`, 6,4%), perche' la
+severita' del filtro e' configurata **per risorsa** e non solo instabile fra corse. Attaccando al
+deployment un **filtro contenuti custom permissivo** e rilanciando le sole righe mancanti, 312
+delle 360 sono state recuperate: copertura finale **5.562/5.610 = 99,1%**, la piu' alta di tutte
+le corse Azure del progetto. Le 48 righe residue restano respinte anche dalla policy permissiva.
+La provenienza resta pulita — stessa risorsa, stesso modello, stesso prompt, stessi parametri:
+cambia solo la policy del filtro, che regola l'**accesso** e non altera la generazione. Effetto
+sul confronto: l'intersezione comune ai 18 metodi sale a **5.527** cluster, sopra i 5.437 di
+partenza. **Per riprodurre la corsa serve il filtro custom sul deployment**, altrimenti si
+ricade a ~93,6% di copertura.
+
+Avvertenza: sulla riga 50540 (sorgente degenere, un elenco di birrifici) il METEOR non limitato di
+pyAutoSummarizer esplode (−77.557 per `lda`, −3.074 per `lexrank`) e trascina le medie a −13,5 e
+−0,16 contro ~0,40 e ~0,39 reali — stesso fenomeno della riga 51178 di PEGASUS, stessa scelta:
+nessun file modificato.
+
+## Validazione del giudice G-Eval (notebook [19](19_confronto_giudici.ipynb))
+
+Il G-Eval committato ha **un solo giudice**, `gpt-5.4-mini`, e fra i 18 metodi giudicati ce n'è
+uno della stessa famiglia: `gpt5mini`. `CLAUDE.md` ha sempre rivendicato l'indipendenza a
+livello di *modello* («no self-judging»), mai a livello di **famiglia**. La domanda è legittima
+perché i numeri la sollevano da soli: fra i quattro LLM l'ordine G-Eval è esattamente invertito
+rispetto a BERTScore e ROUGE-1 F1, e `gpt5mini` è terzo su quattro sulle metriche ancorate al
+riferimento ma primo in assoluto su G-Eval (4,89).
+
+[19_confronto_giudici.ipynb](19_confronto_giudici.ipynb) risponde con un **confronto appaiato**:
+gli stessi riassunti, già generati e già giudicati, vengono rigiudicati da
+`DeepSeek-V3.2-Speciale` — lignaggio completamente diverso, stesso prompt, stesse rubriche. Il
+campione è di 1.000 righe estratte con seme fisso su 7 metodi: i 4 LLM più **3 controlli
+non-LLM** (`primera`, `firstk_psr`, `lexrank`), che sono la parte che fa funzionare il disegno,
+perché separano un effetto generico «al giudice piace la prosa LLM» da un effetto specifico
+della famiglia OpenAI. La corsa è
+[`scripts/pilota_giudice_deepseek.py`](../scripts/pilota_giudice_deepseek.py); scrive su una
+cache e un JSON **separati**, quindi non tocca nulla di committato.
+
+Esito su 6.799 giudizi appaiati (983 cluster, 2026-09-17/18, €9,16):
+
+- **ordinamento identico**, ρ di Spearman **1,000**, nessuna inversione su sette posizioni;
+- il contrasto che misurerebbe il bias — `delta(gpt5mini) − media(delta degli altri 3 LLM)`,
+  calcolato riga per riga — vale **+0,049** con IC95% `[+0,022, +0,076]`. Il family bias
+  prevedeva un contrasto **negativo**: il segno è quello sbagliato per l'ipotesi, quindi
+  correggere per questo effetto *allargherebbe* il primato di `gpt5mini` invece di ridurlo.
+
+Due avvertenze da non perdere. **Lo zero è fuori dall'intervallo**: con ~970 cluster appaiati
+l'errore standard è 0,014 e anche cinque centesimi di punto risultano statisticamente
+distinguibili, quindi non si scriva «compatibile con zero» — ciò che rende conclusivo il
+risultato è il *segno*, non la significatività. E i due giudici **non sono intercambiabili**:
+DeepSeek è più severo sui metodi non-LLM (`−0,276` contro `+0,005` sugli LLM) e quindi allarga
+di 0,28 punti il distacco fra prosa LLM e prosa estrattiva. L'effetto «al giudice piace la
+prosa LLM» è reale ed è più forte nel giudice DeepSeek che in quello OpenAI: è una proprietà
+del paradigma LLM-as-a-Judge, condivisa, non una distorsione di famiglia. Il disaccordo si
+concentra su `coherence` (−0,32) e `relevance` (−0,30, quasi tutta sui controlli: −0,675 contro
+−0,017 sugli LLM), mentre `fluency` è identica e `consistency` va in senso opposto (+0,19).
+
+**Perché il secondo giudice resta un pilota.** Non per qualità ma per portata del deployment:
+20 RPM nominali, **6,5 giudizi/min effettivi** (il resto è attesa di backoff sui 429), misurati
+su 17,99 h di corsa. Estrapolato ai 100.621 giudizi di un ambito fa **10,8 giorni e €132** per
+ambito, 21,6 giorni per entrambi. `gpt-5.4-mini` copre lo stesso ambito in 3–12 h **e costa
+meno per giudizio** (€93 contro €132) nonostante un listino per token più alto, perché il suo
+deployment GlobalStandard ha la **prompt cache**, che un deployment MaaS non offre: la sorgente
+troncata condivisa fra i metodi di una riga — il motivo per cui l'ordine dei messaggi è un
+contratto nel notebook [14](14_geval.ipynb) — con DeepSeek si ripaga a ogni chiamata. Alzare i thread non aiuta;
+servirebbe un aumento di quota su `DeepSeek-V3.2-Speciale`.
+
+Conseguenza operativa: il G-Eval dell'ambito `test_budgetref` si esegue con **`gpt-5.4-mini`**,
+stesso giudice dei numeri pubblicati (quindi continuità del confronto prima/dopo), con questa
+validazione appaiata come garanzia metodologica.
+
+### G-Eval nell'ambito `test_budgetref`
+
+Il notebook [14](14_geval.ipynb) accetta `GEVAL_SCOPE=test_budgetref` (driver: `scripts/run_geval.py --scope
+test_budgetref`). Legge le righe della split base, prende i riassunti dalla corsa a budget quando
+esiste e da `_test.tsv` altrimenti, e **riapplica il tetto a 1,25 × riferimento**
+(`su.tetto_riferimento`, lo stesso di `applica_budget.py`) prima di giudicare, così il giudice
+vede esattamente il testo su cui sono state calcolate le metriche dell'ambito. I giudizi dei testi
+rimasti identici all'ambito `test` — bart 94 %, pegasus 84 %, primera 74 % — vengono copiati dalla
+cache `test` invece di essere ripagati (voci con `riuso_da`, zero token). Il giudice è lo stesso
+`gpt-5.4-mini` dei numeri pubblicati, validato nel notebook [19](19_confronto_giudici.ipynb). L'eseguito va in
+`results/notebook_runs/test_budgetref/`, non in-place.
+
+**Esito (corsa 2026-09-18/19, 100.712 giudizi, 99.040 riusciti, €76,26 di spesa utile): la
+lunghezza non era il confondente del G-Eval.** Dove il riallineamento ha ribaltato il recall
+ROUGE e rimescolato la sua graduatoria, **le prime undici posizioni del G-Eval restano
+identiche** e il massimo spostamento è 0,34 su 5. I due estrattivi più lunghi *guadagnano*
+tagliando (`lexrank` +0,34, `textrank` +0,27: coerenza, consistenza e fluenza in su, pertinenza
+in lieve calo); la **pertinenza è l'unica dimensione sensibile alla lunghezza**, controparte del
+recall (`lda` −0,50, `centroid_mmr*` −0,28, `lsa_steinberger` −0,23); fra gli LLM allungati
+`qwen` +0,15 supera `mistral` −0,13 (tutto sulla consistency: costretto a scrivere di più,
+mistral aggiunge cose che nella fonte non ci sono), `gpt5mini` non si muove. Tabella e grafico
+prima/dopo nel notebook [05d](05d_confronto_prima_dopo.ipynb).
+
 ## Parametri principali (cella di configurazione di ogni notebook)
 
-- `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook 00.
+- `N_SAMPLES`, `SEED` — identificano il file campione; devono combaciare con il notebook [00](00_prepara_campione.ipynb).
 - `SCOPE` — `'sample'` = campione condiviso (tutti i metodi); `'full'` = intero `complete.tab`,
   56.101 esempi in streaming (01/02, 10/11, 12 e 15-17); `'test'` = intera split test, 5.610
-  esempi in streaming (03-04, 06-11, 12 e 15-17; nei notebook 03-04, 06-11 e 15-17 letto dalla
+  esempi in streaming (03-04, 06-11, 12 e 15-17; nei notebook [03](03_bart.ipynb)-[04](04_pegasus.ipynb), [06](06_primera.ipynb)-[11](11_centroid_mmr.ipynb) e [15](15_lsa.ipynb)-[17](17_lda.ipynb) letto dalla
   variabile d'ambiente `SUMM_SCOPE`, impostata da `scripts/run_benchmark_test.py` — default
   `'sample'` se assente).
 - `LIMIT` — `None` per la corsa completa; un intero piccolo (es. `3`) per uno smoke test. Nei
-  notebook 03-04, 06-11 e 15-17 letto anche dalla variabile d'ambiente `SUMM_LIMIT` (usata da
+  notebook [03](03_bart.ipynb)-[04](04_pegasus.ipynb), [06](06_primera.ipynb)-[11](11_centroid_mmr.ipynb) e [15](15_lsa.ipynb)-[17](17_lda.ipynb) letto anche dalla variabile d'ambiente `SUMM_LIMIT` (usata da
   `run_benchmark_test.py --limit N`).
+- `BUDGET` (01/02, 07-12, 15-17) — `su.budget_riferimento` quando `SCOPE` è un ambito `*_budgetref`,
+  altrimenti `None`: il canale con cui `ciclo_summarization` passa a `genera()` la lunghezza
+  obiettivo del cluster. Con esso `K_ORDINE_BUDGET` (11, 15), `MAX_TOKENS_BUDGET` e
+  `PROMPT_USER_BUDGET` (07-09, 12) — vedi la sezione sull'ambito `test_budgetref`.
 - `N_SENTENCES` (01/02, 11 e 15-17) — frasi estratte per riassunto (default 11, la mediana di
   frasi per riassunto del corpus; i riassunti estratti risultano comunque più lunghi dei
   riferimenti, perché le frasi di cronaca sono più lunghe di quelle dei digest). Attenzione: a
@@ -574,7 +790,7 @@ i casi, cambia solo la cifra.
 - `MODELLO`, `OLLAMA_URL`, `MAX_TOKENS`, `TEMPERATURE` (solo 07–09) — tag del modello ollama
   (verificare con `ollama list`), endpoint e parametri di generazione.
 - `DEPLOYMENT`, endpoint da variabili d'ambiente (solo 12) — nome del deployment Azure e
-  parametri del client (vedi la sezione Azure sopra); il notebook 12 usa la rotta **v1** di
+  parametri del client (vedi la sezione Azure sopra); il notebook [12](12_azure_gpt.ipynb) usa la rotta **v1** di
   Azure OpenAI (`<endpoint>/openai/v1/`, senza api-version datata).
 
 ## File prodotti
@@ -590,8 +806,18 @@ results/
   metrics/{metodo}_{scope}_geval_aggregate.json   # SEPARATI: vedi la sezione G-Eval per il perché
   metrics/geval_cache_{scope}.jsonl          # cache dei giudizi (una riga per metodo+row_id, con i
                                               # conteggi di token): è l'artefatto PAGATO, va committato
-  figures/{metodo}/*.png                     # figure della sezione esplicativa dei notebook 11 e 15-17
+  figures/{metodo}/*.png                     # figure della sezione esplicativa dei notebook [11](11_centroid_mmr.ipynb) e [15](15_lsa.ipynb)-[17](17_lda.ipynb)
                                               # (solo con SALVA_FIGURE; illustrative, non usate dalle metriche)
+  metrics/analisi_lunghezze_{ambito}.json    # dispersione per cluster + T(n_articoli) (18_analisi_lunghezze.ipynb)
+  metrics/geval_cache_test_deepseek.jsonl    # cache del SECONDO giudice (pilota, 6.997 giudizi): artefatto
+                                              # pagato come l'altra cache, va committato
+  metrics/confronto_giudici_test.json        # esito del confronto fra i due giudici (19_confronto_giudici.ipynb)
+  summaries/{metodo}_test_budgetref.tsv      # riassunti rigenerati a lunghezza del riferimento (issue #16):
+                                              # gli 11 estrattivi via driver --scope, gli LLM col budget nel prompt
+  metrics/{metodo}_test_budgetref_*          # metriche post-troncamento per tutti e 18 (scripts/applica_budget.py)
+  notebook_runs/{ambito}/*.ipynb             # notebook eseguiti dal driver negli ambiti a budget (in .gitignore)
+scripts/
+  budget_lunghezza.json                      # T(n_articoli): budget per-cluster (18_analisi_lunghezze.ipynb)
 ```
 
 I riassunti sono la parte costosa: vengono scritti **incrementalmente** (una riga per esempio,
@@ -627,13 +853,13 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | GPT-5-mini (12), campione 100 | ~5–15 min (dipende dalla latenza dell'API) | — |
 | GPT-5-mini (12), split test 5.610 | ~8 h sequenziali (corsa reale 2026-07-17: ~5 s/esempio) | — |
 | GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
-| BERTScore (13), tutti e 18 i metodi su `test` (5.610 righe ciascuno) | sconsigliata (`roberta-large`, migliaia di forward pass) | ~1 h per tredici metodi + 24 min per i cinque dei notebook 15–17 (misurato: caricamento ~6 s/metodo + ~19-21 righe/s di scoring — vedi sezione dedicata) |
+| BERTScore (13), tutti e 18 i metodi su `test` (5.610 righe ciascuno) | sconsigliata (`roberta-large`, migliaia di forward pass) | ~1 h per tredici metodi + 24 min per i cinque dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb) (misurato: caricamento ~6 s/metodo + ~19-21 righe/s di scoring — vedi sezione dedicata) |
 | G-Eval (14), pilota 20 righe (260 giudizi) | ~1 min (misurato, 8 thread) | — |
 | G-Eval (14), i tredici metodi originali su `test` (72.681 giudizi) | ~3 h a 8 thread (~6,7 giudizi/s misurati) ma **~$111**; ~12 h a 2 thread per **~$56** — il compromesso è costo/tempo, non CPU. Riprendibile in qualunque momento | — |
 | G-Eval (14), backfill dei cinque metodi 15–17 su `test` (27.940 giudizi) | **€32** in ~5 h a 2 thread, in due sessioni (la prima fermata dal tetto `--budget` al ~60%) | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
-PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 13, ~1,4 GB).
+PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook [13](13_bertscore.ipynb), ~1,4 GB).
 
 ## Esecuzione su Google Colab
 
@@ -651,28 +877,28 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   `google/pegasus-multi_news` sia `allenai/PRIMERA-multinews` sono stati addestrati sulla split
   train di questo dataset → i loro punteggi su righe train sono ottimistici. Gli aggregati
   riportano anche le medie per split; il confronto pulito è sulla sola split `test` (vista
-  dedicata nel notebook 05).
+  dedicata nel notebook [05b](05b_confronto_test.ipynb)).
 - **ROUGE della libreria**: pyAutoSummarizer calcola ROUGE-N su insiemi di n-grammi *unici*
   (non i conteggi "clipped" dello standard): i valori sono coerenti tra i metodi di questo
   benchmark ma non confrontabili in assoluto con la letteratura.
 - **Troncamento a 1024 token**: BART e PEGASUS vedono solo l'inizio di ogni cluster di articoli
   (limite dei checkpoint); vale per entrambi, quindi il confronto tra i due resta equo. PRIMERA
-  (notebook 06) arriva invece a 4096 token, con budget uguale per articolo e separatore
+  (notebook [06](06_primera.ipynb)) arriva invece a 4096 token, con budget uguale per articolo e separatore
   `<doc-sep>`: il divario con BART/PEGASUS riflette quindi anche la diversa copertura
   dell'input, non solo il modello.
 - **Righe saltate dagli estrattivi**: su rari testi (22/5.610 nella split test, ~0,4%) il
   costruttore di `psr.summarization` solleva un `IndexError` (bug della libreria: dopo la pulizia
   le liste di frasi possono disallinearsi). Il ciclo registra l'errore e prosegue: la riga manca
-  dal file dei riassunti di quel metodo. Il notebook 05 confronta i metodi sull'**intersezione**
+  dal file dei riassunti di quel metodo. I notebook di confronto (05a–05d) confrontano i metodi sull'**intersezione**
   dei `row_id` valutati da tutti, quindi le medie restano eque.
-- **G-Eval, bias del giudice e copertura**: il G-Eval del notebook 14 è l'unica metrica non
+- **G-Eval, bias del giudice e copertura**: il G-Eval del notebook [14](14_geval.ipynb) è l'unica metrica non
   ancorata al riferimento umano, ma un LLM giudice ha bias noti — premia i testi **più lunghi** e
   quelli generati da altri LLM — quindi il confronto estrattivi vs astrattivi su questa metrica
   va preso con cautela. La copertura è inoltre **parziale** (content filter di Azure, risposte
-  non conformi): le medie vanno lette insieme alla colonna `n_geval` del notebook 05, che può
+  non conformi): le medie vanno lette insieme alla colonna `n_geval` dei notebook [05b](05b_confronto_test.ipynb)/[05c](05c_confronto_test_budgetref.ipynb), che può
   essere minore di `n_esempi`. Il giudice è comunque **indipendente da tutti e 18 i metodi**
   valutati, quindi non c'è self-judging.
-- **Lunghezza dei riassunti LDA**: i notebook 15/16/17 condividono lo stesso budget nominale
+- **Lunghezza dei riassunti LDA**: i notebook [15](15_lsa.ipynb)/[16](16_sbert_clustering.ipynb)/[17](17_lda.ipynb) condividono lo stesso budget nominale
   (`N_SENTENCES = 11`), ma le frasi che l'allocazione proporzionale ai topic di LDA seleziona
   sono in media molto più lunghe: **477 parole** per riassunto contro 249 (`lsa`), 257
   (`lsa_steinberger`), 264 (`sbert_kmeans`) e 216 (`sbert_agglom`). È questo divario, più che la
@@ -680,11 +906,13 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   ROUGE-1 **recall** più alto del gruppo (0,499 contro 0,357 di `lsa`) e il METEOR più alto
   (0,511), ma in **F1** resta alla pari con `lsa` (0,351) e sotto `lsa_steinberger` (0,376). Su
   questi cinque metodi conviene quindi leggere l'F1, non il recall; la colonna `parole_generate`
-  del notebook 05 rende il confronto esplicito. Per un confronto a lunghezza davvero pari
-  servirebbe un budget in parole, non in frasi — non è stato fatto.
+  del notebook [05b](05b_confronto_test.ipynb) rende il confronto esplicito. Il confronto a lunghezza pari è stato poi
+  fatto (ambito `test_budgetref`, issue #16, notebook [05d](05d_confronto_prima_dopo.ipynb)) e **chiude la questione**:
+  con il budget in parole `lda` scende all'ultimo posto degli estrattivi in F1 (0,338) e il suo
+  recall cala da 0,499 a 0,348 — il vantaggio era interamente di lunghezza.
 - **Il content filter di Azure non è stabile nel tempo**: BERTScore e G-Eval ci sono ora per
   tutti e 18 i metodi, ma i due backfill sono stati eseguiti in due momenti diversi (i tredici
-  metodi il 2026-08-17, i cinque dei notebook 15–17 il 2026-08-31) e le righe che Azure respinge
+  metodi il 2026-08-17, i cinque dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb) il 2026-08-31) e le righe che Azure respinge
   sono cambiate nel frattempo. Nella prima corsa il rifiuto era di fatto **determinato dalla
   sorgente** (unione 366 righe respinte sui tredici metodi, intersezione 358: quasi le stesse per
   ognuno, come ci si aspetta da un filtro che scatta sul testo condiviso). Nella seconda, 155 di
@@ -696,8 +924,15 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   un IC 95% di ±0,03 — ma va tenuto presente prima di leggere le differenze di `n_geval` come se
   dicessero qualcosa sui metodi. Riallineare i tredici alla nuova versione del filtro
   costerebbe una nuova corsa completa (~€70) e cambierebbe numeri già pubblicati: non è stato
-  fatto.
-- **La logica «sottoinsieme» del notebook 05 va lasciata com'è**: ogni grafico BERTScore/G-Eval
+  fatto. È stato invece fatto, il 2026-09-19 per €2,09, **il ritentativo dei soli giudizi
+  falliti** (`run_geval.py --scope test --riprova-errori`): i 5.855 fallimenti stavano su 457
+  righe, 381 delle quali erano passate due giorni prima nella corsa `test_budgetref` sulla
+  stessa risorsa. Nessun giudizio esistente è stato toccato; i fallimenti sono scesi a 1.071, i
+  riusciti a **99.550 su 100.621 (98,9%)**, le righe giudicate per tutti e 18 da 5.091 a
+  **5.363**. Graduatoria invariata, spostamento massimo delle medie 0,010 (pegasus): le righe
+  che il filtro aveva bloccato non sono sistematicamente diverse dalle altre. Il divario di
+  copertura «tredici contro cinque» descritto sopra è quindi storico.
+- **La logica «sottoinsieme» dei notebook di confronto va lasciata com'è** (`su.con_metrica`): ogni grafico BERTScore/G-Eval
   disegna i metodi che hanno quella metrica, elencando gli esclusi in un avviso, invece di
   pretenderla da tutti. Adesso che tutti e 18 le hanno l'avviso non compare mai, ma è ciò che
   evita di far sparire i grafici la prossima volta che si aggiunge un metodo prima del backfill.
@@ -706,4 +941,4 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook 1
   produce due riassunti patologici (un loop di ripetizione del beam search e un probabile
   mismatch sorgente/riferimento) con METEOR rispettivamente -1959.12 e -2.10, che trascinano la
   sua media riportata da ~0.42 a 0.079 — solo quella colonna va letta con questa avvertenza (vedi
-  il dettaglio nel notebook 05). LexRank ha un caso molto più lieve, con effetto trascurabile.
+  il dettaglio nel notebook [05b](05b_confronto_test.ipynb)). LexRank ha un caso molto più lieve, con effetto trascurabile.

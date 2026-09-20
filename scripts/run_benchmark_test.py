@@ -7,19 +7,29 @@ SUMM_SCOPE=test, so each generates summaries and metrics for the full clean test
 (5,610 rows) without any manual babysitting between notebooks. TextRank/LexRank test-split
 metrics are derived by filtering their already-committed SCOPE='full' per-example CSVs (no
 need to rerun them: metrics are computed per example, so filtering is numerically identical
-to a fresh test-scope run). Notebook 05 is re-executed at the end so the comparison views
-reflect the new results.
+to a fresh test-scope run). The comparison notebooks are re-executed at the end so their
+views reflect the new results: 05b (test scope) and 05d (test vs test_budgetref).
 
 Usage (from the repo root or anywhere — paths are resolved relative to this script):
 
     python scripts/run_benchmark_test.py                 # full run, all notebooks, all rows
     python scripts/run_benchmark_test.py --limit 2       # smoke test: 2 rows per method
     python scripts/run_benchmark_test.py --only 10,11    # only notebooks 10 and 11 (+ 05)
+    python scripts/run_benchmark_test.py --scope test_budgetref   # issue #16: extractives at
+                                                                  # reference-length budget
+
+--scope selects the SUMM_SCOPE passed to every notebook (default: test). With a
+``*_budgetref`` scope (see summ_utils.budget_attivo) the notebook list switches to the
+seven extractive notebooks that support the word budget — 01/02 included, executed for real
+on the test split instead of being derived from their ``full`` run, since the budget changes
+the summaries — the textrank/lexrank derivation step is skipped, and the comparison
+notebooks re-executed are 05c (budget scope) and 05d (before/after).
+The LLM notebooks join this list once they support the budget in the prompt (issue #16).
 
 --only takes comma-separated notebook number prefixes and skips the others (useful when the
 rest already completed: re-executing them would reload models and recompute metrics for
 nothing). Preflight checks shrink accordingly (ollama only for 07-09, GPU for 03/04/06/11).
-Notebook 05 is always re-executed at the end.
+The comparison notebooks are always re-executed at the end.
 
 A failed notebook is logged and does NOT stop the run — thanks to the shared resumable
 generation loop (notebooks/summ_utils.py), simply re-running this script later completes
@@ -86,6 +96,18 @@ NOTEBOOKS_GPU = {'03_bart.ipynb', '04_pegasus.ipynb', '06_primera.ipynb',
 # Methods whose SCOPE='test' metrics are derived from an existing SCOPE='full' run
 # instead of executing a notebook (TextRank/LexRank already cover the full dataset).
 DERIVED_FROM_FULL = ['textrank', 'lexrank']
+
+# Notebooks executed for a ``*_budgetref`` scope (issue #16), fastest first. 02/01 are real
+# runs here (5,610 rows each): with a word budget their summaries differ from the full run.
+NOTEBOOKS_BUDGET = [
+    '10_firstk.ipynb',
+    '17_lda.ipynb',
+    '15_lsa.ipynb',
+    '16_sbert_clustering.ipynb',
+    '11_centroid_mmr.ipynb',
+    '02_lexrank.ipynb',
+    '01_textrank.ipynb',
+]
 
 OLLAMA_TAGS_REQUIRED = [
     'qwen2.5:7b-instruct',
@@ -158,18 +180,28 @@ def preflight(selezionati):
 # Esecuzione notebook
 # ---------------------------------------------------------------------------
 
-def esegui_notebook(nome, limit=None):
-    """Esegue un notebook in-place via nbconvert con SUMM_SCOPE=test (e SUMM_LIMIT se dato)."""
+def esegui_notebook(nome, limit=None, scope='test'):
+    """Esegue un notebook in-place via nbconvert con SUMM_SCOPE=scope (e SUMM_LIMIT se dato)."""
     path = NOTEBOOKS_DIR / nome
-    env = dict(os.environ, SUMM_SCOPE='test')
+    env = dict(os.environ, SUMM_SCOPE=scope)
     if limit is not None:
         env['SUMM_LIMIT'] = str(limit)
 
     inizio = time.time()
-    log(f'=== Avvio {nome} (SUMM_SCOPE=test{f", SUMM_LIMIT={limit}" if limit else ""}) ===')
+    log(f'=== Avvio {nome} (SUMM_SCOPE={scope}{f", SUMM_LIMIT={limit}" if limit else ""}) ===')
+    # Ambito test: in-place, il notebook committato documenta la corsa di riferimento.
+    # Ambito a budget: l'eseguito va in results/notebook_runs/{scope}/ (ignorato da git),
+    # cosi' gli output committati restano quelli della corsa test e l'evidenza della
+    # corsa a budget sono i suoi TSV e le sue metriche.
+    if su.budget_attivo(scope):
+        out_dir = RESULTS_DIR / 'notebook_runs' / scope
+        out_dir.mkdir(parents=True, exist_ok=True)
+        destinazione = ['--output-dir', str(out_dir)]
+    else:
+        destinazione = ['--inplace']
     risultato = subprocess.run(
         [sys.executable, '-m', 'jupyter', 'nbconvert', '--to', 'notebook', '--execute',
-         '--inplace', '--ExecutePreprocessor.timeout=-1', nome],
+         *destinazione, '--ExecutePreprocessor.timeout=-1', nome],
         cwd=NOTEBOOKS_DIR, env=env, capture_output=True, text=True)
     durata = time.time() - inizio
 
@@ -180,14 +212,14 @@ def esegui_notebook(nome, limit=None):
             log(f'    {riga}')
         return False
 
-    if nome == '05_confronto.ipynb':
+    if nome.startswith('05'):          # notebook di confronto: non generano riassunti
         log(f'=== Completato {nome} in {durata:.0f}s ===')
         return True
 
     metodi = METODI_PER_NOTEBOOK.get(nome, [nome.split('_', 1)[1].removesuffix('.ipynb')])
     conteggi = []
     for metodo in metodi:
-        tsv = RESULTS_DIR / 'summaries' / f'{metodo}_test.tsv'
+        tsv = RESULTS_DIR / 'summaries' / f'{metodo}_{scope}.tsv'
         n_righe = len(su.carica_riassunti(tsv)) if tsv.exists() else 0
         conteggi.append(f'{n_righe} riassunti in {tsv.name}')
     log(f'=== Completato {nome} in {durata:.0f}s — {"; ".join(conteggi)} ===')
@@ -262,35 +294,50 @@ def main():
                         help='Limita ogni notebook a N esempi nuovi (smoke test end-to-end).')
     parser.add_argument('--only', default=None,
                         help='Prefissi numerici dei soli notebook da eseguire, separati da '
-                             'virgola (es. "10,11"). Il notebook 05 viene comunque rieseguito.')
+                             'virgola (es. "10,11"). I notebook di confronto vengono comunque rieseguiti.')
+    parser.add_argument('--scope', default='test',
+                        help="Ambito passato ai notebook come SUMM_SCOPE (default: test). "
+                             "Con un ambito *_budgetref (issue #16) girano i soli notebook "
+                             "estrattivi a budget, senza derivazione; poi i notebook 05c e 05d.")
     args = parser.parse_args()
 
+    a_budget = su.budget_attivo(args.scope)
+    lista = NOTEBOOKS_BUDGET if a_budget else NOTEBOOKS
     if args.only:
         prefissi = {p.strip() for p in args.only.split(',') if p.strip()}
-        noti = {n.split('_')[0] for n in NOTEBOOKS}
+        noti = {n.split('_')[0] for n in lista}
         sconosciuti = prefissi - noti
         if sconosciuti:
             parser.error(f'--only: prefissi sconosciuti {sorted(sconosciuti)} '
-                         f'(disponibili: {sorted(noti)})')
-        selezionati = [n for n in NOTEBOOKS if n.split('_')[0] in prefissi]
+                         f'(disponibili per {args.scope}: {sorted(noti)})')
+        selezionati = [n for n in lista if n.split('_')[0] in prefissi]
     else:
-        selezionati = list(NOTEBOOKS)
+        selezionati = list(lista)
 
-    log(f'--- Avvio corsa benchmark test (limit={args.limit}, notebook={selezionati}) ---')
+    log(f'--- Avvio corsa benchmark {args.scope} (limit={args.limit}, notebook={selezionati}) ---')
     if not preflight(selezionati):
         log('Interruzione: risolvere i problemi sopra prima di rilanciare.')
         sys.exit(1)
 
     esiti = {}
     for nome in selezionati:
-        esiti[nome] = esegui_notebook(nome, limit=args.limit)
+        esiti[nome] = esegui_notebook(nome, limit=args.limit, scope=args.scope)
 
-    log('--- Derivazione metriche test per textrank/lexrank (da corse full esistenti) ---')
-    for metodo in DERIVED_FROM_FULL:
-        deriva_metriche_test(metodo)
+    if a_budget:
+        log(f'--- Ambito {args.scope}: textrank/lexrank eseguiti davvero, nessuna derivazione ---')
+        confronti = ['05c_confronto_test_budgetref.ipynb', '05d_confronto_prima_dopo.ipynb']
+    else:
+        log('--- Derivazione metriche test per textrank/lexrank (da corse full esistenti) ---')
+        for metodo in DERIVED_FROM_FULL:
+            deriva_metriche_test(metodo)
+        confronti = ['05b_confronto_test.ipynb', '05d_confronto_prima_dopo.ipynb']
 
-    log('--- Riesecuzione notebook 05 (viste di confronto aggiornate) ---')
-    esiti['05_confronto.ipynb'] = esegui_notebook('05_confronto.ipynb')
+    # I notebook di confronto (05a-05d) leggono solo i file di metriche: si rieseguono
+    # in-place quelli toccati dall'ambito appena corso, cosi' le viste committate
+    # riflettono i risultati nuovi. Le metriche 'full' (05a) non cambiano qui.
+    log(f'--- Riesecuzione notebook di confronto: {", ".join(confronti)} ---')
+    for nome in confronti:
+        esiti[nome] = esegui_notebook(nome)
 
     falliti = [n for n, ok in esiti.items() if not ok]
     log('--- Riepilogo ---')

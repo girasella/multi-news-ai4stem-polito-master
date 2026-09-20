@@ -1,0 +1,844 @@
+{
+  "scope": "test_budgetref",
+  "split": "test",
+  "banda": [
+    0.8,
+    1.25
+  ],
+  "n_cluster": 5527,
+  "metodi": [
+    "bart",
+    "centroid_mmr",
+    "centroid_mmr_bert",
+    "firstk_nltk",
+    "firstk_psr",
+    "gemma",
+    "gpt5mini",
+    "lda",
+    "lexrank",
+    "lsa",
+    "lsa_steinberger",
+    "mistral",
+    "pegasus",
+    "primera",
+    "qwen",
+    "sbert_agglom",
+    "sbert_kmeans",
+    "textrank"
+  ],
+  "riferimento": {
+    "p10": 130.0,
+    "p25": 167.0,
+    "p50": 217.0,
+    "p75": 259.0,
+    "p90": 292.0,
+    "media": 215.6,
+    "min": 54.0,
+    "max": 615.0,
+    "n": 5527
+  },
+  "n_articoli": {
+    "p10": 2.0,
+    "p25": 2.0,
+    "p50": 2.0,
+    "p75": 3.0,
+    "p90": 4.0,
+    "media": 2.72,
+    "min": 1.0,
+    "max": 9.0,
+    "n": 5527
+  },
+  "dispersione_per_cluster": {
+    "spread_parole": {
+      "p10": 105.0,
+      "p25": 150.0,
+      "p50": 206.0,
+      "p75": 258.0,
+      "p90": 298.0,
+      "media": 206.2,
+      "min": 27.0,
+      "max": 666.0,
+      "n": 5527
+    },
+    "rapporto_max_min": {
+      "p10": 2.86,
+      "p25": 3.69,
+      "p50": 4.71,
+      "p75": 5.87,
+      "p90": 6.96,
+      "media": 4.87,
+      "min": 1.47,
+      "max": 42.5,
+      "n": 5527
+    },
+    "cv": {
+      "p10": 0.179,
+      "p25": 0.195,
+      "p50": 0.213,
+      "p75": 0.231,
+      "p90": 0.251,
+      "media": 0.215,
+      "min": 0.11,
+      "max": 0.814,
+      "n": 5527
+    },
+    "spread_su_riferimento": {
+      "p10": 0.78,
+      "p25": 0.87,
+      "p50": 0.95,
+      "p75": 1.02,
+      "p90": 1.06,
+      "media": 0.93,
+      "min": 0.4,
+      "max": 1.22,
+      "n": 5527
+    }
+  },
+  "per_metodo": {
+    "bart": {
+      "parole": {
+        "p10": 45.0,
+        "p25": 49.0,
+        "p50": 54.0,
+        "p75": 60.0,
+        "p90": 67.0,
+        "media": 55.2,
+        "min": 23.0,
+        "max": 178.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.17,
+        "p25": 0.21,
+        "p50": 0.26,
+        "p75": 0.33,
+        "p90": 0.43,
+        "media": 0.28,
+        "min": 0.08,
+        "max": 1.12,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.2,
+        "p25": 0.22,
+        "p50": 0.26,
+        "p75": 0.29,
+        "p90": 0.33,
+        "media": 0.26,
+        "min": 0.12,
+        "max": 0.77,
+        "n": 5527
+      },
+      "pct_in_banda": 0.3,
+      "corr_len_riferimento": 0.066,
+      "corr_len_n_articoli": 0.015
+    },
+    "centroid_mmr": {
+      "parole": {
+        "p10": 126.0,
+        "p25": 165.0,
+        "p50": 216.0,
+        "p75": 260.0,
+        "p90": 295.0,
+        "media": 214.8,
+        "min": 12.0,
+        "max": 601.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.91,
+        "p25": 0.96,
+        "p50": 1.0,
+        "p75": 1.04,
+        "p90": 1.08,
+        "media": 1.0,
+        "min": 0.05,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.62,
+        "p25": 0.79,
+        "p50": 0.98,
+        "p75": 1.19,
+        "p90": 1.38,
+        "media": 1.0,
+        "min": 0.05,
+        "max": 2.43,
+        "n": 5527
+      },
+      "pct_in_banda": 97.5,
+      "corr_len_riferimento": 0.968,
+      "corr_len_n_articoli": 0.426
+    },
+    "centroid_mmr_bert": {
+      "parole": {
+        "p10": 127.0,
+        "p25": 166.0,
+        "p50": 216.0,
+        "p75": 259.0,
+        "p90": 295.0,
+        "media": 214.7,
+        "min": 28.0,
+        "max": 634.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.92,
+        "p25": 0.96,
+        "p50": 1.0,
+        "p75": 1.04,
+        "p90": 1.08,
+        "media": 1.0,
+        "min": 0.15,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.62,
+        "p25": 0.79,
+        "p50": 0.98,
+        "p75": 1.19,
+        "p90": 1.37,
+        "media": 0.99,
+        "min": 0.11,
+        "max": 2.38,
+        "n": 5527
+      },
+      "pct_in_banda": 97.5,
+      "corr_len_riferimento": 0.972,
+      "corr_len_n_articoli": 0.433
+    },
+    "firstk_nltk": {
+      "parole": {
+        "p10": 127.0,
+        "p25": 166.0,
+        "p50": 215.0,
+        "p75": 260.0,
+        "p90": 292.4,
+        "media": 214.4,
+        "min": 2.0,
+        "max": 613.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.93,
+        "p25": 0.97,
+        "p50": 1.0,
+        "p75": 1.03,
+        "p90": 1.06,
+        "media": 0.99,
+        "min": 0.03,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.62,
+        "p25": 0.79,
+        "p50": 0.99,
+        "p75": 1.18,
+        "p90": 1.37,
+        "media": 0.99,
+        "min": 0.01,
+        "max": 2.35,
+        "n": 5527
+      },
+      "pct_in_banda": 98.1,
+      "corr_len_riferimento": 0.974,
+      "corr_len_n_articoli": 0.436
+    },
+    "firstk_psr": {
+      "parole": {
+        "p10": 127.0,
+        "p25": 165.0,
+        "p50": 215.0,
+        "p75": 259.0,
+        "p90": 293.0,
+        "media": 214.4,
+        "min": 15.0,
+        "max": 620.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.93,
+        "p25": 0.97,
+        "p50": 1.0,
+        "p75": 1.03,
+        "p90": 1.07,
+        "media": 0.99,
+        "min": 0.11,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.62,
+        "p25": 0.79,
+        "p50": 0.99,
+        "p75": 1.18,
+        "p90": 1.37,
+        "media": 0.99,
+        "min": 0.08,
+        "max": 2.35,
+        "n": 5527
+      },
+      "pct_in_banda": 98.0,
+      "corr_len_riferimento": 0.973,
+      "corr_len_n_articoli": 0.43
+    },
+    "gemma": {
+      "parole": {
+        "p10": 136.0,
+        "p25": 169.0,
+        "p50": 218.0,
+        "p75": 262.0,
+        "p90": 297.0,
+        "media": 218.3,
+        "min": 51.0,
+        "max": 584.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.91,
+        "p25": 0.96,
+        "p50": 1.01,
+        "p75": 1.07,
+        "p90": 1.12,
+        "media": 1.02,
+        "min": 0.74,
+        "max": 1.25,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.66,
+        "p25": 0.81,
+        "p50": 0.99,
+        "p75": 1.2,
+        "p90": 1.4,
+        "media": 1.01,
+        "min": 0.26,
+        "max": 2.39,
+        "n": 5527
+      },
+      "pct_in_banda": 99.4,
+      "corr_len_riferimento": 0.961,
+      "corr_len_n_articoli": 0.385
+    },
+    "gpt5mini": {
+      "parole": {
+        "p10": 122.0,
+        "p25": 162.0,
+        "p50": 205.0,
+        "p75": 252.0,
+        "p90": 289.0,
+        "media": 208.3,
+        "min": 51.0,
+        "max": 625.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.9,
+        "p25": 0.93,
+        "p50": 0.96,
+        "p75": 1.0,
+        "p90": 1.04,
+        "media": 0.96,
+        "min": 0.69,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.6,
+        "p25": 0.77,
+        "p50": 0.95,
+        "p75": 1.14,
+        "p90": 1.34,
+        "media": 0.96,
+        "min": 0.26,
+        "max": 2.47,
+        "n": 5527
+      },
+      "pct_in_banda": 99.8,
+      "corr_len_riferimento": 0.979,
+      "corr_len_n_articoli": 0.426
+    },
+    "lda": {
+      "parole": {
+        "p10": 134.0,
+        "p25": 177.0,
+        "p50": 229.0,
+        "p75": 276.0,
+        "p90": 318.0,
+        "media": 229.3,
+        "min": 46.0,
+        "max": 718.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.89,
+        "p25": 0.97,
+        "p50": 1.07,
+        "p75": 1.19,
+        "p90": 1.25,
+        "media": 1.07,
+        "min": 0.2,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.66,
+        "p25": 0.85,
+        "p50": 1.06,
+        "p75": 1.26,
+        "p90": 1.46,
+        "media": 1.06,
+        "min": 0.22,
+        "max": 2.63,
+        "n": 5527
+      },
+      "pct_in_banda": 93.4,
+      "corr_len_riferimento": 0.922,
+      "corr_len_n_articoli": 0.437
+    },
+    "lexrank": {
+      "parole": {
+        "p10": 126.0,
+        "p25": 166.0,
+        "p50": 216.0,
+        "p75": 260.0,
+        "p90": 297.0,
+        "media": 215.5,
+        "min": 34.0,
+        "max": 605.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.9,
+        "p25": 0.95,
+        "p50": 1.0,
+        "p75": 1.05,
+        "p90": 1.1,
+        "media": 1.0,
+        "min": 0.19,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.62,
+        "p25": 0.79,
+        "p50": 0.99,
+        "p75": 1.19,
+        "p90": 1.38,
+        "media": 1.0,
+        "min": 0.14,
+        "max": 2.37,
+        "n": 5527
+      },
+      "pct_in_banda": 97.2,
+      "corr_len_riferimento": 0.965,
+      "corr_len_n_articoli": 0.429
+    },
+    "lsa": {
+      "parole": {
+        "p10": 127.0,
+        "p25": 166.0,
+        "p50": 215.0,
+        "p75": 259.0,
+        "p90": 294.0,
+        "media": 214.5,
+        "min": 12.0,
+        "max": 596.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.93,
+        "p25": 0.97,
+        "p50": 1.0,
+        "p75": 1.03,
+        "p90": 1.07,
+        "media": 0.99,
+        "min": 0.09,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.62,
+        "p25": 0.79,
+        "p50": 0.98,
+        "p75": 1.19,
+        "p90": 1.37,
+        "media": 0.99,
+        "min": 0.06,
+        "max": 2.53,
+        "n": 5527
+      },
+      "pct_in_banda": 98.2,
+      "corr_len_riferimento": 0.975,
+      "corr_len_n_articoli": 0.437
+    },
+    "lsa_steinberger": {
+      "parole": {
+        "p10": 128.0,
+        "p25": 166.0,
+        "p50": 215.0,
+        "p75": 259.0,
+        "p90": 292.0,
+        "media": 214.8,
+        "min": 12.0,
+        "max": 596.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.93,
+        "p25": 0.97,
+        "p50": 1.0,
+        "p75": 1.03,
+        "p90": 1.07,
+        "media": 1.0,
+        "min": 0.09,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.62,
+        "p25": 0.79,
+        "p50": 0.99,
+        "p75": 1.19,
+        "p90": 1.37,
+        "media": 0.99,
+        "min": 0.06,
+        "max": 2.42,
+        "n": 5527
+      },
+      "pct_in_banda": 98.5,
+      "corr_len_riferimento": 0.978,
+      "corr_len_n_articoli": 0.439
+    },
+    "mistral": {
+      "parole": {
+        "p10": 133.0,
+        "p25": 170.0,
+        "p50": 227.0,
+        "p75": 288.0,
+        "p90": 334.0,
+        "media": 232.2,
+        "min": 52.0,
+        "max": 649.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.77,
+        "p25": 0.95,
+        "p50": 1.2,
+        "p75": 1.25,
+        "p90": 1.25,
+        "media": 1.09,
+        "min": 0.27,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.63,
+        "p25": 0.81,
+        "p50": 1.06,
+        "p75": 1.31,
+        "p90": 1.54,
+        "media": 1.08,
+        "min": 0.27,
+        "max": 2.97,
+        "n": 5527
+      },
+      "pct_in_banda": 71.3,
+      "corr_len_riferimento": 0.79,
+      "corr_len_n_articoli": 0.343
+    },
+    "pegasus": {
+      "parole": {
+        "p10": 118.0,
+        "p25": 150.0,
+        "p50": 188.0,
+        "p75": 204.0,
+        "p90": 214.0,
+        "media": 175.1,
+        "min": 42.0,
+        "max": 233.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.6,
+        "p25": 0.71,
+        "p50": 0.83,
+        "p75": 1.01,
+        "p90": 1.25,
+        "media": 0.86,
+        "min": 0.26,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.55,
+        "p25": 0.7,
+        "p50": 0.83,
+        "p75": 0.96,
+        "p90": 1.07,
+        "media": 0.82,
+        "min": 0.22,
+        "max": 1.32,
+        "n": 5527
+      },
+      "pct_in_banda": 52.1,
+      "corr_len_riferimento": 0.544,
+      "corr_len_n_articoli": 0.178
+    },
+    "primera": {
+      "parole": {
+        "p10": 118.0,
+        "p25": 154.0,
+        "p50": 200.0,
+        "p75": 244.5,
+        "p90": 284.0,
+        "media": 201.1,
+        "min": 31.0,
+        "max": 515.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.64,
+        "p25": 0.79,
+        "p50": 0.97,
+        "p75": 1.19,
+        "p90": 1.25,
+        "media": 0.96,
+        "min": 0.14,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.58,
+        "p25": 0.74,
+        "p50": 0.92,
+        "p75": 1.1,
+        "p90": 1.28,
+        "media": 0.93,
+        "min": 0.16,
+        "max": 2.1,
+        "n": 5527
+      },
+      "pct_in_banda": 65.9,
+      "corr_len_riferimento": 0.671,
+      "corr_len_n_articoli": 0.45
+    },
+    "qwen": {
+      "parole": {
+        "p10": 123.0,
+        "p25": 152.0,
+        "p50": 202.0,
+        "p75": 279.0,
+        "p90": 323.0,
+        "media": 216.1,
+        "min": 44.0,
+        "max": 655.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.75,
+        "p25": 0.87,
+        "p50": 1.01,
+        "p75": 1.17,
+        "p90": 1.25,
+        "media": 1.0,
+        "min": 0.26,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.58,
+        "p25": 0.72,
+        "p50": 0.95,
+        "p75": 1.27,
+        "p90": 1.52,
+        "media": 1.01,
+        "min": 0.23,
+        "max": 2.62,
+        "n": 5527
+      },
+      "pct_in_banda": 79.2,
+      "corr_len_riferimento": 0.82,
+      "corr_len_n_articoli": 0.243
+    },
+    "sbert_agglom": {
+      "parole": {
+        "p10": 129.0,
+        "p25": 166.0,
+        "p50": 215.0,
+        "p75": 259.0,
+        "p90": 292.4,
+        "media": 214.5,
+        "min": 21.0,
+        "max": 623.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.94,
+        "p25": 0.97,
+        "p50": 1.0,
+        "p75": 1.02,
+        "p90": 1.06,
+        "media": 1.0,
+        "min": 0.11,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.63,
+        "p25": 0.8,
+        "p50": 0.98,
+        "p75": 1.18,
+        "p90": 1.37,
+        "media": 0.99,
+        "min": 0.11,
+        "max": 2.4,
+        "n": 5527
+      },
+      "pct_in_banda": 98.5,
+      "corr_len_riferimento": 0.977,
+      "corr_len_n_articoli": 0.435
+    },
+    "sbert_kmeans": {
+      "parole": {
+        "p10": 127.0,
+        "p25": 165.0,
+        "p50": 215.0,
+        "p75": 259.0,
+        "p90": 293.0,
+        "media": 214.4,
+        "min": 23.0,
+        "max": 616.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.93,
+        "p25": 0.97,
+        "p50": 1.0,
+        "p75": 1.03,
+        "p90": 1.06,
+        "media": 0.99,
+        "min": 0.18,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.62,
+        "p25": 0.79,
+        "p50": 0.98,
+        "p75": 1.18,
+        "p90": 1.37,
+        "media": 0.99,
+        "min": 0.12,
+        "max": 2.36,
+        "n": 5527
+      },
+      "pct_in_banda": 98.1,
+      "corr_len_riferimento": 0.976,
+      "corr_len_n_articoli": 0.437
+    },
+    "textrank": {
+      "parole": {
+        "p10": 126.0,
+        "p25": 166.0,
+        "p50": 216.0,
+        "p75": 260.0,
+        "p90": 294.4,
+        "media": 214.8,
+        "min": 14.0,
+        "max": 632.0,
+        "n": 5527
+      },
+      "rapporto_riferimento": {
+        "p10": 0.91,
+        "p25": 0.96,
+        "p50": 1.0,
+        "p75": 1.04,
+        "p90": 1.08,
+        "media": 1.0,
+        "min": 0.2,
+        "max": 1.26,
+        "n": 5527
+      },
+      "rapporto_budget": {
+        "p10": 0.62,
+        "p25": 0.79,
+        "p50": 0.99,
+        "p75": 1.19,
+        "p90": 1.37,
+        "media": 0.99,
+        "min": 0.07,
+        "max": 2.4,
+        "n": 5527
+      },
+      "pct_in_banda": 97.6,
+      "corr_len_riferimento": 0.971,
+      "corr_len_n_articoli": 0.435
+    }
+  },
+  "tabella_budget": {
+    "1": 164,
+    "2": 194,
+    "3": 232,
+    "4": 250,
+    "5": 270,
+    "6": 287,
+    "7": 304,
+    "8": 327
+  },
+  "split_taratura_budget": "train",
+  "confronto_budget": {
+    "A  costante (mediana train)": {
+      "MAE (parole)": 53.2,
+      "APE mediano %": 20.0,
+      "riferimento in banda %": 54.2,
+      "spearman": null
+    },
+    "B  mediana per n_articoli (T)": {
+      "MAE (parole)": 48.1,
+      "APE mediano %": 19.0,
+      "riferimento in banda %": 56.7,
+      "spearman": 0.362
+    },
+    "C1 mediana per 10 decili di parole sorgente": {
+      "MAE (parole)": 48.0,
+      "APE mediano %": 18.4,
+      "riferimento in banda %": 57.7,
+      "spearman": 0.402
+    },
+    "C2 log-log riferimento ~ sorgente (esp. 0.18)": {
+      "MAE (parole)": 48.6,
+      "APE mediano %": 19.4,
+      "riferimento in banda %": 55.2,
+      "spearman": 0.407
+    },
+    "C3 sorgente / compressione mediana (6.4)": {
+      "MAE (parole)": 137.7,
+      "APE mediano %": 41.3,
+      "riferimento in banda %": 27.6,
+      "spearman": 0.407
+    },
+    "D  mediana per n_articoli x terzile sorgente": {
+      "MAE (parole)": 46.5,
+      "APE mediano %": 18.4,
+      "riferimento in banda %": 58.0,
+      "spearman": 0.436
+    },
+    "E  log-log riferimento ~ sorgente + n_articoli": {
+      "MAE (parole)": 46.7,
+      "APE mediano %": 18.8,
+      "riferimento in banda %": 56.7,
+      "spearman": 0.457
+    },
+    "F  oracolo = lunghezza del riferimento": {
+      "MAE (parole)": 0.0,
+      "APE mediano %": 0.0,
+      "riferimento in banda %": 100.0,
+      "spearman": 1.0
+    }
+  }
+}

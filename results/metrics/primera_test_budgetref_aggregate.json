@@ -1,0 +1,59 @@
+{
+  "metodo": "primera",
+  "scope": "test_budgetref",
+  "config": {
+    "checkpoint": "allenai/PRIMERA-multinews",
+    "max_len": 1024,
+    "num_beams": 5,
+    "max_input_tokens": 4096,
+    "device": "cuda",
+    "note": "articoli uniti da <doc-sep> (global attention), budget di token uguale per articolo; checkpoint multi_news (leakage su split train)",
+    "libreria": "transformers (parametri di generazione del repo allenai/PRIMER)",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "tetto": "1.25 x budget, su.tronca_parole",
+      "sorgente_riassunti": "primera_test.tsv",
+      "rigenerato_a_budget": false,
+      "righe_troncate_dal_tetto": 1157
+    }
+  },
+  "timestamp": "2026-09-13T19:55:50+00:00",
+  "n_esempi": 5610,
+  "overall": {
+    "rouge1_f1": 0.44594749068874767,
+    "rouge1_p": 0.4725963589466392,
+    "rouge1_r": 0.432527330424154,
+    "rouge2_f1": 0.1979581812033677,
+    "rouge2_p": 0.20971858224693166,
+    "rouge2_r": 0.193401341329254,
+    "rougeL_f1": 0.25007957570825684,
+    "rougeL_p": 0.2657312806908997,
+    "rougeL_r": 0.24429234628077381,
+    "bleu": 0.14951965547340756,
+    "meteor": 0.46858854237135567,
+    "parole_generate": 201.41105169340463,
+    "bertscore_f1": 0.8745595737999561,
+    "bertscore_p": 0.8771745278129816,
+    "bertscore_r": 0.8721152595657716
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5610,
+      "rouge1_f1": 0.44594749068874767,
+      "rouge1_p": 0.4725963589466392,
+      "rouge1_r": 0.432527330424154,
+      "rouge2_f1": 0.1979581812033677,
+      "rouge2_p": 0.20971858224693166,
+      "rouge2_r": 0.193401341329254,
+      "rougeL_f1": 0.25007957570825684,
+      "rougeL_p": 0.2657312806908997,
+      "rougeL_r": 0.24429234628077381,
+      "bleu": 0.14951965547340756,
+      "meteor": 0.46858854237135567,
+      "parole_generate": 201.41105169340463,
+      "bertscore_f1": 0.8745595737999561,
+      "bertscore_p": 0.8771745278129816,
+      "bertscore_r": 0.8721152595657716
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "metodo": "pegasus",
+  "scope": "test_budgetref",
+  "config": {
+    "giudice": "gpt-5.4-mini",
+    "deployment": "gpt-5.4-mini",
+    "backend": "Azure AI Foundry / Azure OpenAI (chat completions, rotta v1)",
+    "max_completion_tokens": 1500,
+    "reasoning_effort": "minimal",
+    "temperature": "non impostata (modello reasoning: accetta solo il default)",
+    "max_parole_sorgente": 3500,
+    "protocollo": "una chiamata per (metodo, riga), 4 dimensioni in un unico JSON",
+    "response_format": "json_schema strict",
+    "rubriche": "verbatim da pyAutoSummarizer 1.2.0 (psr.summarization.g_eval)",
+    "n_thread": 2,
+    "valuta": "EUR",
+    "prezzi_per_1M_token": {
+      "input": 0.644,
+      "cached": 0.0644,
+      "output": 3.864
+    },
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (su.budget_riferimento)",
+      "tetto": "1.25 x budget, su.tronca_parole (lo stesso di scripts/applica_budget.py)",
+      "riuso_giudizi": "dalla cache dell'ambito test per i testi rimasti identici"
+    },
+    "nota": "punteggi 1-5 su coherence/consistency/fluency/relevance; il giudice e' indipendente da tutti i metodi valutati e piu' recente di ogni generatore del benchmark"
+  },
+  "timestamp": "2026-09-19T09:13:00+00:00",
+  "n_esempi": 5553,
+  "overall": {
+    "geval_coherence": 4.255357464433639,
+    "geval_consistency": 3.470556455969746,
+    "geval_fluency": 4.369349900954439,
+    "geval_relevance": 4.021249774896452,
+    "geval_media": 4.029128399063569
+  },
+  "diagnostica": {
+    "n_giudizi_riusciti": 5553,
+    "n_richiesti": 5610,
+    "n_errori": 57,
+    "copertura": 0.9898
+  }
+}

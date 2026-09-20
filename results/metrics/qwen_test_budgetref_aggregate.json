@@ -1,0 +1,60 @@
+{
+  "metodo": "qwen",
+  "scope": "test_budgetref",
+  "config": {
+    "modello": "qwen2.5:7b-instruct",
+    "backend": "ollama (endpoint OpenAI-compatibile)",
+    "max_tokens": 1500,
+    "temperature": 0.3,
+    "prompt_system": "You are a helpful assistant that summarizes news articles from different sources concisely.",
+    "prompt_user": "/no_think\n\nSummarize the following document into a comprehensive summary of about {richiesto} words. The summary must be at least {richiesto} words long: {documento}",
+    "budget_parole": "lunghezza del riferimento nel prompt x 1.2 (issue #16)",
+    "note": "prompt zero-shot in inglese; max_tokens=200 come la corsa originale (unico modello con limite 200 invece di 300)",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "tetto": "1.25 x budget, su.tronca_parole",
+      "sorgente_riassunti": "qwen_test_budgetref.tsv",
+      "rigenerato_a_budget": true,
+      "righe_troncate_dal_tetto": 870
+    }
+  },
+  "timestamp": "2026-09-14T07:51:46+00:00",
+  "n_esempi": 5610,
+  "overall": {
+    "rouge1_f1": 0.3512219149695943,
+    "rouge1_p": 0.3609247465178793,
+    "rouge1_r": 0.34674077499906253,
+    "rouge2_f1": 0.11291522291905773,
+    "rouge2_p": 0.11535313870682201,
+    "rouge2_r": 0.11250651018612245,
+    "rougeL_f1": 0.19285942018398777,
+    "rougeL_p": 0.19649622964951216,
+    "rougeL_r": 0.1930920154701657,
+    "bleu": 0.0797731208793991,
+    "meteor": 0.4046818716372868,
+    "parole_generate": 216.42566844919787,
+    "bertscore_f1": 0.8619609340945668,
+    "bertscore_p": 0.8662244230455681,
+    "bertscore_r": 0.8578241217051386
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5610,
+      "rouge1_f1": 0.3512219149695943,
+      "rouge1_p": 0.3609247465178793,
+      "rouge1_r": 0.34674077499906253,
+      "rouge2_f1": 0.11291522291905773,
+      "rouge2_p": 0.11535313870682201,
+      "rouge2_r": 0.11250651018612245,
+      "rougeL_f1": 0.19285942018398777,
+      "rougeL_p": 0.19649622964951216,
+      "rougeL_r": 0.1930920154701657,
+      "bleu": 0.0797731208793991,
+      "meteor": 0.4046818716372868,
+      "parole_generate": 216.42566844919787,
+      "bertscore_f1": 0.8619609340945668,
+      "bertscore_p": 0.8662244230455681,
+      "bertscore_r": 0.8578241217051386
+    }
+  }
+}

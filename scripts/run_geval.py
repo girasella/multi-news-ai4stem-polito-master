@@ -26,7 +26,7 @@ Usage (from the repo root or anywhere — paths are resolved relative to this sc
     python scripts/run_geval.py --solo-metriche  # rewrite CSV/JSON from the cache, ZERO calls
     python scripts/run_geval.py --costo          # cost report from the cache, ZERO calls
     python scripts/run_geval.py --riprova-errori # drop cached failures so they are retried
-    python scripts/run_geval.py --no-05          # skip re-running notebook 05 at the end
+    python scripts/run_geval.py --no-05          # skip re-running the 05x comparison notebooks
 
 --costo needs no notebook execution and touches no API: every cached judgment carries its own
 token counts, so it can be run from a SECOND TERMINAL while a long run is in progress to see
@@ -57,9 +57,12 @@ sys.path.insert(0, str(NOTEBOOKS_DIR))
 import summ_utils as su  # noqa: E402  (needs NOTEBOOKS_DIR on sys.path first)
 
 NOTEBOOK = '14_geval.ipynb'
-NOTEBOOK_CONFRONTO = '05_confronto.ipynb'
+# Notebook di confronto da rieseguire a fine corsa, per ambito (leggono solo i file).
+NOTEBOOK_CONFRONTO = {'test': ['05b_confronto_test.ipynb', '05d_confronto_prima_dopo.ipynb'],
+                      'test_budgetref': ['05c_confronto_test_budgetref.ipynb',
+                                         '05d_confronto_prima_dopo.ipynb']}
 
-# Gli stessi 18 slug del notebook 05 (Vista 2), 13 e 14. Gli ultimi cinque (notebook
+# Gli stessi 18 slug di su.METODI_BENCHMARK (notebook 05b, 13 e 14). Gli ultimi cinque (notebook
 # 15-17) sono stati aggiunti col backfill dell'issue #12: la cache e' per (metodo,
 # row_id), quindi allargare la lista fa giudicare SOLO i nuovi, senza ripagare i 13.
 METODI = ['firstk_psr', 'firstk_nltk', 'centroid_mmr', 'centroid_mmr_bert',
@@ -76,9 +79,14 @@ def log(message):
 
 
 def percorso_riassunti(metodo, scope):
-    """textrank/lexrank hanno solo la corsa '_full.tsv' (vedi notebook 13/14)."""
-    suffisso = 'full' if metodo in ('textrank', 'lexrank') else scope
-    return RESULTS_DIR / 'summaries' / f'{metodo}_{suffisso}.tsv'
+    """Stessa regola del notebook 14: la corsa dell'ambito se esiste (i 15 rigenerati
+    a budget in `test_budgetref`), poi `_test.tsv`, poi `_full.tsv` (l'unica di
+    textrank/lexrank nell'ambito `test`). Serve solo al preflight."""
+    for suffisso in (scope, su.split_base(scope), 'full'):
+        path = RESULTS_DIR / 'summaries' / f'{metodo}_{suffisso}.tsv'
+        if path.exists():
+            return path
+    return RESULTS_DIR / 'summaries' / f'{metodo}_{scope}.tsv'
 
 
 def percorso_cache(scope):
@@ -200,18 +208,23 @@ def rapporto_costo(scope, prezzi=None, valuta='USD'):
     cache = su.CacheGiudizi(path)
     totali = cache.totali_token()
     errori = cache.errori()
+    # Negli ambiti a budget il notebook 14 copia dalla cache `test` i giudizi dei
+    # testi rimasti identici (voci con `riuso_da`, zero token): sono gratis e non
+    # devono entrare nel costo per giudizio, altrimenti la proiezione crolla a zero.
+    riusati = sum(1 for v in cache._voci.values() if v.get('riuso_da'))
     cache.chiudi()
 
     costi = su.costo_da_token(totali, prezzi)
     totale = sum(costi.values())
     n = totali['n_giudizi']
-    n_pagati = max(totali['n_riusciti'], 1)
+    n_pagati = max(totali['n_riusciti'] - riusati, 1)
 
     rimanenti = max(giudizi_attesi(scope) - n, 0)
 
     log(f'--- Costo G-Eval (scope={scope}) ---')
     log(f'  giudizi in cache : {n:,} ({totali["n_riusciti"]:,} riusciti, '
-        f'{len(errori):,} falliti)')
+        f'{len(errori):,} falliti'
+        + (f", di cui {riusati:,} riusati gratis dall'ambito test" if riusati else '') + ')')
     log(f'  token input      : {totali["prompt_tokens"]:,} '
         f'({totali["cached_tokens"] / max(totali["prompt_tokens"], 1):.0%} in cache)')
     log(f'  token output     : {totali["completion_tokens"]:,} '
@@ -230,23 +243,102 @@ def rapporto_costo(scope, prezzi=None, valuta='USD'):
 # Esecuzione notebook
 # ---------------------------------------------------------------------------
 
-def esegui_notebook(nome, env_extra=None):
-    """Esegue un notebook in-place via nbconvert con le variabili GEVAL_* impostate."""
+def termina_albero(proc):
+    """Uccide `proc` e tutti i suoi discendenti (il kernel Jupyter e' un nipote)."""
+    if os.name == 'nt':
+        subprocess.run(['taskkill', '/T', '/F', '/PID', str(proc.pid)],
+                       capture_output=True)
+    else:
+        proc.terminate()
+    try:
+        proc.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
+def percorso_lock(scope):
+    return percorso_cache(scope).with_suffix('.lock')
+
+
+def pid_vivo(pid):
+    if os.name == 'nt':
+        out = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH'],
+                             capture_output=True, text=True).stdout
+        return str(pid) in out
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def acquisisci_lock(scope):
+    """Una sola corsa per cache. Un lock lasciato da un processo morto (riavvio,
+    kill) viene ignorato; uno di un processo vivo blocca l'avvio: due corse sullo
+    stesso file si pagano i giudizi a vicenda e lo corrompono a righe intrecciate."""
+    lock = percorso_lock(scope)
+    if lock.exists():
+        try:
+            pid = int(lock.read_text().strip())
+        except ValueError:
+            pid = None
+        if pid == os.getpid():
+            return True
+        if pid and pid_vivo(pid):
+            log(f"Un'altra corsa (pid {pid}) sta gia' scrivendo su {percorso_cache(scope).name}: "
+                f"fermarla prima (taskkill /T /F /PID {pid}) o attendere che finisca.")
+            return False
+        log(f"Lock stantio di un processo non piu' vivo ({pid}): ignorato.")
+    lock.write_text(str(os.getpid()))
+    return True
+
+
+def rilascia_lock(scope):
+    try:
+        percorso_lock(scope).unlink()
+    except FileNotFoundError:
+        pass
+
+
+def esegui_notebook(nome, env_extra=None, scope=None):
+    """Esegue un notebook via nbconvert con le variabili GEVAL_* impostate.
+
+    In-place di norma; negli ambiti a budget l'eseguito va invece in
+    results/notebook_runs/{scope}/ (ignorato da git), come fa run_benchmark_test.py,
+    cosi' gli output committati del notebook (ambito `test`) restano quelli.
+    """
     env = dict(os.environ, **(env_extra or {}))
     inizio = time.time()
     dettagli = ', '.join(f'{k}={v}' for k, v in sorted((env_extra or {}).items()))
     log(f'=== Avvio {nome} ({dettagli or "nessuna variabile extra"}) ===')
 
-    risultato = subprocess.run(
+    if scope and su.budget_attivo(scope):
+        out_dir = RESULTS_DIR / 'notebook_runs' / scope
+        out_dir.mkdir(parents=True, exist_ok=True)
+        destinazione = ['--output-dir', str(out_dir), '--output', nome]
+    else:
+        destinazione = ['--inplace']
+    # Popen + kill dell'INTERO albero su Ctrl-C. Con subprocess.run un Ctrl-C su Windows
+    # uccideva il driver ma non il kernel Jupyter (jupyter_client lo avvia in un process
+    # group separato): il 2026-09-18 un kernel orfano ha continuato a giudicare per 10 ore
+    # in parallelo alla corsa rilanciata, scrivendo sulla stessa cache -> 50.275 giudizi
+    # pagati due volte (EUR 44) e file corrotto dalle scritture intrecciate.
+    proc = subprocess.Popen(
         [sys.executable, '-m', 'jupyter', 'nbconvert', '--to', 'notebook', '--execute',
-         '--inplace', '--ExecutePreprocessor.timeout=-1', nome],
-        cwd=NOTEBOOKS_DIR, env=env, capture_output=True, text=True)
+         *destinazione, '--ExecutePreprocessor.timeout=-1', nome],
+        cwd=NOTEBOOKS_DIR, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        _, stderr = proc.communicate()
+    except KeyboardInterrupt:
+        log(f'Ctrl-C: termino {nome} e tutto il suo albero di processi (pid {proc.pid})')
+        termina_albero(proc)
+        raise
     durata = time.time() - inizio
 
-    if risultato.returncode != 0:
-        log(f'*** ERRORE in {nome} dopo {durata:.0f}s (returncode={risultato.returncode}) ***')
+    if proc.returncode != 0:
+        log(f'*** ERRORE in {nome} dopo {durata:.0f}s (returncode={proc.returncode}) ***')
         log('--- stderr (ultime 40 righe) ---')
-        for riga in risultato.stderr.splitlines()[-40:]:
+        for riga in stderr.splitlines()[-40:]:
             log(f'    {riga}')
         return False
 
@@ -299,7 +391,7 @@ def main():
     parser.add_argument('--riprova-errori', action='store_true',
                         help='Rimuove dalla cache i giudizi falliti cosi\' vengono ritentati.')
     parser.add_argument('--no-05', action='store_true',
-                        help='Non rieseguire il notebook 05 al termine.')
+                        help='Non rieseguire i notebook di confronto (05b/05c/05d) al termine.')
     args = parser.parse_args()
 
     if args.costo:
@@ -337,15 +429,22 @@ def main():
     if args.solo_metriche:
         env['GEVAL_SOLO_METRICHE'] = '1'
 
-    ok = esegui_notebook(NOTEBOOK, env)
+    if not acquisisci_lock(args.scope):
+        sys.exit(1)
+    try:
+        ok = esegui_notebook(NOTEBOOK, env, scope=args.scope)
+    finally:
+        rilascia_lock(args.scope)
 
     dopo = conta_cache(args.scope)
     log(f'Giudizi in cache: {prima:,} -> {dopo:,} (+{dopo - prima:,})')
     rapporto_costo(args.scope, valuta=args.valuta)
 
     if ok and not args.no_05 and args.pilota is None:
-        log('--- Riesecuzione notebook 05 (viste di confronto aggiornate) ---')
-        ok = esegui_notebook(NOTEBOOK_CONFRONTO) and ok
+        confronti = NOTEBOOK_CONFRONTO.get(args.scope, [])
+        log(f'--- Riesecuzione notebook di confronto: {", ".join(confronti) or "nessuno"} ---')
+        for nome in confronti:
+            ok = esegui_notebook(nome) and ok
 
     if not ok:
         log('Corsa terminata con errori. Rilanciare questo script per riprendere: '

@@ -15,25 +15,26 @@
     "n_thread": 2,
     "valuta": "EUR",
     "prezzi_per_1M_token": {
-      "input": 0.659,
-      "cached": 0.0659,
-      "output": 3.9538
+      "input": 0.644,
+      "cached": 0.0644,
+      "output": 3.864
     },
+    "ambito_budget": null,
     "nota": "punteggi 1-5 su coherence/consistency/fluency/relevance; il giudice e' indipendente da tutti i metodi valutati e piu' recente di ogni generatore del benchmark"
   },
-  "timestamp": "2026-08-31T13:45:06+00:00",
-  "n_esempi": 5294,
+  "timestamp": "2026-09-19T10:06:02+00:00",
+  "n_esempi": 5504,
   "overall": {
-    "geval_coherence": 2.3692859841329805,
-    "geval_consistency": 2.359841329807329,
-    "geval_fluency": 2.060823573857197,
-    "geval_relevance": 3.540045334340763,
-    "geval_media": 2.5824990555345675
+    "geval_coherence": 2.36827761627907,
+    "geval_consistency": 2.357013081395349,
+    "geval_fluency": 2.061591569767442,
+    "geval_relevance": 3.5385174418604652,
+    "geval_media": 2.5813499273255816
   },
   "diagnostica": {
-    "n_giudizi_riusciti": 5294,
+    "n_giudizi_riusciti": 5504,
     "n_richiesti": 5588,
-    "n_errori": 294,
-    "copertura": 0.9474
+    "n_errori": 84,
+    "copertura": 0.985
   }
 }

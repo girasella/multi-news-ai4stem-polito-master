@@ -1,0 +1,61 @@
+{
+  "metodo": "sbert_kmeans",
+  "scope": "test_budgetref",
+  "config": {
+    "n_cluster": 11,
+    "n_sentences": null,
+    "budget_parole": "lunghezza del riferimento (issue #16)",
+    "segmentazione": "psr.summarization",
+    "encoder": "sentence-transformers all-MiniLM-L6-v2 (embedding L2-normalizzati)",
+    "clustering": "sklearn KMeans (euclidea)",
+    "selezione": "medoide di ogni cluster (frase piu' vicina al centroide)",
+    "device": "cuda",
+    "libreria_valutazione": "pyAutoSummarizer 1.2.0",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "tetto": "1.25 x budget, su.tronca_parole",
+      "sorgente_riassunti": "sbert_kmeans_test_budgetref.tsv",
+      "rigenerato_a_budget": true,
+      "righe_troncate_dal_tetto": 26
+    }
+  },
+  "timestamp": "2026-09-13T19:17:40+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.3594879227670232,
+    "rouge1_p": 0.36306441995379846,
+    "rouge1_r": 0.3579853997629861,
+    "rouge2_f1": 0.12213035507213035,
+    "rouge2_p": 0.12383125265484675,
+    "rouge2_r": 0.12093019644320256,
+    "rougeL_f1": 0.18750552582317603,
+    "rougeL_p": 0.18906345680865516,
+    "rougeL_r": 0.18666130916651352,
+    "bleu": 0.1077612623424604,
+    "meteor": 0.4081614963578265,
+    "parole_generate": 214.76771653543307,
+    "bertscore_f1": 0.8434436621521743,
+    "bertscore_p": 0.8377312626276344,
+    "bertscore_r": 0.8493315169725063
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.3594879227670232,
+      "rouge1_p": 0.36306441995379846,
+      "rouge1_r": 0.3579853997629861,
+      "rouge2_f1": 0.12213035507213035,
+      "rouge2_p": 0.12383125265484675,
+      "rouge2_r": 0.12093019644320256,
+      "rougeL_f1": 0.18750552582317603,
+      "rougeL_p": 0.18906345680865516,
+      "rougeL_r": 0.18666130916651352,
+      "bleu": 0.1077612623424604,
+      "meteor": 0.4081614963578265,
+      "parole_generate": 214.76771653543307,
+      "bertscore_f1": 0.8434436621521743,
+      "bertscore_p": 0.8377312626276344,
+      "bertscore_r": 0.8493315169725063
+    }
+  }
+}

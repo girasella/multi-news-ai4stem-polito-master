@@ -13,8 +13,10 @@ di Torino*
 4. [I metodi di summarization](#4-i-metodi-di-summarization)
 5. [Le metriche di valutazione](#5-le-metriche-di-valutazione)
 6. [Risultati principali](#6-risultati-principali)
-7. [Limiti e avvertenze di lettura](#7-limiti-e-avvertenze-di-lettura)
-8. [Bibliografia](#8-bibliografia)
+7. [Il confondente della lunghezza: il confronto a lunghezza pari](#7-il-confondente-della-lunghezza-il-confronto-a-lunghezza-pari)
+8. [Quanto ci si può fidare del giudice](#8-quanto-ci-si-può-fidare-del-giudice)
+9. [Limiti e avvertenze di lettura](#9-limiti-e-avvertenze-di-lettura)
+10. [Bibliografia](#10-bibliografia)
 
 ---
 
@@ -41,6 +43,10 @@ Il lavoro si articola in tre parti:
    **18 metodi diversi** di riassunto automatico multi-documento, dalle tecniche classiche
    basate su statistiche testuali fino ai grandi modelli linguistici (LLM), tutti valutati
    sullo stesso split di test con lo stesso insieme di metriche.
+4. **Controllo del confondente della lunghezza** — su richiesta del relatore, la verifica di
+   quanto le differenze di lunghezza fra i riassunti dei diversi metodi influenzino le
+   metriche, e il rifacimento del confronto *a lunghezza pari*, con una validazione
+   indipendente del giudice usato per la metrica reference-free.
 
 Lo scopo non è proporre un nuovo metodo di summarization, ma **mappare lo stato dell'arte** —
 dalle tecniche pre-neurali degli anni 2000 ai modelli Transformer specializzati e ai moderni
@@ -470,7 +476,11 @@ non è perfettamente riproducibile bit-per-bit tra un'esecuzione e l'altra.
 
 In questo progetto il giudice è un modello (GPT-5.4-mini su Azure) scelto per essere
 indipendente da tutti i 18 metodi valutati (nessun metodo valutato è generato dallo stesso
-modello) e più recente di ciascuno di essi.
+modello) e più recente di ciascuno di essi. L'indipendenza a livello di *modello* non
+garantisce però quella a livello di *famiglia*: uno dei metodi valutati (GPT-5-mini) è della
+stessa famiglia del giudice, e la letteratura documenta che gli LLM tendono a preferire i
+testi generati da modelli simili a sé (*self-preference bias*). Questo rischio è stato
+verificato sperimentalmente con un secondo giudice di lignaggio diverso — sezione 8.
 
 **Riferimento**: Y. Liu, D. Iter, Y. Xu, S. Wang, R. Xu, C. Zhu, *"G-Eval: NLG Evaluation
 using GPT-4 with Better Human Alignment"*, EMNLP 2023 — il paper che ha proposto e validato
@@ -520,24 +530,28 @@ di ROUGE, non il recall o il METEOR.
 
 | Metodo | Coherence | Consistency | Fluency | Relevance | Media |
 |---|---|---|---|---|---|
-| First-k (PSR) | 2.98 | 2.94 | 2.39 | 3.14 | 2.86 |
-| First-k (NLTK) | 3.52 | 3.13 | 3.74 | 3.11 | 3.37 |
+| First-k (PSR) | 2.98 | 2.93 | 2.38 | 3.14 | 2.86 |
+| First-k (NLTK) | 3.52 | 3.12 | 3.74 | 3.11 | 3.37 |
 | Centroid+MMR (TF-IDF) | 2.56 | 2.63 | 2.15 | 3.63 | 2.74 |
 | Centroid+MMR (BERT) | 2.53 | 2.61 | 2.16 | 3.67 | 2.74 |
-| TextRank | 1.95 | 2.05 | 1.88 | 3.33 | 2.31 |
+| TextRank | 1.95 | 2.05 | 1.89 | 3.33 | 2.30 |
 | LexRank | 1.81 | 1.78 | 1.77 | 3.12 | 2.12 |
-| BART | 4.79 | 4.65 | 4.85 | 3.56 | 4.46 |
-| PEGASUS | 4.27 | 3.46 | 4.38 | 4.03 | 4.04 |
+| BART | 4.79 | 4.64 | 4.85 | 3.56 | 4.46 |
+| PEGASUS | 4.28 | 3.48 | 4.39 | 4.04 | 4.05 |
 | PRIMERA | 4.59 | 3.74 | 4.48 | 4.32 | 4.28 |
-| Qwen2.5-7B | 4.61 | 4.25 | 4.80 | 4.49 | 4.54 |
-| Gemma 4 | 4.94 | 4.34 | 4.99 | 4.83 | 4.78 |
-| Mistral-7B | 4.81 | 4.49 | 4.90 | 4.68 | 4.72 |
-| GPT-5-mini | **4.98** | **4.66** | **5.00** | **4.93** | **4.89** |
-| LSA (Gong & Liu) | 2.34 | 2.55 | 2.07 | 3.11 | 2.52 |
+| Qwen2.5-7B | 4.61 | 4.24 | 4.80 | 4.49 | 4.54 |
+| Gemma 4 | 4.94 | 4.34 | 4.99 | 4.83 | 4.77 |
+| Mistral-7B | 4.82 | 4.49 | 4.90 | 4.68 | 4.72 |
+| GPT-5-mini | **4.98** | **4.65** | **5.00** | **4.93** | **4.89** |
+| LSA (Gong & Liu) | 2.34 | 2.54 | 2.07 | 3.11 | 2.52 |
 | LSA (Steinberger) | 2.50 | 2.70 | 2.17 | 3.44 | 2.70 |
 | SBERT + K-Means | 2.46 | 2.57 | 2.16 | 3.37 | 2.64 |
-| SBERT + Agglomerativo | 2.26 | 2.34 | 2.11 | 2.95 | 2.41 |
+| SBERT + Agglomerativo | 2.26 | 2.34 | 2.11 | 2.95 | 2.42 |
 | LDA | 2.37 | 2.36 | 2.06 | 3.54 | 2.58 |
+
+I giudizi coprono il 98,9 % delle coppie (metodo, esempio): il resto è stato respinto dal
+filtro di sicurezza dei contenuti del servizio cloud prima che il giudice potesse leggerlo
+(sezione 9).
 
 ### 6.3 Il risultato chiave: due metriche, due classifiche opposte
 
@@ -561,9 +575,200 @@ completi. Le due famiglie di metriche, in altre parole, **non misurano la stessa
 misura l'aderenza a un particolare stile di riferimento, l'altra la qualità percepita in
 assoluto.
 
+Questa lettura lascia aperte due obiezioni, entrambe affrontate nelle sezioni seguenti: che
+parte delle differenze fra metodi sia dovuta alla **lunghezza** dei riassunti e non alla loro
+qualità (sezione 7), e che il giudice LLM favorisca i metodi della **propria famiglia**
+(sezione 8).
+
 ---
 
-## 7. Limiti e avvertenze di lettura
+## 7. Il confondente della lunghezza: il confronto a lunghezza pari
+
+### 7.1 Il problema
+
+Le metriche reference-based non sono neutrali rispetto alla lunghezza. Il **recall** di ROUGE
+premia chi include più parole del riferimento: un riassunto più lungo, a parità di qualità
+della selezione, ne cattura di più «gratis». La **precisione** fa l'opposto. La F1 le combina,
+ma non annulla l'effetto, perché le due componenti non sono simmetriche rispetto alla
+lunghezza. Il problema è noto in letteratura (Sun et al., 2019): confrontare sistemi che
+producono output di lunghezza diversa senza controllare la lunghezza rende le conclusioni
+ambigue, e buona parte dei confronti pubblicati ne è affetta.
+
+Nel benchmark il problema è concreto. Le medie per metodo vanno da 55 parole (BART) a 477
+(LDA), ma il dato rilevante è quello **dentro il singolo cluster**: per lo stesso insieme di
+articoli, il più lungo dei 18 riassunti è in mediana **8,5 volte** il più corto, e la
+distanza fra i due è il doppio del riassunto di riferimento. La lunghezza media spiega da sola
+gran parte del recall ROUGE fra metodi (correlazione 0,89) e assai meno della F1 (0,26): il
+sospetto che alcune posizioni in classifica fossero «comprate» con la lunghezza era fondato.
+Nessun metodo, inoltre, adatta la propria lunghezza al cluster: gli estrattivi a budget di
+frasi producono la stessa quantità di testo qualunque sia la dimensione dell'input, e la
+correlazione fra lunghezza generata e lunghezza del riferimento non supera 0,51.
+
+### 7.2 Quale lunghezza «giusta»?
+
+La prima idea — un tetto fisso uguale per tutti — è sbagliata per due ragioni. Il riferimento
+umano non ha lunghezza costante: va da circa 130 a circa 290 parole fra il decimo e il
+novantesimo percentile e cresce col numero di articoli del cluster, quindi un tetto unico
+sarebbe troppo largo per i cluster piccoli e troppo stretto per quelli grandi. E il
+troncamento agisce solo verso il basso: un riassunto da 55 parole non si allunga troncandolo,
+per cui il tetto da solo riduce la dispersione dentro il cluster da 8,5× a circa 4×, non
+oltre.
+
+Si è allora verificato se la lunghezza del riferimento si lasci **prevedere dal solo input**
+(numero di articoli, lunghezza delle fonti, combinazioni e regressioni). La risposta è
+negativa: il miglior predittore colloca il riferimento entro ±25 % nel 58 % dei cluster
+contro il 54 % di un valore costante — un guadagno di quattro punti — e l'intuizione più
+naturale, «proporzionale alla lunghezza delle fonti», è la peggiore, perché il rapporto di
+compressione varia di cinque volte fra un cluster e l'altro. La lunghezza del riassunto umano
+è in larga parte una scelta di chi lo scrive, non una funzione misurabile del cluster.
+
+La scelta è quindi caduta sul protocollo **length-matched** o **oracle-length** (Sun et al.,
+2019): a ogni metodo si assegna, cluster per cluster, **la lunghezza del riassunto di
+riferimento** come budget di parole. Si usa un'informazione «gold» — la sola lunghezza, mai
+il contenuto — e questo va dichiarato ogni volta che i numeri compaiono: rispondono alla
+domanda «quanto è buona la selezione dei contenuti a parità di lunghezza», non a «cosa
+produrrebbe il metodo in condizioni reali». Non sostituiscono i risultati della sezione 6: ne
+sono il controllo.
+
+### 7.3 Come si applica
+
+Servono due interventi distinti, perché il vincolo va imposto in entrambe le direzioni:
+
+- un **tetto** per tutti e 18 i metodi: ogni riassunto viene troncato a 1,25 volte la
+  lunghezza del riferimento del suo cluster;
+- una **rigenerazione a budget** per i metodi che producono meno del riferimento. Per gli
+  undici estrattivi significa sostituire il budget in *frasi* («le prime 11») con un budget in
+  *parole*, mantenendo intatto il criterio di ordinamento di ciascun metodo: cambia dove ci
+  si ferma, non cosa si preferisce. Per gli LLM significa mettere la lunghezza richiesta nel
+  prompt; un LLM la rispetta solo approssimativamente, e ogni modello sbaglia in una
+  direzione propria (chi accorcia, chi eccede), per cui l'istruzione è stata calibrata modello
+  per modello.
+
+Tre metodi ricevono il solo tetto, per scelta: BART, PEGASUS e PRIMERA. Allungare un modello
+abstractive richiede di imporgli una lunghezza minima di generazione, forzando la ricerca a
+continuare oltre il punto in cui il modello si fermerebbe da sé — ed è proprio il meccanismo
+che produce i loop di ripetizione già osservati per PEGASUS. PEGASUS e PRIMERA sono comunque
+già vicini alla lunghezza del riferimento; BART, che dovrebbe quadruplicare il proprio
+output, resta l'**eccezione dichiarata** del confronto.
+
+Il risultato del contenimento: i 15 metodi rigenerati cadono nella banda [0,8; 1,25] × il
+riferimento nel 71–100 % dei cluster, e la dispersione dentro il cluster passa da 8,5× a 4,7×
+sui 18 metodi — ma quel 4,7 è quasi interamente BART; **senza BART il rapporto passa da 3,8×
+a 1,6×, e sui soli 15 rigenerati da 3,7× a 1,4×**.
+
+### 7.4 Che cosa cambia nei risultati
+
+| Metodo | Parole prima → dopo | ROUGE-1 recall prima → dopo | ROUGE-1 F1 prima → dopo | G-Eval prima → dopo |
+|---|---|---|---|---|
+| PRIMERA | 211 → 201 | 0.441 → 0.433 | **0.445 → 0.446** | 4.28 → 4.22 |
+| PEGASUS | 178 → 175 | 0.390 → 0.387 | 0.424 → 0.424 | 4.05 → 4.03 |
+| Centroid+MMR (TF-IDF) | 362 → 215 | 0.465 → 0.365 | 0.383 → 0.378 | 2.74 → 2.79 |
+| LSA (Steinberger) | 257 → 215 | 0.419 → 0.366 | 0.376 → 0.369 | 2.70 → 2.61 |
+| First-k (PSR) | 217 → 215 | 0.347 → 0.354 | 0.355 → 0.368 | 2.86 → 2.86 |
+| First-k (NLTK) | 219 → 215 | 0.348 → 0.352 | 0.356 → 0.368 | 3.37 → 3.38 |
+| Mistral-7B | 161 → 233 | 0.325 → 0.367 | 0.354 → 0.365 | 4.72 → 4.59 |
+| TextRank | 368 → 215 | 0.448 → 0.343 | 0.370 → 0.359 | 2.30 → 2.57 |
+| LexRank | 450 → 216 | 0.482 → 0.338 | 0.365 → 0.352 | 2.12 → 2.46 |
+| Qwen2.5-7B | 140 → 216 | 0.309 → 0.347 | 0.344 → 0.351 | 4.54 → 4.68 |
+| GPT-5-mini | 241 → 209 | 0.380 → 0.363 | 0.348 → 0.351 | 4.89 → 4.89 |
+| LDA | 477 → 230 | **0.499 → 0.348** | 0.351 → **0.338** | 2.58 → 2.54 |
+| Gemma 4 | 292 → 219 | 0.390 → 0.337 | 0.335 → 0.328 | 4.77 → 4.83 |
+| BART (solo tetto) | 55 → 55 | 0.181 → 0.181 | 0.265 → 0.265 | 4.46 → 4.46 |
+
+(Le righe omesse — Centroid+MMR BERT, LSA, le due varianti SBERT — si muovono di meno di
+0,01 in F1.)
+
+Sulle metriche reference-based la graduatoria si riassesta in quattro modi:
+
+- **LDA perde tutto il suo vantaggio**: il recall crolla da 0,499 a 0,348 e in F1 scende
+  all'ultimo posto fra gli estrattivi. Il suo primato nella sezione 6.1 era interamente
+  lunghezza.
+- **Le baseline posizionali salgono** dal 9°–10° al 5°–6° posto in F1, sopra LSA, SBERT,
+  TextRank e LexRank: a parità di parole, prendere le prime frasi di ogni articolo regge il
+  confronto con metodi di selezione molto più elaborati. È il *lead bias* del paper originale
+  (sezione 4.1), che il confondente della lunghezza aveva nascosto.
+- **I metodi corti guadagnano** — Qwen, Mistral, le First-k — perché la rigenerazione dà loro
+  lo spazio che non usavano: il confondente tagliava in entrambe le direzioni.
+- **PRIMERA e PEGASUS restano in testa**, appena toccati dal tetto: il loro vantaggio non era
+  di lunghezza.
+
+Il G-Eval racconta una storia diversa, ed è il risultato più istruttivo. Dove il
+riallineamento ha rimescolato il ROUGE, **le prime undici posizioni del G-Eval restano
+identiche** e il massimo spostamento è di 0,34 punti su 5. La lunghezza non era il suo
+confondente — coerentemente con ciò che misura: qualità della prosa rispetto alla fonte, non
+sovrapposizione con il riferimento. Tre osservazioni:
+
+- i due estrattivi più lunghi **guadagnano tagliando** (LexRank +0,34, TextRank +0,27): per
+  il giudice un riassunto estrattivo da 450 parole è un testo *meno* coerente, non più
+  completo;
+- la **pertinenza** è l'unica dimensione sensibile alla lunghezza — chi ha dovuto tagliare di
+  più la perde (LDA −0,50) mentre coerenza, consistenza e fluenza salgono. È la controparte
+  del recall: i due effetti che la F1 di ROUGE somma in un numero solo, qui separati;
+- fra gli LLM allungati, Qwen aggiunge contenuto pertinente e supera Mistral, che perde tutto
+  sulla *consistenza*: costretto a scrivere di più, aggiunge cose che nella fonte non ci sono.
+
+La conclusione della sezione 6.3 regge, e ne esce rafforzata: la divergenza fra metriche
+reference-based e reference-free non è un artefatto della lunghezza.
+
+---
+
+## 8. Quanto ci si può fidare del giudice
+
+### 8.1 Il dubbio
+
+La validità di G-Eval come metrica dipende dall'imparzialità del giudice. La letteratura sul
+paradigma *LLM-as-a-judge* documenta un **self-preference bias**: gli LLM tendono ad
+assegnare punteggi più alti ai testi che riconoscono come simili al proprio stile (Zheng et
+al., 2023; Panickssery et al., 2024), e la somiglianza è massima per i modelli della stessa
+famiglia. In questo benchmark il giudice (GPT-5.4-mini) e uno dei metodi valutati (GPT-5-mini)
+sono entrambi modelli OpenAI della stessa generazione. E i numeri sollevano il dubbio da soli:
+fra i quattro LLM, l'ordine G-Eval è esattamente **invertito** rispetto a quello di BERTScore
+e ROUGE, e GPT-5-mini — terzo su quattro sulle metriche ancorate al riferimento — è primo
+assoluto sul G-Eval.
+
+Due spiegazioni si adattano ugualmente bene a questo quadro: (a) un bias di famiglia del
+giudice; (b) nessun bias — G-Eval misura una cosa diversa, e GPT-5-mini scrive davvero in
+prosa migliore pur aderendo meno al riferimento. **Un solo giudice non può separarle.**
+
+### 8.2 Il disegno sperimentale
+
+Gli stessi riassunti, già generati e già giudicati, sono stati **rigiudicati da un secondo
+giudice di lignaggio completamente diverso** (DeepSeek-V3.2), con istruzioni identiche, su un
+campione casuale di circa mille cluster. È un confronto **appaiato sullo stesso testo**: la
+sola variabile che cambia è il giudice, e qualunque differenza sistematica è attribuibile a
+lui.
+
+Il campione comprende i quattro LLM e **tre metodi di controllo non-LLM** (PRIMERA, First-k,
+LexRank), presi a quote diverse della graduatoria. I controlli sono ciò che rende il disegno
+conclusivo: permettono di distinguere un effetto generico «al giudice piace la prosa degli
+LLM» — reale, ma condiviso e non distorsivo per il confronto — da un effetto **specifico
+della famiglia** OpenAI. Il test è direzionale: se il giudice di famiglia gonfiasse
+GPT-5-mini, il giudice estraneo gli toglierebbe qualcosa che agli altri LLM non toglie, e il
+contrasto «variazione di GPT-5-mini meno variazione media degli altri LLM» risulterebbe
+**negativo**.
+
+### 8.3 L'esito
+
+- I due giudici producono **lo stesso ordinamento** dei sette metodi: correlazione di rango
+  pari a 1, nessuna inversione.
+- Il contrasto che misurerebbe il bias vale **+0,05** (intervallo di confidenza al 95 % da
+  +0,02 a +0,08): positivo, cioè di **segno opposto** a quello previsto dall'ipotesi. Con un
+  giudice estraneo GPT-5-mini guadagna sugli altri LLM, non perde. L'ipotesi del bias di
+  famiglia è respinta nella sua stessa direzione, non semplicemente «non confermata».
+- I due giudici **non sono intercambiabili**: DeepSeek è sistematicamente più severo con i
+  metodi non-LLM (circa −0,3 punti), soprattutto su coerenza e pertinenza, e allarga quindi il
+  distacco fra prosa LLM e prosa estrattiva. La preferenza per la prosa degli LLM è una
+  proprietà del paradigma, condivisa da entrambi i giudici, e va tenuta presente leggendo
+  qualunque valutazione LLM-as-a-judge — ma non è una distorsione di famiglia.
+
+Una precisazione statistica utile in sede di presentazione: con circa mille cluster appaiati
+anche cinque centesimi di punto risultano statisticamente distinguibili da zero, quindi il
+risultato *non* va descritto come «compatibile con zero». Ciò che lo rende conclusivo è il
+**segno**, non la significatività.
+
+---
+
+## 9. Limiti e avvertenze di lettura
 
 Alcuni aspetti da tenere presenti quando si presentano questi risultati, per evitare
 conclusioni affrettate:
@@ -573,27 +778,39 @@ conclusioni affrettate:
   comunque un dato mai visto durante l'addestramento), ma va ricordato quando si spiega perché
   questi due modelli dominano le metriche reference-based: parte del loro vantaggio deriva
   dall'aver imparato lo stile specifico di questo dataset, non da capacità di summarization
-  generiche superiori.
+  generiche superiori. Il confronto a lunghezza pari (sezione 7) mostra che quel vantaggio
+  non è comunque di lunghezza.
 - **ROUGE non standard**: come indicato nella sezione 5.1, i valori ROUGE di questo progetto
   usano una variante a n-grammi unici, confrontabile solo *internamente* tra i 18 metodi, non
   con valori ROUGE pubblicati altrove (incluso il paper Multi-News originale).
-- **Outlier METEOR**: la media METEOR di PEGASUS è artificialmente bassa a causa di due righe
-  patologiche su 5.610 (sezione 5.3); non riflette la sua reale qualità media.
-- **Instabilità del filtro di contenuto Azure tra le sessioni di valutazione G-Eval**: le
-  giudicazioni G-Eval sono state raccolte in due sessioni separate (a distanza di circa due
-  settimane) per due sottoinsiemi di metodi; il filtro di sicurezza dei contenuti di Azure ha
-  rifiutato insiemi di righe leggermente diversi nelle due sessioni. Questo produce una
-  copertura (`n_geval`) diversa tra metodi (93,5%-96,7%), ma l'impatto sulle medie riportate è
-  trascurabile (nessuno spostamento superiore a 0,01 punti, confrontando le sole righe
-  giudicate per tutti e 18 i metodi).
-- **Riassunti LDA più lunghi**: come indicato nella sezione 6.1, la lunghezza sistematicamente
-  maggiore dei riassunti LDA gonfia recall e METEOR in modo non comparabile agli altri
-  metodi; la F1 di ROUGE resta la metrica corretta per confrontarlo con gli altri quattro
-  metodi non supervisionati.
+- **Outlier METEOR**: la formula usata non è limitata inferiormente per input degeneri. La
+  media METEOR di PEGASUS è artificialmente bassa a causa di due righe patologiche su 5.610
+  (sezione 5.3); nel confronto a lunghezza pari lo stesso accade a LDA e LexRank su una riga
+  la cui sorgente è un elenco di nomi. In nessun caso i valori sono stati corretti: sono
+  segnalati.
+- **Copertura del G-Eval e filtro di sicurezza del servizio cloud**: il filtro di contenuti
+  di Azure respinge alcuni esempi (cronaca violenta o d'odio) prima che il giudice li legga,
+  e lo fa in modo non stabile nel tempo. Le prime sessioni avevano lasciato una copertura fra
+  il 93,5 % e il 96,7 % a seconda del metodo; un ritentativo successivo dei soli giudizi
+  respinti l'ha portata al 96,8–99,0 %, senza toccare i giudizi esistenti e senza spostare
+  nessuna media di più di 0,01 punti né l'ordinamento. Le righe che il filtro blocca non sono
+  quindi sistematicamente diverse dalle altre; resta il fatto che i metodi non sono giudicati
+  esattamente sullo stesso insieme di esempi.
+- **Riassunti LDA più lunghi**: la lunghezza sistematicamente maggiore dei riassunti LDA
+  gonfia recall e METEOR nella sezione 6.1. La questione è chiusa dal confronto a lunghezza
+  pari (sezione 7): a parità di lunghezza LDA è l'ultimo degli estrattivi.
+- **La lunghezza «oracolare» è un'informazione gold**: il confronto della sezione 7 usa la
+  lunghezza del riassunto umano come budget. È il protocollo standard per neutralizzare la
+  lunghezza, ma i suoi numeri descrivono la qualità della selezione a parità di lunghezza, non
+  ciò che un metodo produrrebbe da solo; i risultati di testa restano quelli della sezione 6.
+- **Un giudice non è un umano**: la validazione della sezione 8 esclude un bias di famiglia,
+  non stabilisce che il G-Eval coincida con il giudizio umano; la preferenza dei giudici LLM
+  per la prosa degli LLM è reale e condivisa. Le due famiglie di metriche vanno lette insieme,
+  non l'una al posto dell'altra.
 
 ---
 
-## 8. Bibliografia
+## 10. Bibliografia
 
 **Dataset e modello di origine**
 - A. Fabbri, I. Li, T. She, S. Li, D. Radev, *"Multi-News: A Large-Scale Multi-Document
@@ -650,3 +867,16 @@ conclusioni affrettate:
   Generation with BERT"*, ICLR 2020.
 - Y. Liu, D. Iter, Y. Xu, S. Wang, R. Xu, C. Zhu, *"G-Eval: NLG Evaluation using GPT-4 with
   Better Human Alignment"*, EMNLP 2023.
+
+**Lunghezza dei riassunti e affidabilità dei giudici LLM**
+- S. Sun, O. Shapira, I. Dagan, A. Nenkova, *"How to Compare Summarizers without Target
+  Length? Pitfalls, Solutions and Re-Examination of the Neural Summarization Literature"*,
+  Workshop on Methods for Optimizing and Evaluating Neural Language Generation (NeuralGen),
+  NAACL 2019 — il problema della lunghezza nei confronti fra sistemi e il protocollo a
+  lunghezza pari (sezione 7).
+- L. Zheng et al., *"Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena"*, NeurIPS 2023
+  (Datasets and Benchmarks) — i bias sistematici dei giudici LLM, fra cui la preferenza per
+  le proprie generazioni (sezione 8).
+- A. Panickssery, S. R. Bowman, S. Feng, *"LLM Evaluators Recognize and Favor Their Own
+  Generations"*, NeurIPS 2024 — il self-preference bias e il suo legame con la capacità del
+  giudice di riconoscere il proprio stile (sezione 8).
