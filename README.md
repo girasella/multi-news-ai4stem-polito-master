@@ -64,7 +64,7 @@ metodologiche sono in [notebooks/05b_confronto_test.ipynb](notebooks/05b_confron
 | [multi_news_dashboard.html](multi_news_dashboard.html) | Dashboard EDA autoconsistente — si apre direttamente nel browser (testo del report in italiano) |
 | [notebooks/](notebooks/) | Notebook del benchmark di summarization: uno per metodo (18 slug), più i quattro di confronto (05a–05d) e i due backfill di metrica (13 BERTScore, 14 G-Eval), in italiano — vedi [notebooks/README.md](notebooks/README.md) |
 | [scripts/run_benchmark_test.py](scripts/run_benchmark_test.py) | Driver non presidiato della corsa `test`: esegue in sequenza i notebook dei metodi, dal più veloce al più lento — documentato in [scripts/README.md](scripts/README.md) |
-| [scripts/run_geval.py](scripts/run_geval.py) | Driver non presidiato del backfill G-Eval, con controllo di spesa e report di costo offline — documentato in [scripts/README.md](scripts/README.md) |
+| [scripts/run_geval.py](scripts/run_geval.py) | Driver non presidiato del backfill G-Eval (pilota, corsa completa con limite di spesa, riderivazione delle metriche dalla cache) — documentato in [scripts/README.md](scripts/README.md) |
 | [results/](results/) | Output del benchmark: campione di valutazione condiviso, riassunti generati, metriche per esempio e aggregate (comprese quelle G-Eval, in file dedicati, e la cache dei giudizi) |
 | [requirements-notebooks.txt](requirements-notebooks.txt) | Dipendenze Python dei notebook del benchmark |
 | [Multi-News_paper.md](Multi-News_paper.md) | Il paper originale (Fabbri et al., 2019), come riferimento — lasciato in inglese perché copia verbatim della pubblicazione |

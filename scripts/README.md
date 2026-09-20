@@ -158,28 +158,29 @@ qui. G-Eval non viene ricalcolato **da questo script**: lo fa, separatamente,
 
 Driver non presidiato per il backfill **G-Eval (LLM-as-a-Judge)** — notebook [14](../notebooks/14_geval.ipynb). Fa giudicare ogni
 riassunto generato sulla split test da `gpt-5.4-mini` su Azure, con punteggi 1–5 su coherence,
-consistency, fluency e relevance. **100.621 giudizi** sui 18 metodi, ore di chiamate API a
-pagamento; per la metodologia vedi la sezione *G-Eval* di `notebooks/README.md`. La corsa è
-completa e l'intera cache è committata (€97,28; 98,9% dei giudizi riusciti dopo il ritentativo dei
-fallimenti del 2026-09-19 con `--riprova-errori`, il resto è finito nel content filter di Azure); un rilancio giudica solo ciò che manca, quindi non costa nulla a meno
-che non si aggiungano metodi o righe.
+consistency, fluency e relevance. **100.621 giudizi** sui 18 metodi, ore di chiamate API; per
+la metodologia vedi la sezione *G-Eval* di `notebooks/README.md`. La corsa è completa e
+l'intera cache è committata (98,9% dei giudizi riusciti dopo il ritentativo dei fallimenti del
+2026-09-19 con `--riprova-errori`, il resto è finito nel content filter di Azure); un rilancio
+giudica solo ciò che manca, quindi non fa alcuna chiamata a meno che non si aggiungano metodi o
+righe.
 
 ### Uso
 
 ```
 python scripts/run_geval.py --righe 1        # smoke: una chiamata per ogni metodo non ancora in
                                              # cache, dimostra che la prompt cache funziona
-python scripts/run_geval.py --pilota 20      # pilota: 20 righe, misura il costo per giudizio
-python scripts/run_geval.py --budget 120     # corsa completa, stop netto una volta spesi $120
+python scripts/run_geval.py --pilota 20      # pilota: 20 righe, misura consumo e ritmo per giudizio
+python scripts/run_geval.py --budget 120     # corsa completa, stop netto al limite di spesa
 python scripts/run_geval.py --righe 500 --thread 12
 python scripts/run_geval.py --solo-metriche  # riscrive CSV/JSON dalla cache, ZERO chiamate API
-python scripts/run_geval.py --costo          # report di costo dalla cache, ZERO chiamate API
+python scripts/run_geval.py --costo          # riepilogo di consumo dalla cache, ZERO chiamate API
 python scripts/run_geval.py --riprova-errori # scarta i fallimenti in cache per ritentarli
 python scripts/run_geval.py --no-05          # non rieseguire i notebook di confronto alla fine
 ```
 
 Vanno eseguiti in quest'ordine: `--righe 1`, poi `--pilota 20`, poi la corsa completa. È il pilota
-a trasformare la stima di costo in un numero misurato.
+a trasformare la stima di consumo e durata in un numero misurato.
 
 #### Ambito `test_budgetref` (issue #16)
 
@@ -200,9 +201,9 @@ cambiano rispetto all'ambito `test`, tutte nel notebook [14](../notebooks/14_gev
   pre-troncamento, e il giudice deve vedere esattamente il testo su cui sono state calcolate le
   metriche dell'ambito;
 - i giudizi dei testi **rimasti identici** all'ambito `test` vengono **copiati dalla cache
-  `test`** invece di essere ripagati (voci con `riuso_da`, zero token): 15.061 su 100.712 — bart
-  94 %, pegasus 84 %, primera 74 %, briciole dagli estrattivi. `--costo` li esclude dal costo per
-  giudizio. Restano 85.651 giudizi da comprare, ~€50–60 a 2 thread (18 h).
+  `test`** invece di essere rigiudicati (voci con `riuso_da`, zero token): 15.061 su 100.712 — bart
+  94 %, pegasus 84 %, primera 74 %, briciole dagli estrattivi. `--costo` li esclude dal consumo
+  per giudizio. Restano 85.651 giudizi da fare, ~18 h a 2 thread.
 
 L'eseguito del notebook va in `results/notebook_runs/test_budgetref/` (ignorato da git), non
 in-place: gli output committati del notebook [14](../notebooks/14_geval.ipynb) restano quelli dell'ambito `test`.
@@ -216,8 +217,7 @@ non solo se stesso. Entrambe le cose nascono da un incidente reale (2026-09-18):
 Windows aveva ucciso il driver ma **non il kernel Jupyter** (jupyter_client lo avvia in un
 process group separato), che ha continuato a giudicare per dieci ore in parallelo alla corsa
 rilanciata. Le due corse — stesso seme di `--casuale`, quindi stesse righe nello stesso ordine —
-hanno pagato **50.275 giudizi due volte (€44,42 buttati, €116,40 spesi in tutto contro i €71,99
-utili)** e hanno corrotto la cache con scritture intrecciate (30 righe rotte, 51.301 doppioni).
+hanno fatto **50.275 giudizi due volte** e hanno corrotto la cache con scritture intrecciate (30 righe rotte, 51.301 doppioni).
 La cache committata è quella deduplicata (una voce per coppia, un successo batte un errore,
 altrimenti la prima occorrenza); l'originale corrotto è stato conservato fuori da git. Prima di
 rilanciare una corsa, **verificare con `tasklist` che non resti un `python.exe` del kernel**, o
@@ -240,56 +240,31 @@ alla fine, a meno di `--pilota` o `--no-05`.
 ### Output
 
 - `results/metrics/geval_cache_test.jsonl` — una riga JSON per ogni coppia `(metodo, row_id)` con
-  i quattro punteggi (o l'errore) **e i conteggi di token**. È l'artefatto pagato: viene
-  committato, e i file di metrica si riderivano da lì a costo zero.
+  i quattro punteggi (o l'errore) **e i conteggi di token**. È l'artefatto di riproducibilità:
+  viene committato, e i file di metrica si riderivano da lì senza chiamate API.
 - `results/metrics/{metodo}_test_geval_{per_example.csv,aggregate.json}` per i 18 metodi —
   deliberatamente **separati** dai file di metrica standard (in `notebooks/README.md` è spiegato
   perché unirli romperebbe `valuta_e_salva`).
 - `run_geval.log` nella radice del repository (in `.gitignore`) — in sola aggiunta, con marca
   temporale.
 
-### Monitoraggio dei costi
+### Monitoraggio della corsa
 
-**Azure non ha un'API di costo in tempo reale.** Cost Management ha 8–24 h di ritardo, quindi a
-corsa in corso è inutile. La fonte di verità è l'oggetto `usage` di ogni risposta: i conteggi di
-token sono esatti e immediati, e i prezzi unitari vengono dall'**Azure Retail Prices API**
-pubblica e non autenticata (`su.prezzi_retail_azure()`, con `su.PREZZI_GEVAL` fissato come
-fallback).
-
-Durante una corsa il notebook stampa un blocco di costo ogni 1.500 giudizi (ritmo, TPM osservato,
-ETA, quota di input in cache, quota di token di reasoning, costo diviso per voce e **proiezione
-del totale**). Poiché i conteggi finiscono anche in cache, `--costo` ricalcola le stesse cifre
-offline: si lancia **da un secondo terminale mentre la corsa lunga è in esecuzione**. `--budget` è
-un tetto duro (**complessivo** fra le sessioni, non per lancio: somma quanto è già in cache prima
-di confrontarlo con il tetto) e ferma la corsa in modo pulito, riprendibile al lancio successivo.
-
-**`--valuta` deve corrispondere alla valuta di fatturazione della sottoscrizione: non è un default
-cosmetico.** L'Azure Retail Prices API risponde in USD di default, ma i listini per valuta di
-Azure **non** sono conversioni al cambio l'uno dell'altro: verificato su questo account
-(fatturazione in EUR), il listino EUR è un **~0,8776×** fisso del numero USD su ogni meter (input,
-cached e output allo stesso modo), non il tasso EUR/USD del giorno. Lanciare con la `--valuta`
-sbagliata non altera la contabilità dei token — resta esatta — ma la cifra in dollari o euro
-stampata e confrontata con `--budget` non corrisponderà a quanto viene effettivamente addebitato
-alla sottoscrizione. Scoperto la prima volta quando una corsa tracciata a $36,00 si è rivelata,
-24 h dopo e a saldo EUR reale, pari a €31,59 — un divario del 12% spiegato interamente da questo
-sconto EUR fisso, non dal ritardo di Cost Management.
-
-Per la riconciliazione del giorno dopo con la fatturazione reale:
-
-```
-az costmanagement query --type ActualCost --timeframe MonthToDate \
-  --scope "/subscriptions/<sub-id>/resourceGroups/rg-antonio.girasella-0716"
-```
-
-Serve prima `az login --tenant <tenant-id>`: la CLI potrebbe essere autenticata su un tenant
-diverso da quello che possiede la risorsa AI Foundry.
+La fonte di verità sul consumo è l'oggetto `usage` di ogni risposta: i conteggi di token sono
+esatti e immediati. Durante una corsa il notebook stampa un blocco di riepilogo ogni 1.500
+giudizi (ritmo, TPM osservato, ETA, quota di input in cache, quota di token di reasoning e
+**proiezione del totale**). Poiché i conteggi finiscono anche in cache, `--costo` ricalcola le
+stesse cifre offline: si lancia **da un secondo terminale mentre la corsa lunga è in
+esecuzione**. `--budget` è un limite di spesa duro (**complessivo** fra le sessioni, non per
+lancio: somma quanto è già in cache prima di confrontarlo con il limite) e ferma la corsa in modo
+pulito, riprendibile al lancio successivo; `--valuta` deve corrispondere alla valuta di
+fatturazione della sottoscrizione, altrimenti il limite è confrontato con una cifra sbagliata.
 
 ### Prima di una corsa lunga
 
 Disattivare la sospensione di Windows (`powercfg /change standby-timeout-ac 0`), controllare la
 **quota TPM** del deployment nel portale Azure (è quella, non `--thread`, il vero collo di
-bottiglia) e ricordare che qui si spendono soldi veri: tenere d'occhio il contatore di costo
-stampato e impostare `--budget`.
+bottiglia) e impostare `--budget`.
 
 ## `pilota_giudice_deepseek.py`
 
@@ -304,7 +279,7 @@ i due giudici metodo per metodo. L'analisi e le figure stanno in
 
 ```bash
 python scripts/pilota_giudice_deepseek.py --righe 1000
-python scripts/pilota_giudice_deepseek.py --righe 1000 --budget 12   # tetto di spesa in EUR
+python scripts/pilota_giudice_deepseek.py --righe 1000 --budget 12   # limite di spesa
 python scripts/pilota_giudice_deepseek.py --solo-metriche            # riepilogo, zero chiamate
 ```
 
@@ -319,7 +294,7 @@ DeepSeek (`--deployment`, default `deepseek-giudice`, oppure `AZURE_GEVAL_DEPLOY
   famiglia** OpenAI: senza di loro il confronto non conclude nulla.
 - **Righe estratte con seme fisso** (42) fra quelle coperte da tutti i metodi del pilota, così
   una corsa interrotta a metà resta comunque un campione non distorto — la stessa proprietà che
-  ha salvato la corsa di agosto quando il tetto di spesa l'ha fermata al 60%.
+  ha salvato la corsa di agosto quando il limite `--budget` l'ha fermata al 60%.
 - **Chiamata identica** a quella del notebook [14](../notebooks/14_geval.ipynb) (stessi messaggi, stesse rubriche, stesso
   `response_format` json_schema strict): l'unica variabile che cambia è il giudice. Senza
   `response_format` DeepSeek discorre invece di emettere JSON.
@@ -331,11 +306,10 @@ DeepSeek (`--deployment`, default `deepseek-giudice`, oppure `AZURE_GEVAL_DEPLOY
 
 `--thread` è deliberatamente basso (2) e **alzarlo non accelera**: il deployment è a 20 RPM e
 la resa effettiva misurata è **6,5 giudizi/min**, cioè il 32% del nominale, il resto essendo
-attesa di backoff sui 429. Sul pilota: 6.997 giudizi in **17,99 h** per **€9,16** (€0,00131 per
-giudizio). Estrapolato a un ambito intero (100.621 giudizi) fa **10,8 giorni e €132** — contro
-le 3–12 h e i €93 di `gpt-5.4-mini`, che è più veloce **e** più economico per giudizio grazie
-alla prompt cache, assente sui deployment MaaS. Per questo il secondo giudice resta un pilota
-di validazione e non diventa la metrica.
+attesa di backoff sui 429. Sul pilota: 6.997 giudizi in **17,99 h**. Estrapolato a un ambito
+intero (100.621 giudizi) fa **10,8 giorni** — contro le 3–12 h di `gpt-5.4-mini`, che è più
+veloce anche grazie alla prompt cache, assente sui deployment MaaS. Per questo il secondo
+giudice resta un pilota di validazione e non diventa la metrica.
 
 ### Esito
 

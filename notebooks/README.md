@@ -281,14 +281,13 @@ modo documentato (niente `temperature`, `max_completion_tokens=1500` con
 `reasoning_effort='minimal'` — il caso gemma del notebook [08](08_gemma.ipynb); la famiglia gpt-4o-mini è ritirata
 da Azure e non è più deployabile). Tre ambiti:
 
-- `sample` — il campione condiviso da 100 esempi (confronto con tutti gli altri metodi, costo di
-  pochi centesimi);
+- `sample` — il campione condiviso da 100 esempi (confronto con tutti gli altri metodi);
 - `test` — l'intera split **test** pulita di `complete.tab` (5.610 righe = 5.622 − 12 righe
   sporche): confronto senza le avvertenze di leakage, con numerosità ~56 volte maggiore;
 - `full` — l'**intero dataset** (56.101 righe) in chiamate sequenziali sul deployment Standard
-  (~2–4 giorni, interrompibile e riprendibile). ⚠️ La Batch API di Azure OpenAI (sconto 50%)
+  (~2–4 giorni, interrompibile e riprendibile). ⚠️ La Batch API di Azure OpenAI
   **non offre gpt-5-mini in nessuna regione** (solo gpt-4.1*, gpt-4o*, gpt-5, gpt-5.1 e serie
-  o), quindi la corsa completa va a prezzo pieno.
+  o), quindi la corsa completa va in chiamate sequenziali.
 
 ### Configurazione di Azure (una tantum, nel portale)
 
@@ -297,16 +296,6 @@ da Azure e non è più deployabile). Tre ambiti:
 3. Variabili d'ambiente (mai chiavi nel codice o nei notebook): `AZURE_OPENAI_ENDPOINT` (solo
    la **radice** della risorsa, es. `https://<risorsa>.services.ai.azure.com`, senza path) e
    `AZURE_OPENAI_API_KEY`.
-
-### Costi indicativi (luglio 2026, prezzi Azure pay-as-you-go)
-
-Stime con ~2.900 token di input e ~300 di output per esempio (GPT-5-mini: 0,25/2,00 $/M):
-
-| Corsa | Costo stimato |
-|---|---|
-| `sample` (100 esempi) | centesimi |
-| `test` (5.610) | ~8 $ (corsa reale 2026-07-17: ~7 €) |
-| `full` (56.101, sequenziale a prezzo pieno) | ~80 $ |
 
 ### Avvertenze
 
@@ -369,7 +358,7 @@ parla solo con OpenAI e non con Azure; (2) ha `max_tokens=5` e `temperature=0.0`
 entrambi fatali per un modello *reasoning*; (3) legge la sorgente da `self.full_txt`, cioè
 servirebbe una `psr.summarization(sorgente)` nuova e pesante per **ogni** esempio — il pattern a
 istanza fittizia condivisa di `su.crea_valutatore()` non regge; (4) fa **una chiamata API per
-dimensione**, quadruplicando il costo.
+dimensione**, quadruplicando le chiamate.
 
 La funzione è quindi reimplementata in `summ_utils.py`, ma le **rubriche restano verbatim**:
 `su.RUBRICHE_GEVAL` è derivato *meccanicamente* da `su.PROMPT_GEVAL_ORIGINALI` (copia letterale
@@ -408,9 +397,9 @@ riproducibilità è la cache JSONL committata.
 - sorgente troncata a **3.500 parole** (`su.MAX_PAROLE_SORGENTE_GEVAL`): lascia **intero il
   91,5%** dei cluster della split test (mediana 1.288 parole, p90 3.244, p95 4.499) mettendo
   comunque un tetto ai casi estremi, che arrivano a 35.362 parole. È molto più di quanto vedano
-  BART/PEGASUS (1.024 token). Il costo marginale rispetto a un tetto di 2.100 parole (copertura
-  76%) è di circa **$5 sull'intera corsa**, perché quasi tutte le parole in più finiscono nel
-  prefisso condiviso, pagato a tariffa *cached*;
+  BART/PEGASUS (1.024 token). Rispetto a un tetto di 2.100 parole (copertura 76%) il consumo
+  aggiuntivo di token è modesto, perché quasi tutte le parole in più finiscono nel prefisso
+  condiviso servito dalla prompt cache;
 - ambito: split `test` intera, **100.621 giudizi** (meno di 18 × 5.610 perché la copertura è
   disomogenea: firstk_psr, le varianti centroid e i cinque metodi dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb) hanno 5.588
   righe, gpt5mini 5.471), tutti eseguiti: i 72.681 dei tredici metodi originali (2026-08-17) più
@@ -427,26 +416,27 @@ i giudizi di quella riga **in sequenza dentro lo stesso thread**: il primo popol
 di Azure e i successivi la riusano. Il parallelismo è **tra** righe diverse. Parallelizzare per
 singolo giudizio farebbe partire insieme tutte le chiamate della stessa riga, mancando la cache
 tutte quante. Nota che l'ammortamento peggiora quando i metodi da giudicare per riga sono pochi:
-nel backfill dei cinque metodi dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb) la chiamata che paga il prefisso intero si
+nel backfill dei cinque metodi dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb) la chiamata che elabora il prefisso intero si
 divide su 5 giudizi invece che su 13, e la quota di input in cache scende (56% cumulativo contro
 il 59% della prima corsa).
 
 ### ⚠️ La concorrenza degrada la cache (misurato)
 
-Il numero di thread **non** è un parametro innocuo di velocità: è un fattore di costo. Misurato
+Il numero di thread **non** è un parametro innocuo di velocità: decide quanta parte dell'input
+passa dalla prompt cache. Misurato
 confrontando le **sole righe cacheabili** delle due corse (il confronto sui totali grezzi
 sarebbe fuorviante, perché i due campioni hanno lunghezze di sorgente molto diverse):
 
-| thread | chiamate con hit, nelle righe cacheabili | hit rate complessivo | proiezione corsa completa |
+| thread | chiamate con hit, nelle righe cacheabili | hit rate complessivo | durata della corsa completa |
 |---|---|---|---|
-| 8 | 45,9% | 36,1% | **~$107** (~3 h) |
-| 2 | **64,8%** | **51,1%** | **~$87** (~12 h) |
+| 8 | 45,9% | 36,1% | ~3 h |
+| 2 | **64,8%** | **51,1%** | ~12 h |
 
 La causa è il routing: un deployment **GlobalStandard** manda ogni richiesta a una qualunque
 istanza di backend e la prompt cache è **per istanza**. Con più righe in volo, le chiamate 2–13
 di una riga atterrano più spesso su istanze che non hanno mai visto quel prefisso.
 
-Quindi `--thread` basso costa meno e impiega di più: **~$19 di risparmio per ~9 ore in più**. Il
+Quindi `--thread` basso consuma meno token fuori cache e impiega di più (~9 ore in più). Il
 collo di bottiglia non è la quota TPM del deployment (nessun 429 osservato) ma questo
 compromesso.
 
@@ -455,7 +445,7 @@ compromesso.
 Azure non attiva la prompt cache sotto i **1.024 token di prefisso**, e i token in cache sono
 quantizzati a blocchi di 256. Sulla split test **il 14,8% delle righe (830 su 5.610) ha un
 prefisso troppo corto e non entra mai in cache**, indipendentemente da thread e troncamento: le
-loro 13 chiamate si pagano tutte a tariffa piena.
+loro 13 chiamate passano tutte senza cache.
 
 Sommato al fatto che, anche nelle righe cacheabili, si arriva a ~65% di chiamate con hit e non
 al massimo teorico di 12/13 (92%), il tetto realistico complessivo è intorno al **51%** — non al
@@ -465,13 +455,13 @@ al massimo teorico di 12/13 (92%), il tetto realistico complessivo è intorno al
 
 Ogni giudizio è scritto e flushato subito su `results/metrics/geval_cache_{scope}.jsonl` (una
 riga JSON per coppia `(metodo, row_id)`, con anche i conteggi di token) e un rilancio salta le
-coppie già presenti: Ctrl-C non perde nulla di pagato. Gli errori **permanenti** (content filter
+coppie già presenti: Ctrl-C non perde nulla di già giudicato. Gli errori **permanenti** (content filter
 di Azure, 400/401/403) vengono scritti in cache con il campo `errore`, così una riesecuzione non
-li ripaga; quelli **transitori** (429, 5xx, timeout) non vengono scritti affatto e passano per
+li ritenta; quelli **transitori** (429, 5xx, timeout) non vengono scritti affatto e passano per
 `su.chiama_con_backoff` (backoff esponenziale + jitter, rispetta `Retry-After`).
 
 Poiché la sorgente troncata è identica per tutti i metodi di una riga, un `content_filter` sul
-primo giudizio viene **propagato** agli altri dodici senza pagarli. `--riprova-errori` li rimette
+primo giudizio viene **propagato** agli altri dodici senza chiamare l'API. `--riprova-errori` li rimette
 in gioco (utile solo dopo aver attaccato al deployment un filtro contenuti *high-only*).
 
 ### Perché file separati dalle metriche standard
@@ -500,44 +490,25 @@ le stesse del notebook [12](12_azure_gpt.ipynb) (`AZURE_OPENAI_ENDPOINT`, la rad
 diverso da `gpt-5.4-mini`. `scripts/run_geval.py` verifica il deployment con un ping da 1 token
 **prima** di iniziare, così un nome sbagliato costa secondi e non ore.
 
-### Costi e monitoraggio
-
-Prezzi verificati sulla **Azure Retail Prices API** (GlobalStandard, $/1M token: input **0,75**,
-input in cache **0,075**, output **4,50**); il notebook li rilegge a ogni avvio con
-`su.prezzi_retail_azure()`, con `su.PREZZI_GEVAL` come fallback.
+### Consumo di token e monitoraggio
 
 **Misurato sul pilota (269 giudizi):** con `reasoning_effort='minimal'` il giudice emette
-**zero token di reasoning** — l'output è di ~30 token per giudizio, cioè **~$10 sull'intera
-corsa**. Il termine di output, che a priori sembrava dominante e imprevedibile, di fatto non
-conta.
+**zero token di reasoning** — l'output è di ~30 token per giudizio. Il termine di output, che a
+priori sembrava dominante e imprevedibile, di fatto non conta.
 
 La corsa è quindi **interamente vincolata dall'input**, e la variabile che sposta il totale è
-l'**hit rate della prompt cache** (vedi la sezione sulla concorrenza): **~$87 a 2 thread, ~$107
-a 8**. Non è il modello, non è il prompt di sistema (che da solo costa $2,23 in tutto) e quasi
-non è nemmeno il troncamento: passare da 2.100 a 3.500 parole — cioè dal 76% al 91,5% di
-sorgenti intere — costa solo **~$7** in più, perché quasi tutte le parole aggiunte finiscono nel
-prefisso condiviso.
+l'**hit rate della prompt cache** (vedi la sezione sulla concorrenza). Non è il modello, non è
+il prompt di sistema e quasi non è nemmeno il troncamento: passare da 2.100 a 3.500 parole —
+cioè dal 76% al 91,5% di sorgenti intere — aggiunge poco, perché quasi tutte le parole in più
+finiscono nel prefisso condiviso.
 
-**Non esiste un'API Azure che riporti il costo in tempo reale** (Cost Management ha 8–24 h di
-ritardo). La fonte di verità è l'oggetto `usage` di ogni risposta, che `su.ContatoreCosti` somma
-e stampa ogni 1.500 giudizi con ritmo, TPM osservato, ETA, quota di input in cache, quota di
-reasoning, costo per voce e **proiezione a fine corsa**. Gli stessi conteggi sono nella cache,
-quindi la stima si rilegge **da un secondo terminale a corsa in corso** con
-`python scripts/run_geval.py --costo`. `--budget` è un tetto **complessivo** (somma quanto è
-già in cache, non riparte da zero a ogni rilancio): al superamento la corsa si ferma in modo
-pulito e basta rilanciare con un tetto più alto.
-
-⚠️ **La valuta del listino non è cosmetica.** La Azure Retail Prices API, senza parametro,
-ritorna prezzi in **USD** — ma la sottoscrizione potrebbe fatturare in un'altra valuta, e il
-listino di Azure per quella valuta **non è una conversione al cambio del momento**: è un
-listino a sé, verificato qui a **~0,8776× il numero USD su ogni meter** (input, cache, output
-identicamente). La prima corsa completa è stata tracciata come "$36,00" con il listino USD di
-default; il credito Azure realmente consumato, verificato 24 h dopo (tempo sufficiente perché
-il ritardo di Cost Management si esaurisca), corrispondeva a **€31,59** — un divario del 12%
-dovuto **non** al ritardo di rendicontazione ma alla valuta sbagliata nel calcolo. Usare
-`su.prezzi_retail_azure(valuta='EUR')` (o `--valuta EUR` da riga di comando) quando la
-sottoscrizione fattura in euro; il numero di token contati resta comunque esatto in entrambi
-i casi, cambia solo la cifra.
+La fonte di verità sul consumo è l'oggetto `usage` di ogni risposta, che `su.ContatoreCosti`
+somma e stampa ogni 1.500 giudizi con ritmo, TPM osservato, ETA, quota di input in cache, quota
+di reasoning e **proiezione a fine corsa**. Gli stessi conteggi sono nella cache, quindi il
+riepilogo si rilegge **da un secondo terminale a corsa in corso** con
+`python scripts/run_geval.py --costo`. `--budget` è un limite di spesa **complessivo** (somma
+quanto è già in cache, non riparte da zero a ogni rilancio): al superamento la corsa si ferma in
+modo pulito e basta rilanciare con un limite più alto.
 
 ### Avvertenze
 
@@ -712,7 +683,7 @@ della famiglia OpenAI. La corsa è
 [`scripts/pilota_giudice_deepseek.py`](../scripts/pilota_giudice_deepseek.py); scrive su una
 cache e un JSON **separati**, quindi non tocca nulla di committato.
 
-Esito su 6.799 giudizi appaiati (983 cluster, 2026-09-17/18, €9,16):
+Esito su 6.799 giudizi appaiati (983 cluster, 2026-09-17/18):
 
 - **ordinamento identico**, ρ di Spearman **1,000**, nessuna inversione su sette posizioni;
 - il contrasto che misurerebbe il bias — `delta(gpt5mini) − media(delta degli altri 3 LLM)`,
@@ -733,12 +704,11 @@ concentra su `coherence` (−0,32) e `relevance` (−0,30, quasi tutta sui contr
 
 **Perché il secondo giudice resta un pilota.** Non per qualità ma per portata del deployment:
 20 RPM nominali, **6,5 giudizi/min effettivi** (il resto è attesa di backoff sui 429), misurati
-su 17,99 h di corsa. Estrapolato ai 100.621 giudizi di un ambito fa **10,8 giorni e €132** per
-ambito, 21,6 giorni per entrambi. `gpt-5.4-mini` copre lo stesso ambito in 3–12 h **e costa
-meno per giudizio** (€93 contro €132) nonostante un listino per token più alto, perché il suo
-deployment GlobalStandard ha la **prompt cache**, che un deployment MaaS non offre: la sorgente
-troncata condivisa fra i metodi di una riga — il motivo per cui l'ordine dei messaggi è un
-contratto nel notebook [14](14_geval.ipynb) — con DeepSeek si ripaga a ogni chiamata. Alzare i thread non aiuta;
+su 17,99 h di corsa. Estrapolato ai 100.621 giudizi di un ambito fa **10,8 giorni** per
+ambito, 21,6 giorni per entrambi. `gpt-5.4-mini` copre lo stesso ambito in 3–12 h, anche perché
+il suo deployment GlobalStandard ha la **prompt cache**, che un deployment MaaS non offre: la
+sorgente troncata condivisa fra i metodi di una riga — il motivo per cui l'ordine dei messaggi è
+un contratto nel notebook [14](14_geval.ipynb) — con DeepSeek viene rielaborata a ogni chiamata. Alzare i thread non aiuta;
 servirebbe un aumento di quota su `DeepSeek-V3.2-Speciale`.
 
 Conseguenza operativa: il G-Eval dell'ambito `test_budgetref` si esegue con **`gpt-5.4-mini`**,
@@ -753,11 +723,11 @@ esiste e da `_test.tsv` altrimenti, e **riapplica il tetto a 1,25 × riferimento
 (`su.tetto_riferimento`, lo stesso di `applica_budget.py`) prima di giudicare, così il giudice
 vede esattamente il testo su cui sono state calcolate le metriche dell'ambito. I giudizi dei testi
 rimasti identici all'ambito `test` — bart 94 %, pegasus 84 %, primera 74 % — vengono copiati dalla
-cache `test` invece di essere ripagati (voci con `riuso_da`, zero token). Il giudice è lo stesso
+cache `test` invece di essere rigiudicati (voci con `riuso_da`, zero token). Il giudice è lo stesso
 `gpt-5.4-mini` dei numeri pubblicati, validato nel notebook [19](19_confronto_giudici.ipynb). L'eseguito va in
 `results/notebook_runs/test_budgetref/`, non in-place.
 
-**Esito (corsa 2026-09-18/19, 100.712 giudizi, 99.040 riusciti, €76,26 di spesa utile): la
+**Esito (corsa 2026-09-18/19, 100.712 giudizi, 99.040 riusciti): la
 lunghezza non era il confondente del G-Eval.** Dove il riallineamento ha ribaltato il recall
 ROUGE e rimescolato la sua graduatoria, **le prime undici posizioni del G-Eval restano
 identiche** e il massimo spostamento è 0,34 su 5. I due estrattivi più lunghi *guadagnano*
@@ -811,12 +781,12 @@ results/
   metrics/{metodo}_{scope}_geval_per_example.csv  # G-Eval 1-5 per esempio (14_geval.ipynb), file
   metrics/{metodo}_{scope}_geval_aggregate.json   # SEPARATI: vedi la sezione G-Eval per il perché
   metrics/geval_cache_{scope}.jsonl          # cache dei giudizi (una riga per metodo+row_id, con i
-                                              # conteggi di token): è l'artefatto PAGATO, va committato
+                                              # conteggi di token): è l'artefatto di riproducibilità, va committato
   figures/{metodo}/*.png                     # figure della sezione esplicativa dei notebook [11](11_centroid_mmr.ipynb) e [15](15_lsa.ipynb)-[17](17_lda.ipynb)
                                               # (solo con SALVA_FIGURE; illustrative, non usate dalle metriche)
   metrics/analisi_lunghezze_{ambito}.json    # dispersione per cluster + T(n_articoli) (18_analisi_lunghezze.ipynb)
   metrics/geval_cache_test_deepseek.jsonl    # cache del SECONDO giudice (pilota, 6.997 giudizi): artefatto
-                                              # pagato come l'altra cache, va committato
+                                              # di riproducibilità come l'altra cache, va committato
   metrics/confronto_giudici_test.json        # esito del confronto fra i due giudici (19_confronto_giudici.ipynb)
   summaries/{metodo}_test_budgetref.tsv      # riassunti rigenerati a lunghezza del riferimento (issue #16):
                                               # gli 11 estrattivi via driver --scope, gli LLM col budget nel prompt
@@ -826,12 +796,12 @@ scripts/
   budget_lunghezza.json                      # T(n_articoli): budget per-cluster (18_analisi_lunghezze.ipynb)
 ```
 
-I riassunti sono la parte costosa: vengono scritti **incrementalmente** (una riga per esempio,
+I riassunti sono la parte lenta: vengono scritti **incrementalmente** (una riga per esempio,
 flush immediato) e un'esecuzione interrotta **riprende** da dove era arrivata, saltando i `row_id`
 già presenti nel file. Le metriche invece si ricalcolano in pochi secondi **leggendo solo i file
 salvati**: la sezione «Valutazione» di ogni notebook è rieseguibile senza rigenerare nulla.
 Il file campione e le corse `test`/`full` sono versionati (compresi i TSV `*_full.tsv` e
-`*_test.tsv`, grandi ma rigenerabili a pagamento); i risultati dell'ambito `sample`, superato
+`*_test.tsv`, grandi ma rigenerabili); i risultati dell'ambito `sample`, superato
 dalla corsa `test` completa, non sono più committati — restano generabili localmente
 (`SCOPE='sample'`, il default di ogni notebook) per uno smoke test rapido.
 
@@ -861,8 +831,8 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | GPT-5-mini (12), `full` intero dataset | ~2–4 giorni di chiamate sequenziali (riprendibile) | — |
 | BERTScore (13), tutti e 18 i metodi su `test` (5.610 righe ciascuno) | sconsigliata (`roberta-large`, migliaia di forward pass) | ~1 h per tredici metodi + 24 min per i cinque dei notebook [15](15_lsa.ipynb)–[17](17_lda.ipynb) (misurato: caricamento ~6 s/metodo + ~19-21 righe/s di scoring — vedi sezione dedicata) |
 | G-Eval (14), pilota 20 righe (260 giudizi) | ~1 min (misurato, 8 thread) | — |
-| G-Eval (14), i tredici metodi originali su `test` (72.681 giudizi) | ~3 h a 8 thread (~6,7 giudizi/s misurati) ma **~$111**; ~12 h a 2 thread per **~$56** — il compromesso è costo/tempo, non CPU. Riprendibile in qualunque momento | — |
-| G-Eval (14), backfill dei cinque metodi 15–17 su `test` (27.940 giudizi) | **€32** in ~5 h a 2 thread, in due sessioni (la prima fermata dal tetto `--budget` al ~60%) | — |
+| G-Eval (14), i tredici metodi originali su `test` (72.681 giudizi) | ~3 h a 8 thread (~6,7 giudizi/s misurati) o ~12 h a 2 thread — il compromesso è hit rate della prompt cache/tempo, non CPU. Riprendibile in qualunque momento | — |
+| G-Eval (14), backfill dei cinque metodi 15–17 su `test` (27.940 giudizi) | ~5 h a 2 thread, in due sessioni (la prima fermata dal limite `--budget` al ~60%) | — |
 
 Al primo avvio vengono scaricati i modelli da Hugging Face (MiniLM ~90 MB; BART ~1,6 GB;
 PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook [13](13_bertscore.ipynb), ~1,4 GB).
@@ -929,8 +899,8 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook [
   **5.091 righe giudicate per tutti e 18** i metodi nessuna si sposta di più di **0,010**, contro
   un IC 95% di ±0,03 — ma va tenuto presente prima di leggere le differenze di `n_geval` come se
   dicessero qualcosa sui metodi. Riallineare i tredici alla nuova versione del filtro
-  costerebbe una nuova corsa completa (~€70) e cambierebbe numeri già pubblicati: non è stato
-  fatto. È stato invece fatto, il 2026-09-19 per €2,09, **il ritentativo dei soli giudizi
+  richiederebbe una nuova corsa completa e cambierebbe numeri già pubblicati: non è stato
+  fatto. È stato invece fatto, il 2026-09-19, **il ritentativo dei soli giudizi
   falliti** (`run_geval.py --scope test --riprova-errori`): i 5.855 fallimenti stavano su 457
   righe, 381 delle quali erano passate due giorni prima nella corsa `test_budgetref` sulla
   stessa risorsa. Nessun giudizio esistente è stato toccato; i fallimenti sono scesi a 1.071, i
