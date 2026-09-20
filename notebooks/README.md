@@ -568,11 +568,16 @@ metodo in produzione». La sua applicazione ai 18 metodi è documentata in una i
 Il notebook gira sui **due ambiti** insieme — `test` (prima) e `test_budgetref` (dopo il
 contenimento, sezione seguente) — e li presenta uno accanto all'altro: dispersione dentro il
 cluster (anche senza `bart` e sui soli 15 rigenerati), rapporto col riferimento e quota in banda
-per metodo, adattamento alla lunghezza del cluster.
+per metodo, adattamento alla lunghezza del cluster. **Le lunghezze «dopo» sono post-tetto** (i CSV
+di `test_budgetref` li scrive `applica_budget.py` dopo il troncamento a 1,25×); la Vista 3b legge
+i TSV di riassunti pre-tetto dei 15 metodi rigenerati e misura quanto ciascuno rispetta il budget
+*da solo* — quota sotto banda (che il tetto non corregge) e sopra tetto (le righe tagliate):
+`mistral` eccede nel 46 % dei cluster, `qwen` è sotto nel 15 % e sopra nel 16 %, `lda` sopra nel
+16 %, gli altri estrattivi e `gemma`/`gpt5mini` entro l'1–2 %.
 
 Output: `results/metrics/analisi_lunghezze_{ambito}.json`, uno per ambito (committati, stesso
-pattern di `scripts/dataset_stats.json`; includono la tabella del confronto fra predittori e i
-rapporti max/min per sottoinsieme di metodi) e `scripts/budget_lunghezza.json` (scritto solo se
+pattern di `scripts/dataset_stats.json`; includono la tabella del confronto fra predittori, i
+rapporti max/min per sottoinsieme di metodi e, per `test_budgetref`, le distribuzioni pre-tetto) e `scripts/budget_lunghezza.json` (scritto solo se
 mancante).
 
 ## Ambito `test_budgetref` — confronto a lunghezza del riferimento (issue #16)

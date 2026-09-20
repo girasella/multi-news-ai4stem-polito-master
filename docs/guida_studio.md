@@ -673,10 +673,15 @@ il budget viene imposto:
 - gli **undici estrattivi**, dove il budget è un conteggio esatto di parole, stanno in banda nel
   93–99 % dei cluster, con lunghezza mediana pari al riferimento (rapporto 1,00, decimo e
   novantesimo percentile a circa 0,9 e 1,1); LDA è il più largo (93 %) perché le sue frasi sono le più
-  lunghe e la frase «a cavallo» del budget sposta di più;
+  lunghe e la frase «a cavallo» del budget sposta di più (prima del tetto supera 1,25× nel 16 %
+  dei cluster, contro l'1–2 % degli altri estrattivi);
 - gli **LLM**, dove il budget è un'istruzione nel prompt, la seguono in modo diverso: GPT-5-mini
-  (100 %) e Gemma (99 %) quasi sempre, Qwen (79 %) e Mistral (71 %) meno — Mistral è il più
-  disperso e viene tagliato dal tetto quasi una volta su due (novantesimo percentile a 1,25×);
+  (100 %) e Gemma (99 %) quasi sempre, Qwen (79 %) e Mistral (71 %) meno. Queste quote sono
+  misurate *dopo* il tetto, che nasconde gli eccessi: guardando i testi prima del taglio, Mistral
+  supera 1,25× nel 46 % dei cluster (novantesimo percentile a 2×) ed è sotto 0,8× nel 12 %; Qwen
+  è sotto nel 15 % e sopra nel 16 %; Gemma e GPT-5-mini stanno entro l'1 % in entrambe le
+  direzioni. Il tetto corregge solo gli eccessi: ciò che resta fuori banda dopo è tutto per
+  difetto;
 - i tre a **solo tetto** restano dove erano: PEGASUS (52 %) e PRIMERA (66 %) alla loro
   lunghezza naturale, con il tetto come unico intervento; BART, che non arriva mai al tetto,
   allo 0,3 %.
