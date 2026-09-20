@@ -100,7 +100,11 @@ python scripts/applica_budget.py --forza              # ricalcola anche i metodi
    ripiegano sul `_full.tsv` se non c'è la corsa a budget). Quale file è stato usato, e se il
    metodo è stato rigenerato o solo troncato, finisce nel JSON aggregato
    (`config.ambito_budget`).
-2. **Tetto**: `su.tronca_parole(testo, round(1,25 × B_i))`, riga per riga.
+2. **Tetto**: `su.tronca_parole(testo, round(1,25 × B_i))`, riga per riga. È un taglio secco
+   alle prime N parole (`' '.join(testo.split()[:N])`), anche a metà frase: a differenza di
+   `su.seleziona_per_budget`, che decide *dove fermarsi* fra le frasi, qui non si rispetta alcun
+   confine. Il fattore `su.FATTORE_TETTO_BUDGET` vive in `summ_utils` e non nello script perché
+   il notebook 14 lo riapplica allo stesso modo.
 3. **Rivalutazione**: ROUGE-1/2/L, BLEU, METEOR e `parole_generate` via `su.valuta_e_salva`, più
    BERTScore (`su.calcola_bertscore_batch`) salvo `--senza-bertscore`.
 
@@ -116,6 +120,31 @@ quest'ultima, e i quindici aggregati a budget documentavano i parametri dell'amb
 tantum ricatturando la `config` dai notebook, senza toccare le metriche.
 Riprendibile per metodo: un metodo il cui JSON aggregato porta già il marcatore del tetto
 viene saltato salvo `--forza`. I file `*_test_*` committati non vengono mai toccati.
+
+**Il testo troncato non viene scritto da nessuna parte.** I TSV in `results/summaries/` — sia i
+`_test_budgetref.tsv` rigenerati sia i `_test.tsv` dei metodi a solo tetto — restano
+**pre-tetto**, con il testo così com'è uscito dal metodo; la versione troncata esiste solo in
+memoria, nelle metriche che ne derivano e nel giudizio G-Eval, che la ricostruisce (vedi
+`run_geval.py`). L'unica traccia del taglio è il blocco `config.ambito_budget` del JSON
+aggregato, con il conteggio `righe_troncate_dal_tetto` (su 5.610):
+
+| metodo | sorgente | righe troncate |
+|---|---|---|
+| `mistral` | rigenerato | **2.568** |
+| `primera` | solo tetto | 1.157 |
+| `lda` | rigenerato | 896 |
+| `qwen` | rigenerato | 870 |
+| `pegasus` | solo tetto | 571 |
+| `lexrank` | rigenerato | 95 |
+| `centroid_mmr` | rigenerato | 68 |
+| gli altri 9 estrattivi, `gemma`, `gpt5mini` | rigenerato | 23–47 |
+| `bart` | solo tetto | 0 |
+
+Coerente con la calibrazione: gli estrattivi con `su.seleziona_per_budget` sforano di rado (solo
+per la regola «entra se ne entra più della metà» e per la garanzia di almeno una frase), `mistral`
+è il più disperso (p90 1,98×) e viene tagliato quasi una volta su due, `primera`/`pegasus` sono
+alla loro lunghezza naturale e il tetto è l'unico contenimento che ricevono, `bart` non arriva
+mai al tetto.
 
 ### Che cosa NON fa
 

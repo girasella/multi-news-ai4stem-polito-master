@@ -616,7 +616,11 @@ max/min mediano per cluster da 8,5× a ~4×: `bart` resta sotto banda nel 100% d
 nel 99%, e un riassunto corto non si tronca verso l'alto):
 
 - **Tetto, tutti e 18 i metodi** — `scripts/applica_budget.py` tronca ogni riassunto a
-  `1,25 × budget` e ricalcola le metriche (ROUGE/BLEU/METEOR + BERTScore).
+  `1,25 × budget` (`su.tetto_riferimento`, taglio secco alle prime N parole, anche a metà frase)
+  e ricalcola le metriche (ROUGE/BLEU/METEOR + BERTScore). Avviene **dopo** la generazione e
+  fuori dai notebook: i TSV `_test_budgetref.tsv` restano pre-tetto, il testo troncato esiste
+  solo nelle metriche e nel giudizio G-Eval, che lo ricostruisce allo stesso modo. Quante righe
+  ha toccato per metodo (`righe_troncate_dal_tetto`) è in [scripts/README.md](../scripts/README.md#applica_budgetpy).
 - **Rigenerazione a budget, gli 11 estrattivi** (notebook [01](01_textrank.ipynb), [02](02_lexrank.ipynb), [10](10_firstk.ipynb), [11](11_centroid_mmr.ipynb), [15](15_lsa.ipynb), [16](16_sbert_clustering.ipynb), [17](17_lda.ipynb); driver
   `scripts/run_benchmark_test.py --scope test_budgetref`) — rigenerati con il budget in **parole**
   al posto del budget in **frasi**. Il criterio di ordinamento di ciascun metodo è invariato;
@@ -645,8 +649,10 @@ nel 99%, e un riassunto corto non si tronca verso l'alto):
   riferimento) e `primera` (0,97×) sono comunque gia' al bordo o dentro la banda da soli; `bart`
   (0,26×, 0% in banda) resta l'**eccezione dichiarata** del confronto e va letto come tale.
 
-**G-Eval non è ricalcolato** (cache indicizzata su `(metodo, row_id)`, ri-giudizio ~€70–95; misura
-la fedeltà alla fonte, non la sovrapposizione col riferimento). Il confronto prima/dopo è la
+**G-Eval è stato ricalcolato** sull'ambito (corsa 2026-09-18/19, `run_geval.py --scope
+test_budgetref`, riapplicando lo stesso tetto): inizialmente escluso perché misura la fedeltà alla
+fonte e non la sovrapposizione col riferimento, è servito proprio a verificarlo — vedi
+[G-Eval nell'ambito `test_budgetref`](#g-eval-nellambito-test_budgetref). Il confronto prima/dopo è la
 **notebook [05d](05d_confronto_prima_dopo.ipynb)**; la dispersione per cluster «dopo» si ottiene rieseguendo il notebook
 18 con `SUMM_SCOPE='test_budgetref'`.
 
