@@ -15,3 +15,7 @@ results/notebook_runs/
 # Log dell orchestratore notturno una tantum (scripts/notte_mistral.py)
 notte_mistral.log
 notte_mistral.err
+
+# Lock del driver G-Eval (una corsa per cache) e backup di cache riparate
+results/metrics/*.lock
+results/metrics/*.corrotto-*
