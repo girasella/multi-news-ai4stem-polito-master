@@ -94,6 +94,44 @@
       "n": 5437
     }
   },
+  "rapporto_max_min_sottoinsiemi": {
+    "tutti i metodi": {
+      "n_metodi": 18,
+      "p10": 5.59,
+      "p25": 6.84,
+      "p50": 8.51,
+      "p75": 10.58,
+      "p90": 13.05,
+      "media": 9.21,
+      "min": 2.02,
+      "max": 297.19,
+      "n": 5437
+    },
+    "senza bart": {
+      "n_metodi": 17,
+      "p10": 2.75,
+      "p25": 3.2,
+      "p50": 3.84,
+      "p75": 4.76,
+      "p90": 5.91,
+      "media": 4.38,
+      "min": 1.49,
+      "max": 297.19,
+      "n": 5437
+    },
+    "solo rigenerati a budget": {
+      "n_metodi": 15,
+      "p10": 2.66,
+      "p25": 3.1,
+      "p50": 3.72,
+      "p75": 4.61,
+      "p90": 5.74,
+      "media": 4.25,
+      "min": 1.47,
+      "max": 297.19,
+      "n": 5437
+    }
+  },
   "per_metodo": {
     "bart": {
       "parole": {

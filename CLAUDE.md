@@ -35,7 +35,7 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
   summ_utils.py        # Shared routines: data loading, resumable generation loop, metrics, G-Eval, and the comparison helpers of 05a-d (METODI_BENCHMARK, COLORI_METODI, carica_scope, tabella_medie, barre_metriche, viste_metriche)
   0X_*.ipynb           # 00 sample prep, 01-04 and 06-09 one method each; 05a/b/c/d comparison
                        # (full / test / test_budgetref / before-after), helpers in summ_utils
-  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill, 15 LSA (2 variants), 16 SBERT clustering (2 variants), 17 LDA, 18 per-cluster length analysis (issue #15, generates nothing), 19 second-judge
+  1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill, 15 LSA (2 variants), 16 SBERT clustering (2 variants), 17 LDA, 18 per-cluster length analysis, both scopes test/test_budgetref side by side (issue #15/#16, generates nothing, writes `analisi_lunghezze_{scope}.json` per scope), 19 second-judge
                        # validation of the G-Eval judge (generates nothing, spends nothing); ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral

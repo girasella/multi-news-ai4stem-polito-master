@@ -651,10 +651,42 @@ che produce i loop di ripetizione già osservati per PEGASUS. PEGASUS e PRIMERA 
 già vicini alla lunghezza del riferimento; BART, che dovrebbe quadruplicare il proprio
 output, resta l'**eccezione dichiarata** del confronto.
 
-Il risultato del contenimento: i 15 metodi rigenerati cadono nella banda [0,8; 1,25] × il
-riferimento nel 71–100 % dei cluster, e la dispersione dentro il cluster passa da 8,5× a 4,7×
-sui 18 metodi — ma quel 4,7 è quasi interamente BART; **senza BART il rapporto passa da 3,8×
-a 1,6×, e sui soli 15 rigenerati da 3,7× a 1,4×**.
+Il risultato del contenimento, misurato rifacendo la stessa analisi per cluster della
+sezione 7.1 sui riassunti riallineati (i due ambiti sono presentati uno accanto all'altro nel
+notebook 18):
+
+| Insieme di metodi | Rapporto max/min dentro il cluster, prima → dopo |
+|---|---|
+| Tutti e 18 | 8,5× → 4,7× |
+| Senza BART | 3,8× → 1,6× |
+| Solo i 15 rigenerati a budget | **3,7× → 1,4×** |
+
+Il 4,7 sui 18 è quasi interamente BART: a 0,26× il riferimento resta il minimo di quasi ogni
+cluster mentre il tetto tiene il massimo a 1,25× (1,25/0,26 ≈ 4,8), per cui il numero sui 18
+sottostima il contenimento ed è quello sui 15 rigenerati a descriverlo. Lo spread assoluto fra
+il riassunto più lungo e il più corto dello stesso cluster si dimezza (mediana 409 → 206
+parole) e, rapportato al riferimento, scende da circa il doppio a circa una volta.
+
+Per metodo, la banda [0,8; 1,25] × il riferimento è centrata in modo diverso a seconda di come
+il budget viene imposto:
+
+- gli **undici estrattivi**, dove il budget è un conteggio esatto di parole, stanno in banda nel
+  93–99 % dei cluster, con lunghezza mediana pari al riferimento (rapporto 1,00, decimo e
+  novantesimo percentile a circa 0,9 e 1,1); LDA è il più largo (93 %) perché le sue frasi sono le più
+  lunghe e la frase «a cavallo» del budget sposta di più;
+- gli **LLM**, dove il budget è un'istruzione nel prompt, la seguono in modo diverso: GPT-5-mini
+  (100 %) e Gemma (99 %) quasi sempre, Qwen (79 %) e Mistral (71 %) meno — Mistral è il più
+  disperso e viene tagliato dal tetto quasi una volta su due (novantesimo percentile a 1,25×);
+- i tre a **solo tetto** restano dove erano: PEGASUS (52 %) e PRIMERA (66 %) alla loro
+  lunghezza naturale, con il tetto come unico intervento; BART, che non arriva mai al tetto,
+  allo 0,3 %.
+
+Un effetto collaterale utile per la lettura: prima del contenimento la lunghezza generata non
+seguiva quella del riferimento (correlazione al massimo 0,51, sezione 7.1); dopo, per i 15
+rigenerati, la correlazione è 0,92–0,98 per gli estrattivi, Gemma e GPT-5-mini (0,79–0,82 per
+Mistral e Qwen, che seguono il prompt meno fedelmente) — per costruzione, ed è proprio ciò che rende il
+confronto della sezione 7.4 un confronto a parità di lunghezza cluster per cluster e non solo
+in media.
 
 ### 7.4 Che cosa cambia nei risultati
 
