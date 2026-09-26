@@ -230,6 +230,13 @@ a ogni passo un compromesso tra rilevanza (similarità al centroide/query) e **d
 particolarmente rilevante nell'MDS, dove più articoli sulla stessa notizia contengono
 naturalmente informazioni ripetute.
 
+![Frasi e centroide di un cluster, proiezione PCA](resources/centroid_mmr_pca.png)
+
+*Figura 1 — Centroid+MMR su un cluster di esempio (row_id 425): le frasi proiettate in 2D,
+colorate per similarità col centroide (la stella); i cerchi neri sono le frasi scelte da MMR,
+che non sono solo le più vicine al centroide ma anche frasi lontane fra loro. Fonte:
+notebook 11.*
+
 **Riferimenti**:
 - D. Radev, H. Jing, M. Styś, D. Tam, *"Centroid-based summarization of multiple documents"*,
   Information Processing & Management, 2004 — il sistema MEAD.
@@ -254,6 +261,13 @@ decomposizione SVD:
   rappresentazione latente residua, per favorire esplicitamente la copertura di temi diversi ed
   evitare ridondanza tra frasi provenienti da fonti diverse.
 
+![Salienza delle frasi e selezione delle due varianti LSA](resources/lsa_salienza.png)
+
+*Figura 2 — LSA sullo stesso cluster: salienza di ogni frase (norma nello spazio latente, in
+ordine di documento) e frasi scelte dalle due varianti. Le selezioni differiscono perché la
+deflazione, dopo ogni scelta, abbassa il punteggio delle frasi che coprono gli stessi
+concetti. Fonte: notebook 15.*
+
 **Riferimenti**:
 - Y. Gong, X. Liu, *"Generic Text Summarization Using Relevance Measure and Latent Semantic
   Analysis"*, SIGIR 2001.
@@ -273,6 +287,12 @@ Il progetto confronta due algoritmi di clustering sugli stessi embedding:
 - **K-Means** (clustering a partizione, numero di cluster fissato a priori);
 - **clustering agglomerativo gerarchico** (bottom-up, unisce iterativamente i cluster più
   simili).
+
+![Frasi nello spazio semantico SBERT, colorate per cluster](resources/sbert_cluster_pca.png)
+
+*Figura 3 — Le frasi dello stesso cluster nello spazio degli embedding SBERT (proiezione
+PCA), colorate per cluster K-Means (le stelle ne sono i centri); il cerchio nero è il medoide
+di ciascun cluster, cioè la frase che entra nel riassunto. Fonte: notebook 16.*
 
 Concettualmente, questo approccio appartiene alla famiglia dei metodi che il corso PoliTO
 classifica come "summarization neurale self-supervised": non richiede addestramento
@@ -296,6 +316,11 @@ deterministico come LSA). Applicato alla summarization, si stima la distribuzion
 cluster di articoli, e si selezionano le frasi da includere nel riassunto in proporzione al
 peso di ciascun topic — con l'obiettivo di garantire che il riassunto copra tutti i temi
 principali nella proporzione in cui compaiono nelle fonti, non solo il tema dominante.
+
+![Peso dei topic e quota di frasi assegnata](resources/lda_peso_topic.png)
+
+*Figura 4 — LDA sullo stesso cluster: peso di ciascun topic e numero di frasi che gli viene
+assegnato nel riassunto, in proporzione al peso. Fonte: notebook 17.*
 
 **Riferimenti**:
 - D. Blei, A. Ng, M. Jordan, *"Latent Dirichlet Allocation"*, Journal of Machine Learning
@@ -526,6 +551,11 @@ lunghezza LDA cattura più contenuto e quindi più recall/METEOR "gratuiti". Per
 equo tra i cinque metodi non supervisionati (Centroid+MMR, LSA, SBERT, LDA), guardare la F1
 di ROUGE, non il recall o il METEOR.
 
+![ROUGE-1/2/L F1 medio per metodo](resources/test_rouge.png)
+
+*Figura 5 — ROUGE-1, ROUGE-2 e ROUGE-L F1 medi sulla split test, metodi in ordine
+decrescente. Fonte: notebook 05b.*
+
 ### 6.2 G-Eval — valutazione LLM-as-judge (scala 1-5, senza riferimento)
 
 | Metodo | Coherence | Consistency | Fluency | Relevance | Media |
@@ -552,6 +582,12 @@ di ROUGE, non il recall o il METEOR.
 I giudizi coprono il 98,9 % delle coppie (metodo, esempio): il resto è stato respinto dal
 filtro di sicurezza dei contenuti del servizio cloud prima che il giudice potesse leggerlo
 (sezione 9).
+
+![G-Eval per dimensione](resources/test_geval_dimensioni.png)
+
+*Figura 6 — G-Eval per dimensione sulla split test (scala 1-5). Gli LLM occupano le prime
+posizioni in tutte e quattro; la pertinenza (relevance) è la dimensione in cui gli estrattivi
+restano più vicini agli altri. Fonte: notebook 05b.*
 
 ### 6.3 Il risultato chiave: due metriche, due classifiche opposte
 
@@ -604,6 +640,20 @@ Nessun metodo, inoltre, adatta la propria lunghezza al cluster: gli estrattivi a
 frasi producono la stessa quantità di testo qualunque sia la dimensione dell'input, e la
 correlazione fra lunghezza generata e lunghezza del riferimento non supera 0,51.
 
+![Rapporto max/min delle lunghezze dentro il cluster](resources/lunghezze_dispersione_cluster.png)
+
+*Figura 7 — Per ogni cluster, rapporto fra il più lungo e il più corto dei 18 riassunti: a
+sinistra così come sono (mediana 8,5×), a destra dopo il contenimento descritto nella
+sezione 7.3. Fonte: notebook 18.*
+
+![Lunghezza media contro ROUGE-1 recall, prima e dopo](resources/lunghezza_vs_recall.png)
+
+*Figura 8 — Lunghezza media dei riassunti contro ROUGE-1 recall, un punto per metodo. A
+sinistra la correlazione di 0,89 citata sopra; a destra, dopo il contenimento, i metodi si
+raccolgono attorno alla stessa lunghezza, e la correlazione residua (0,76) si deve
+soprattutto ai metodi a solo tetto — BART isolato in basso, PEGASUS e PRIMERA — discussi
+nella sezione 7.3. Fonte: notebook 05d.*
+
 ### 7.2 Quale lunghezza «giusta»?
 
 La prima idea — un tetto fisso uguale per tutti — è sbagliata per due ragioni. Il riferimento
@@ -613,6 +663,12 @@ sarebbe troppo largo per i cluster piccoli e troppo stretto per quelli grandi. E
 troncamento agisce solo verso il basso: un riassunto da 55 parole non si allunga troncandolo,
 per cui il tetto da solo riduce la dispersione dentro il cluster da 8,5× a circa 4×, non
 oltre.
+
+![Mediana del riferimento per numero di articoli](resources/lunghezza_riferimento_per_cluster.png)
+
+*Figura 9 — Lunghezza mediana del riassunto di riferimento (split train) in funzione del
+numero di articoli del cluster: da 164 parole per un articolo a 327 per otto o più. Fonte:
+notebook 18.*
 
 Si è allora verificato se la lunghezza del riferimento si lasci **prevedere dal solo input**
 (numero di articoli, lunghezza delle fonti, combinazioni e regressioni). La risposta è
@@ -686,12 +742,24 @@ il budget viene imposto:
   lunghezza naturale, con il tetto come unico intervento; BART, che non arriva mai al tetto,
   allo 0,3 %.
 
+![Rapporto col riferimento per cluster, per metodo](resources/lunghezze_banda_per_metodo.png)
+
+*Figura 10 — Rapporto fra lunghezza generata e lunghezza del riferimento, cluster per
+cluster, prima (sopra) e dopo (sotto) il contenimento; la fascia verde è la banda 0,8-1,25×,
+l'asse è logaritmico. Fonte: notebook 18.*
+
 Un effetto collaterale utile per la lettura: prima del contenimento la lunghezza generata non
 seguiva quella del riferimento (correlazione al massimo 0,51, sezione 7.1); dopo, per i 15
 rigenerati, la correlazione è 0,92–0,98 per gli estrattivi, Gemma e GPT-5-mini (0,79–0,82 per
 Mistral e Qwen, che seguono il prompt meno fedelmente) — per costruzione, ed è proprio ciò che rende il
 confronto della sezione 7.4 un confronto a parità di lunghezza cluster per cluster e non solo
 in media.
+
+![Lunghezza generata contro lunghezza del riferimento, un metodo per famiglia](resources/lunghezze_adattamento.png)
+
+*Figura 11 — Lunghezza generata contro lunghezza del riferimento, un punto per cluster, per un
+metodo di ciascuna famiglia, prima (sopra) e dopo (sotto) il contenimento; r è la
+correlazione. BART, che riceve il solo tetto, resta piatto. Fonte: notebook 18.*
 
 ### 7.4 Che cosa cambia nei risultati
 
@@ -729,6 +797,12 @@ Sulle metriche reference-based la graduatoria si riassesta in quattro modi:
 - **PRIMERA e PEGASUS restano in testa**, appena toccati dal tetto: il loro vantaggio non era
   di lunghezza.
 
+![ROUGE-1 F1 prima e dopo il riallineamento](resources/prima_dopo_rouge1_f1.png)
+
+*Figura 12 — ROUGE-1 F1 per metodo, prima (barra chiara, ambito test) e dopo (barra piena)
+il riallineamento alla lunghezza del riferimento; «solo tetto» indica i tre metodi non
+rigenerati. Fonte: notebook 05d.*
+
 Il G-Eval racconta una storia diversa, ed è il risultato più istruttivo. Dove il
 riallineamento ha rimescolato il ROUGE, **le prime undici posizioni del G-Eval restano
 identiche** e il massimo spostamento è di 0,34 punti su 5. La lunghezza non era il suo
@@ -743,6 +817,12 @@ sovrapposizione con il riferimento. Tre osservazioni:
   del recall: i due effetti che la F1 di ROUGE somma in un numero solo, qui separati;
 - fra gli LLM allungati, Qwen aggiunge contenuto pertinente e supera Mistral, che perde tutto
   sulla *consistenza*: costretto a scrivere di più, aggiunge cose che nella fonte non ci sono.
+
+![G-Eval prima e dopo il riallineamento](resources/prima_dopo_geval.png)
+
+*Figura 13 — G-Eval medio per metodo, prima e dopo il riallineamento: l'ordine resta quasi
+lo stesso, e gli spostamenti più visibili sono i guadagni di TextRank e LexRank. Fonte:
+notebook 05d.*
 
 La conclusione della sezione 6.3 regge, e ne esce rafforzata: la divergenza fra metriche
 reference-based e reference-free non è un artefatto della lunghezza.
@@ -797,6 +877,18 @@ contrasto «variazione di GPT-5-mini meno variazione media degli altri LLM» ris
   distacco fra prosa LLM e prosa estrattiva. La preferenza per la prosa degli LLM è una
   proprietà del paradigma, condivisa da entrambi i giudici, e va tenuta presente leggendo
   qualunque valutazione LLM-as-a-judge — ma non è una distorsione di famiglia.
+
+![G-Eval medio dei sette metodi secondo i due giudici](resources/giudici_confronto.png)
+
+*Figura 14 — Stessi riassunti, due giudici: G-Eval medio dei sette metodi del campione
+secondo GPT-5.4-mini e DeepSeek-V3.2; sfondo grigio per i controlli non-LLM, dove DeepSeek è
+più severo. Fonte: notebook 19.*
+
+![Il test del family bias](resources/giudici_family_bias.png)
+
+*Figura 15 — Differenza DeepSeek meno GPT-5.4-mini per metodo, con intervallo di confidenza al
+95 %, e in cima il contrasto del test: positivo, cioè fuori dalla zona (in rosa) in cui
+cadrebbe se il giudice favorisse la propria famiglia. Fonte: notebook 19.*
 
 Una precisazione statistica utile in sede di presentazione: con circa mille cluster appaiati
 anche cinque centesimi di punto risultano statisticamente distinguibili da zero, quindi il
