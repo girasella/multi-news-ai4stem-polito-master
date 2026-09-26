@@ -867,7 +867,7 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | Mistral, `test` (5.610) | — | ~17 h |
 | Gemma, `test` (5.610) | — | ~22 h |
 | Pilota few-shot (20), 100 righe val × 5 configurazioni | — | ~1 h (misurato 2026-09-26 su 3 righe: 6 s/riga a k=0, 7–8 a k=2, 8–9 a k=4; + ~14 min una tantum per gli embedding del train) |
-| Qwen few-shot (21), `test` (5.610, k=2) | — | ~12 h stimate (~7,5 s/riga) |
+| Qwen few-shot (21), `test` (5.610, k=4) | — | ~15 h stimate (~9,5 s/riga misurati nel pilota) |
 | PRIMERA, `test` (5.610) | sconsigliata | ~28-56 h — **richiede la GPU** |
 | First-k, `test` (5.610, **entrambe le varianti**) | ~3 min | ~3 min (nessun modello) |
 | Centroid+MMR, `test` (5.610, **entrambe le varianti**) | non misurata (TF-IDF rapida, BERT lenta senza GPU) | ~8 min (corsa reale 2026-07-25, encoding BERT su GPU) |
