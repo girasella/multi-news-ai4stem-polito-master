@@ -19,7 +19,7 @@ Tecniche_MDS_non_LLM_MultiNews.md  # Annotated survey of non-LLM MDS techniques 
 multi_news_dashboard.html  # Self-contained EDA dashboard (Italian) — see "EDA dashboard" section below
 docs/
   guida_studio.md      # Study/presentation guide (Italian): methods, metrics, results, length confound, judge validation
-  guida_studio.pdf     # Its printed PDF (untracked); re-print after editing the .md
+  YYYYMMDD_guida_studio.pdf  # Its printed PDF, named by print date (untracked); re-print after editing the .md
   resources/           # Figures the guide embeds, extracted by scripts/estrai_figure_guida.py — copies, never edit by hand
 scripts/
   README.md            # Documentation for the scripts (usage, inputs/outputs, cleaning criteria)
