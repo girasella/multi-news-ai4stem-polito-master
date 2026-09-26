@@ -19,3 +19,7 @@ notte_mistral.err
 # Lock del driver G-Eval (una corsa per cache) e backup di cache riparate
 results/metrics/*.lock
 results/metrics/*.corrotto-*
+
+# Cache degli embedding SBERT del few-shot (notebook 20/21): ~140 MB, rigenerabile;
+# il retrieval riproducibile e' nei TSV dei vicini in results/fewshot/
+results/embeddings_cache/

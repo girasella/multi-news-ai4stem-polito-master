@@ -62,12 +62,12 @@ NOTEBOOK_CONFRONTO = {'test': ['05b_confronto_test.ipynb', '05d_confronto_prima_
                       'test_budgetref': ['05c_confronto_test_budgetref.ipynb',
                                          '05d_confronto_prima_dopo.ipynb']}
 
-# Gli stessi 18 slug di su.METODI_BENCHMARK (notebook 05b, 13 e 14). Gli ultimi cinque (notebook
-# 15-17) sono stati aggiunti col backfill dell'issue #12: la cache e' per (metodo,
+# Gli stessi 19 slug di su.METODI_BENCHMARK (notebook 05b, 13 e 14). I cinque dei notebook
+# 15-17 sono stati aggiunti col backfill dell'issue #12, `qwen_fewshot` (notebook 21) dopo: la cache e' per (metodo,
 # row_id), quindi allargare la lista fa giudicare SOLO i nuovi, senza ripagare i 13.
 METODI = ['firstk_psr', 'firstk_nltk', 'centroid_mmr', 'centroid_mmr_bert',
           'textrank', 'lexrank', 'bart', 'pegasus', 'primera',
-          'qwen', 'gemma', 'mistral', 'gpt5mini',
+          'qwen', 'gemma', 'mistral', 'gpt5mini', 'qwen_fewshot',
           'lsa', 'lsa_steinberger', 'sbert_kmeans', 'sbert_agglom', 'lda']
 
 
