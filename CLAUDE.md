@@ -42,9 +42,12 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
                        # (full / test / test_budgetref / before-after), helpers in summ_utils
   1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill, 15 LSA (2 variants), 16 SBERT clustering (2 variants), 17 LDA, 18 per-cluster length analysis, both scopes test/test_budgetref side by side — budgetref lengths are POST-ceiling (from the CSVs applica_budget.py rewrites); Vista 3a reads the pre-ceiling `*_test_budgetref.tsv` of the 15 regenerated methods (issue #15/#16, generates nothing, writes `analisi_lunghezze_{scope}.json` per scope), 19 second-judge
                        # validation of the G-Eval judge (generates nothing, spends nothing); ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
+  2X_*.ipynb           # 20 few-shot pilot (100 VALIDATION rows: k x prompt variant vs a k=0 control
+                       # and a retrieval-only baseline), 21 Qwen few-shot (slug `qwen_fewshot`, test only)
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
-                       # results, since replaced by local ollama runs) and docx report —
+                       # results, since replaced by local ollama runs) and docx report, plus
+                       # her few-shot notebooks 20/21 (NOT imported: wrong row_ids, no num_ctx) —
                        # see notebooks/llm/README.md
 results/
   sample/              # Shared evaluation sample TSV (committed)
@@ -129,7 +132,9 @@ unsupervised extractives built on scikit-learn — LSA/TruncatedSVD in two selec
 (notebook 15, slugs `lsa` top-k by latent norm / `lsa_steinberger` greedy with deflation),
 clustering over MiniLM sentence embeddings with medoid selection in two variants (notebook 16,
 slugs `sbert_kmeans` / `sbert_agglom`), and LDA topic modeling with topic-proportional sentence
-allocation (notebook 17, slug `lda`). TextRank/LexRank
+allocation (notebook 17, slug `lda`). A nineteenth slug, `qwen_fewshot` (notebook 21), exists
+in the `test` scope only: the same Qwen with k retrieved train examples in the prompt (see the
+few-shot bullet below); `test_budgetref` stays at 18 methods. TextRank/LexRank
 and BART/PEGASUS
 run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the local LLMs via
 the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`),
@@ -471,6 +476,29 @@ respect:
     reports the *useful* spend, not the bill. Judgments are not bitwise reproducible, so the two
     runs' duplicates could differ — the kept one is the first written, which is arbitrary but
     deterministic.
+
+- **Few-shot (`qwen_fewshot`, notebooks 20/21, helpers in `summ_utils` section *Few-shot*)**:
+  derived from Federica's notebooks archived in `notebooks/llm/` (20/21), whose prompt text is
+  copied verbatim into `su.prompt_fewshot` (variants `old`/`new`, typos included — changing it
+  changes the method). Her full test run was deliberately NOT imported: it read `test.tab` with
+  pandas, so the two Orange header lines became data rows (5,612 = 5,610 + 2) and row_ids were
+  local indices 0..5611 — which are *train* rows in this project (test = 50491..56100) — and it
+  never set ollama's context. Rules: the example pool is the whole **train** split, so query rows
+  must never come from train (`su.calcola_vicini` asserts it; the shared sample contains train
+  rows, which is why the pilot uses 100 **validation** rows and notebook 21's `sample` scope drops
+  its train rows). Generation uses ollama's **native** `/api/chat` via `su.genera_ollama_nativo`
+  with `num_ctx=32768`, not the OpenAI-compatible endpoint of 07-09, because only the native
+  API takes `num_ctx` per request; it raises when `prompt_eval_count` fills the context, so a
+  silently truncated prompt can never be written. Measured 2026-09-26 on this machine
+  (ollama 0.34.0): the default context is already 32,768, and an 8,349-word document arrives
+  whole (10,856 tokens) with or without explicit `num_ctx` — so the committed zero-shot 07-09
+  runs were most likely not truncated here, but Federica's Mac run is unknown. Example articles
+  are cut to 1,000 words (their summaries stay whole), the target document to 16,000 words
+  (7/5,610 test rows). The retrieval is committed as `results/fewshot/qwen_fewshot_vicini_{scope}.tsv`;
+  the SBERT embeddings (`results/embeddings_cache/`, ~140 MB) are gitignored. Notebook 21 maps
+  examples by **row_id** (it builds each prompt in the row iterator and passes
+  `prepara=identity` to `ciclo_summarization`), never by document text. Notebook 14 drops
+  `qwen_fewshot` in budget scopes, so a budgetref G-Eval run never judges its `test` summaries.
 
 ## Working with the data files
 

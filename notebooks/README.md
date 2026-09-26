@@ -67,6 +67,8 @@ automaticamente e la usano se disponibile.
 | 17 | [17_lda.ipynb](17_lda.ipynb) | Topic modeling con LDA (`CountVectorizer` + `LatentDirichletAllocation`): le frasi vengono allocate ai topic in proporzione al peso di ciascuno. Slug `lda`. Ambiti `sample`, `test` e `full`. |
 | 18 | [18_analisi_lunghezze.ipynb](18_analisi_lunghezze.ipynb) | Analisi **per cluster** delle lunghezze dei riassunti generati dai 18 metodi, **prima e dopo** il contenimento (issue #15/#16): non genera nulla, legge le metriche `test` e `test_budgetref` già salvate e la mediana del riferimento per numero di articoli. |
 | 19 | [19_confronto_giudici.ipynb](19_confronto_giudici.ipynb) | **Validazione del giudice** G-Eval: rigiudica un campione appaiato di riassunti gia' valutati con un secondo giudice di lignaggio diverso (DeepSeek-V3.2-Speciale) per verificare che il primato di `gpt5mini` non sia family bias. Non genera nulla e non spende nulla: legge le due cache di giudizi. |
+| 20 | [20_fewshot_pilota.ipynb](20_fewshot_pilota.ipynb) | **Pilota del few-shot**: su 100 righe di validation confronta k ∈ {2, 4} × due varianti di prompt con il controllo zero-shot (k=0) e con la baseline *retrieval-only*; fissa k e variante del notebook 21. |
+| 21 | [21_qwen_fewshot.ipynb](21_qwen_fewshot.ipynb) | Qwen2.5-7B-Instruct **few-shot** (slug `qwen_fewshot`): nel prompt i k esempi del train più simili (embedding `all-mpnet-base-v2`). Ambiti `sample` e `test`. |
 
 I notebook dei metodi (01–04, 06–12 e 15–17) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
@@ -236,6 +238,35 @@ all'endpoint OpenAI-compatibile (`http://localhost:11434/v1`). Avvertenze:
 - Il prompt (in inglese) e `temperature=0.3` replicano la corsa originale; il BERTScore
   presente nei CSV di Federica non è stato portato in `results/` (la pipeline condivisa non
   lo calcola).
+
+## Few-shot con esempi recuperati (notebook [20](20_fewshot_pilota.ipynb)–[21](21_qwen_fewshot.ipynb))
+
+Stesso modello del notebook [07](07_qwen.ipynb), ma il prompt contiene k esempi (articolo →
+riassunto umano): i k cluster del **train** più simili a quello da riassumere, per coseno fra
+embedding `all-mpnet-base-v2`. Nasce dai notebook di Federica archiviati in
+[llm/](llm/README.md) (20 esplorazione, 21 corsa completa), di cui si conserva il prompt alla
+lettera (`su.prompt_fewshot`); lì è spiegato anche perché la sua corsa non è stata importata.
+Il codice condiviso fra pilota e corsa è in `summ_utils` (sezione *Few-shot*).
+
+- **Pilota prima, corsa dopo.** Il notebook 20 sceglie k e variante di prompt su 100 righe di
+  **validation**: non il campione condiviso (contiene righe del train, che ritroverebbero se
+  stesse come esempio) né il test (si sceglierebbe la configurazione guardando i dati di
+  valutazione). Include il controllo **k=0** (il prompt zero-shot del 07 con la stessa
+  pipeline) e la baseline **retrieval-only** (il riassunto del 1° vicino usato come riassunto),
+  che misura il rischio di quasi-leakage: Multi-News contiene notizie coperte da più cluster, e
+  il vicino del train può essere la stessa notizia.
+- **API nativa di ollama.** A differenza dei notebook 07–09, la generazione passa per
+  `/api/chat` (`su.genera_ollama_nativo`), l'unico canale che accetta `num_ctx` per richiesta:
+  `num_ctx=32768` (contesto nativo di Qwen2.5). Una richiesta che satura il contesto **fallisce**
+  (riga non scritta) invece di essere troncata in silenzio.
+- **Troncamenti.** Articolo di ogni esempio a 1.000 parole (il riassunto dell'esempio resta
+  intero); documento da riassumere a 16.000 parole, cosa che tocca 7 cluster del test su 5.610.
+- **Riproducibilità del retrieval.** I vicini sono salvati in
+  `results/fewshot/qwen_fewshot_vicini_{ambito}.tsv` (committato); gli embedding del train
+  (~140 MB) restano in `results/embeddings_cache/`, fuori da git.
+- **Solo ambito `test`.** Il few-shot non ha l'ambito `test_budgetref` (servirebbe un pilota
+  di calibrazione a sé): `su.carica_scope` lo salta nel confronto a budget e il notebook 14 lo
+  esclude dal G-Eval di quell'ambito.
 
 ## Corsa completa sulla split test (notebook [03](03_bart.ipynb)-[04](04_pegasus.ipynb), [06](06_primera.ipynb)-[11](11_centroid_mmr.ipynb), [15](15_lsa.ipynb)-[17](17_lda.ipynb))
 
@@ -803,6 +834,9 @@ results/
                                               # gli 11 estrattivi via driver --scope, gli LLM col budget nel prompt
   metrics/{metodo}_test_budgetref_*          # metriche post-troncamento per tutti e 18 (scripts/applica_budget.py)
   notebook_runs/{ambito}/*.ipynb             # notebook eseguiti dal driver negli ambiti a budget (in .gitignore)
+  fewshot/qwen_fewshot_vicini_{ambito}.tsv   # vicini del train per ogni riga (21_qwen_fewshot.ipynb): il retrieval riproducibile
+  fewshot/pilota_val100/                     # TSV per configurazione, vicini e riepilogo JSON del pilota (20_fewshot_pilota.ipynb)
+  embeddings_cache/*.npy                     # embedding SBERT del few-shot (in .gitignore, rigenerabili)
 scripts/
   budget_lunghezza.json                      # T(n_articoli): budget per-cluster (18_analisi_lunghezze.ipynb)
 ```
@@ -832,6 +866,8 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | Qwen, `test` (5.610) | — | ~8 h |
 | Mistral, `test` (5.610) | — | ~17 h |
 | Gemma, `test` (5.610) | — | ~22 h |
+| Pilota few-shot (20), 100 righe val × 5 configurazioni | — | ~1 h (misurato 2026-09-26 su 3 righe: 6 s/riga a k=0, 7–8 a k=2, 8–9 a k=4; + ~14 min una tantum per gli embedding del train) |
+| Qwen few-shot (21), `test` (5.610, k=2) | — | ~12 h stimate (~7,5 s/riga) |
 | PRIMERA, `test` (5.610) | sconsigliata | ~28-56 h — **richiede la GPU** |
 | First-k, `test` (5.610, **entrambe le varianti**) | ~3 min | ~3 min (nessun modello) |
 | Centroid+MMR, `test` (5.610, **entrambe le varianti**) | non misurata (TF-IDF rapida, BERT lenta senza GPU) | ~8 min (corsa reale 2026-07-25, encoding BERT su GPU) |
