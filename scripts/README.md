@@ -506,3 +506,28 @@ Ogni volta che `data/text/` cambia. Dopo il rilancio, riportare i nuovi valori n
 `const D` della dashboard e aggiornare le cifre citate in
 [`data/README.md`](../data/README.md) e in [`CLAUDE.md`](../CLAUDE.md) — non lo fa nulla in
 automatico.
+
+## `estrai_figure_guida.py`
+
+Copia in [`docs/resources/`](../docs/resources/) le figure citate dalla
+[guida di studio](../docs/guida_studio.md): le figure esplicative dei notebook 11 e 15-17 sono
+già PNG in `results/figures/` e vengono copiate così come sono; i grafici di confronto dei
+notebook 05b, 05d, 18 e 19 esistono solo come output incorporati nei `.ipynb` committati e
+vengono decodificati da lì.
+
+### Uso
+
+```
+python scripts/estrai_figure_guida.py
+```
+
+La corrispondenza fra file e grafico è la tabella `FIGURE` in testa allo script. Un output di
+notebook è individuato dall'intestazione markdown della sezione che lo precede più il numero
+d'ordine dell'immagine in quella sezione, non dall'indice di cella: aggiungere celle altrove non
+fa prendere il grafico sbagliato, e una sezione rinominata o un'immagine mancante fermano lo
+script con un errore invece di copiare altro.
+
+### Quando rilanciarlo
+
+Dopo aver rieseguito uno dei notebook da cui provengono le figure, perché le immagini in
+`docs/resources/` sono copie e non si aggiornano da sole. Poi va ristampato il PDF della guida.

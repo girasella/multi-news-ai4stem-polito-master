@@ -17,6 +17,10 @@ LICENSE                # Full upstream Dataset Usage Agreement (moved out of REA
 Multi-News_paper.md    # Original paper (Fabbri et al., 2019) — background/context only, not consumed by any tooling
 Tecniche_MDS_non_LLM_MultiNews.md  # Annotated survey of non-LLM MDS techniques vs the PoliTO lecture (Italian) — the "documento-guida" cited by notebooks/README.md; reference only, not consumed by tooling
 multi_news_dashboard.html  # Self-contained EDA dashboard (Italian) — see "EDA dashboard" section below
+docs/
+  guida_studio.md      # Study/presentation guide (Italian): methods, metrics, results, length confound, judge validation
+  guida_studio.pdf     # Its printed PDF (untracked); re-print after editing the .md
+  resources/           # Figures the guide embeds, extracted by scripts/estrai_figure_guida.py — copies, never edit by hand
 scripts/
   README.md            # Documentation for the scripts (usage, inputs/outputs, cleaning criteria)
   analyze_dataset.py   # Streaming corpus-wide EDA over data/text/ — writes dataset_stats.json, the figures multi_news_dashboard.html embeds
@@ -28,6 +32,7 @@ scripts/
   budget_lunghezza.json  # T(n_articoli) table from notebook 18 — an analysis artifact, NOT the containment budget (which is the reference length)
   pilota_giudice_deepseek.py  # Paired second-judge pilot (DeepSeek vs gpt-5.4-mini) — tests the family-bias
                        # hypothesis on 7 methods; separate cache/JSON, touches nothing committed
+  estrai_figure_guida.py  # Copies the guide's figures into docs/resources/ (results/figures/ PNGs + images decoded from 05b/05d/18/19 outputs, located by section heading)
   run_geval.py         # Unattended driver for the G-Eval backfill (notebook 14): staged --righe/--pilota/full run, --budget hard stop, --costo offline cost report, --solo-metriche re-derivation
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
