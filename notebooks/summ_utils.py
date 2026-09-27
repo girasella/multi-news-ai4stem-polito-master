@@ -1269,6 +1269,28 @@ def prompt_fewshot(esempi, documento, variante):
     raise ValueError(f'variante di prompt sconosciuta: {variante!r}')
 
 
+def prompt_fewshot_budget(esempi, documento, richiesto, variante='new'):
+    """Prompt few-shot per l'ambito `*_budgetref` (issue #16): DERIVATO da `prompt_fewshot`.
+
+    Come per lo zero-shot (PROMPT_USER_BUDGET dei notebook 07-09/12) cambia solo la
+    lunghezza: la riga che chiede di imitare "the style and approximate length" degli
+    esempi diventa una richiesta di `richiesto` parole, con lo stesso vincolo "at least"
+    dei notebook zero-shot. Lo stile resta quello degli esempi. Solo la variante `new`
+    (quella del notebook 21): `old` non ha una riga di istruzioni da sostituire.
+    """
+    if variante != 'new':
+        raise ValueError(f'budget supportato solo per la variante new, non {variante!r}')
+    n = len(esempi)
+    base = prompt_fewshot(esempi, documento, 'new')
+    riga = (f"- Write a summary of ONLY the article above, matching the style and approximate "
+            f"length of the {n} example summaries.\n")
+    nuova = (f"- Write a summary of ONLY the article above, of about {richiesto} words, matching "
+             f"the style of the {n} example summaries. "
+             f"The summary must be at least {richiesto} words long.\n")
+    assert base.count(riga) == 1, 'prompt_fewshot cambiato: aggiornare la derivazione budget'
+    return base.replace(riga, nuova)
+
+
 def esempio_fewshot(esempio_train, parole=PAROLE_ESEMPIO_FEWSHOT):
     """Un esempio del train pronto per il prompt: separatore -> newline, articolo
     troncato a `parole`, riassunto di riferimento ripulito dal trattino iniziale."""

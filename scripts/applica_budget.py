@@ -27,7 +27,7 @@ the final table reports, not something this script fixes.
 
 Usage (from anywhere — paths resolve relative to this file):
 
-    python scripts/applica_budget.py                      # 18 slugs, with BERTScore (GPU, ~1.5 h)
+    python scripts/applica_budget.py                      # 19 slugs, with BERTScore (GPU, ~1.5 h)
     python scripts/applica_budget.py --senza-bertscore    # lexical metrics only (minutes)
     python scripts/applica_budget.py --solo lda,lexrank   # subset
     python scripts/applica_budget.py --forza              # recompute slugs already done
@@ -47,11 +47,13 @@ import summ_utils as su  # noqa: E402  (needs NOTEBOOKS_DIR on sys.path first)
 SCOPE = 'test' + su.SUFFISSO_BUDGET          # test_budgetref
 FATTORE_TETTO = su.FATTORE_TETTO_BUDGET  # 1.25: shared with notebook 14 (G-Eval judges the same text)
 
-# Same 18 slugs as notebooks 05/13, in the driver's fastest-first order.
+# Same 19 slugs as notebooks 05/13, in the driver's fastest-first order (qwen_fewshot,
+# notebook 21, added with issue #20).
 METODI = ['firstk_psr', 'firstk_nltk', 'lda', 'lsa', 'lsa_steinberger',
           'sbert_kmeans', 'sbert_agglom', 'centroid_mmr', 'centroid_mmr_bert',
           'lexrank', 'textrank',
-          'bart', 'pegasus', 'primera', 'qwen', 'mistral', 'gemma', 'gpt5mini']
+          'bart', 'pegasus', 'primera', 'qwen', 'mistral', 'gemma', 'gpt5mini',
+          'qwen_fewshot']
 
 
 def sorgente_riassunti(summaries_dir, metodo):
@@ -100,7 +102,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--solo', default=None,
-                        help='slug separati da virgola (default: tutti e 18)')
+                        help='slug separati da virgola (default: tutti e 19)')
     parser.add_argument('--senza-bertscore', action='store_true',
                         help='solo metriche lessicali (minuti invece di ~1,5 h di GPU)')
     parser.add_argument('--forza', action='store_true',
