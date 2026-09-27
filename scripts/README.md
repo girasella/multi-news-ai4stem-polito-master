@@ -154,26 +154,6 @@ tutti) restano corti, e la loro quota di righe in banda — riportata dal notebo
 qui. G-Eval non viene ricalcolato **da questo script**: lo fa, separatamente,
 `run_geval.py --scope test_budgetref`, riapplicando lo stesso tetto (vedi sotto).
 
-## `unisci_riassunti.py`
-
-Unisce i TSV di riassunti di una corsa **divisa fra più macchine**. Oggi lo supporta il
-notebook [21](../notebooks/21_qwen_fewshot.ipynb) con `SUMM_PARTIZIONE='i/n'`: ogni macchina
-genera solo le righe in posizione `p % n == i`.
-
-```bash
-python scripts/unisci_riassunti.py results/summaries/qwen_fewshot_test_budgetref.tsv percorso/del/tsv_altra_macchina.tsv
-```
-
-La destinazione, se esiste, ha la precedenza; le sorgenti aggiungono solo i `row_id`
-mancanti. Un `row_id` presente due volte con testo diverso (una riga generata da entrambe le
-macchine: il campionamento non è deterministico) tiene la prima occorrenza e viene contato.
-Dopo l'unione, un'esecuzione del notebook **senza** partizione completa gli eventuali buchi e
-calcola le metriche su tutte le righe.
-
-Le macchine devono usare **lo stesso modello**: stesso tag e stesso digest in `ollama list`
-(per `qwen2.5:7b-instruct` Q4_K_M: `845dbda0ea48`). Altrimenti il TSV unito mescolerebbe due
-modelli.
-
 ## `run_geval.py`
 
 Driver non presidiato per il backfill **G-Eval (LLM-as-a-Judge)** — notebook [14](../notebooks/14_geval.ipynb). Fa giudicare ogni
