@@ -279,9 +279,19 @@ def budget_riferimento(esempio):
 FATTORE_TETTO_BUDGET = 1.25
 
 
+def tetto_parole(parole_riferimento):
+    """Tetto in parole per un riferimento lungo `parole_riferimento`: round(1,25 x riferimento).
+
+    E' anche il bordo superiore della banda: chi verifica "in banda" deve confrontare con
+    questo intero, non con 1,25 x riferimento esatto, altrimenti una riga troncata proprio
+    sul tetto arrotondato per eccesso (es. 388 contro 387,5) risulta fuori banda (issue #21).
+    """
+    return int(round(FATTORE_TETTO_BUDGET * parole_riferimento))
+
+
 def tetto_riferimento(esempio):
     """Tetto in parole di un esempio negli ambiti a budget: 1,25 x budget."""
-    return int(round(FATTORE_TETTO_BUDGET * budget_riferimento(esempio)))
+    return tetto_parole(budget_riferimento(esempio))
 
 
 def seleziona_per_budget(frasi, ordine, budget_parole):
