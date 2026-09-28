@@ -1136,13 +1136,16 @@ def embedding_fewshot(testi, cache_dir, etichetta, modello=MODELLO_EMBEDDING_FEW
     import hashlib
     import numpy as np
 
-    h = hashlib.sha256(modello.encode('utf-8'))
+    # `modello` puo' essere anche una cartella locale (modello scaricato a mano): la cache
+    # usa solo il nome della cartella, cosi' non dipende dal percorso
+    nome = Path(modello).name
+    h = hashlib.sha256(nome.encode('utf-8'))
     for t in testi:
         h.update(b'\x00')
         h.update(t.encode('utf-8'))
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
-    path = cache_dir / f'{etichetta}_{modello}_{h.hexdigest()[:16]}.npy'
+    path = cache_dir / f'{etichetta}_{nome}_{h.hexdigest()[:16]}.npy'
     if path.exists():
         print(f'[{etichetta}] embedding dalla cache ({path.name})')
         return np.load(path)
