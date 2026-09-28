@@ -47,6 +47,14 @@
       "bertscore_f1": 0.86857,
       "parole_generate": 113.62
     },
+    "k6_new": {
+      "rouge1_f1": 0.3506,
+      "rouge2_f1": 0.11589,
+      "rougeL_f1": 0.19631,
+      "meteor": 0.31739,
+      "bertscore_f1": 0.86795,
+      "parole_generate": 117.23
+    },
     "retrieval_only": {
       "rouge1_f1": 0.25418,
       "rouge2_f1": 0.04252,
@@ -96,6 +104,14 @@
       "meteor": 0.00896,
       "bertscore_f1": 0.00189,
       "parole_generate": 2.47091
+    },
+    "k6_new": {
+      "rouge1_f1": 0.00752,
+      "rouge2_f1": 0.00554,
+      "rougeL_f1": 0.0052,
+      "meteor": 0.0091,
+      "bertscore_f1": 0.00174,
+      "parole_generate": 2.6428
     },
     "retrieval_only": {
       "rouge1_f1": 0.00575,
@@ -193,6 +209,28 @@
       "bertscore_f1": {
         "media": 0.00496,
         "ic95": 0.00233
+      }
+    },
+    "k6_new": {
+      "rouge1_f1": {
+        "media": 0.01128,
+        "ic95": 0.00988
+      },
+      "rouge2_f1": {
+        "media": 0.00882,
+        "ic95": 0.00755
+      },
+      "rougeL_f1": {
+        "media": 0.00537,
+        "ic95": 0.00702
+      },
+      "meteor": {
+        "media": -0.00832,
+        "ic95": 0.01189
+      },
+      "bertscore_f1": {
+        "media": 0.00434,
+        "ic95": 0.002
       }
     },
     "retrieval_only": {
@@ -322,6 +360,32 @@
         "media": -28.08,
         "ic95": 4.94691
       }
+    },
+    "k6_new-k4_new": {
+      "rouge1_f1": {
+        "media": -0.00306,
+        "ic95": 0.01134
+      },
+      "rouge2_f1": {
+        "media": -0.00358,
+        "ic95": 0.00814
+      },
+      "rougeL_f1": {
+        "media": -0.00418,
+        "ic95": 0.0077
+      },
+      "meteor": {
+        "media": 0.00199,
+        "ic95": 0.01144
+      },
+      "bertscore_f1": {
+        "media": -0.00062,
+        "ic95": 0.00172
+      },
+      "parole_generate": {
+        "media": 3.61,
+        "ic95": 4.08766
+      }
     }
   },
   "contaminazione_esempi": {
@@ -344,6 +408,10 @@
     "k4_new": {
       "media": 0.18,
       "righe_con_almeno_uno": 15
+    },
+    "k6_new": {
+      "media": 0.26,
+      "righe_con_almeno_uno": 22
     }
   },
   "sim1": {
