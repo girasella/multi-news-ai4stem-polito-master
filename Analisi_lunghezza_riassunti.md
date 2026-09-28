@@ -94,23 +94,23 @@ lunghezza entro [0,80, 1,25] × riferimento).
 
 | metodo | rigenerato | banda | parole prima → dopo | R-1 recall prima → dopo | R-1 F1 prima → dopo |
 |---|:-:|---:|---:|---:|---:|
-| primera | no | 66% | 211 → 201 | 0,441 → 0,433 | **0,445 → 0,446** |
-| pegasus | no | 52% | 178 → 175 | 0,390 → 0,387 | 0,424 → 0,424 |
+| primera | no | 74% | 211 → 201 | 0,441 → 0,433 | **0,445 → 0,446** |
+| pegasus | no | 56% | 178 → 175 | 0,390 → 0,387 | 0,424 → 0,424 |
 | centroid_mmr | sì | 98% | 362 → 215 | 0,465 → 0,365 | 0,383 → **0,378** |
 | lsa_steinberger | sì | 99% | 257 → 215 | 0,419 → 0,366 | 0,376 → 0,369 |
 | firstk_psr | sì | 98% | 217 → 215 | 0,347 → 0,354 | 0,355 → 0,368 |
 | firstk_nltk | sì | 98% | 219 → 215 | 0,348 → 0,352 | 0,356 → 0,368 |
-| mistral | sì | 71% | 161 → 233 | 0,325 → 0,367 | 0,354 → 0,365 |
+| mistral | sì | 88% | 161 → 233 | 0,325 → 0,367 | 0,354 → 0,365 |
 | centroid_mmr_bert | sì | 98% | 361 → 215 | 0,460 → 0,357 | 0,373 → 0,364 |
 | sbert_kmeans | sì | 98% | 264 → 215 | 0,404 → 0,358 | 0,359 → 0,359 |
 | textrank | sì | 98% | 368 → 215 | 0,448 → 0,343 | 0,370 → 0,359 |
-| lexrank | sì | 97% | 450 → 216 | 0,482 → 0,338 | 0,365 → 0,352 |
-| qwen | sì | 79% | 140 → 216 | 0,309 → 0,347 | 0,344 → 0,351 |
+| lexrank | sì | 98% | 450 → 216 | 0,482 → 0,338 | 0,365 → 0,352 |
+| qwen | sì | 85% | 140 → 216 | 0,309 → 0,347 | 0,344 → 0,351 |
 | lsa | sì | 98% | 249 → 215 | 0,357 → 0,322 | 0,351 → 0,350 |
 | gpt5mini | sì | 100% | 241 → 209 | 0,380 → 0,363 | 0,348 → 0,351 |
 | sbert_agglom | sì | 99% | 216 → 215 | 0,350 → 0,342 | 0,328 → 0,339 |
-| lda | sì | 93% | 477 → 230 | **0,499 → 0,348** | 0,351 → **0,338** |
-| gemma | sì | 99% | 292 → 219 | 0,390 → 0,337 | 0,335 → 0,328 |
+| lda | sì | 99% | 477 → 230 | **0,499 → 0,348** | 0,351 → **0,338** |
+| gemma | sì | 100% | 292 → 219 | 0,390 → 0,337 | 0,335 → 0,328 |
 | bart | no | 0,3% | 55 → 55 | 0,181 → 0,181 | 0,265 → 0,265 |
 
 **Il contenimento ha funzionato, e il numero complessivo lo nasconde.** Il rapporto fra il
@@ -125,8 +125,8 @@ minimo in quasi ogni cluster mentre il tetto tiene il massimo a 1,25× (1,25/0,2
 | i soli 15 rigenerati | 3,7× | **1,4×** |
 
 Fra i metodi effettivamente riportati a lunghezza pari la dispersione dentro il cluster è quindi
-quasi annullata. I 15 rigenerati stanno in banda nel **71–100%** dei cluster (11 estrattivi
-93–99%, `gpt5mini` 100%, `gemma` 99%, `qwen` 79%, `mistral` 71%).
+quasi annullata. I 15 rigenerati stanno in banda nell'**88–100%** dei cluster (11 estrattivi
+98–99%, `gpt5mini` e `gemma` 100%, `mistral` 88%, `qwen` 85%) — quote in banda corrette il 2026-09-28 (issue #21): prima un riassunto troncato esattamente sul tetto arrotondato per eccesso risultava fuori banda per mezza parola, e le quote erano sottostimate (`mistral` 71% invece di 88%, `qwen` 79% invece di 85%); le metriche non cambiano.
 
 **La graduatoria si riassesta, e il quadro cambia in tre punti.**
 
@@ -146,8 +146,10 @@ quasi annullata. I 15 rigenerati stanno in banda nel **71–100%** dei cluster (
 **Avvertenze.**
 
 - `bart` è l'**eccezione dichiarata**: 0,3% in banda, invariato, e va letto come tale (§3).
-- `mistral` segue l'istruzione di lunghezza in modo molto disperso (p10 0,76×, p90 1,98×): 71%
-  in banda contro il 99–100% di `gemma` e `gpt5mini`. È una proprietà del modello, misurata.
+- `mistral` segue l'istruzione di lunghezza in modo molto disperso (p10 0,76×, p90 1,98×): gli
+  eccessi li taglia il tetto, e dopo il taglio è in banda nell'88% dei cluster contro il ~100% di
+  `gemma` e `gpt5mini`; il 12% che resta fuori è tutto per difetto. È una proprietà del modello,
+  misurata.
 - **Content filter e filtro custom**: la severità del filtro è configurata **per risorsa**. Sul
   nuovo account la prima corsa copriva solo 5.250 righe su 5.610 (360 rifiuti, tutti
   `content_filter`) contro le 5.471 della corsa `test` sul vecchio. Attaccando al deployment un
