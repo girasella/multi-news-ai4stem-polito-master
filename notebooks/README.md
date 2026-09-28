@@ -50,8 +50,8 @@ automaticamente e la usano se disponibile.
 | 03 | [03_bart.ipynb](03_bart.ipynb) | BART (`facebook/bart-large-cnn`, abstractive). Ambiti `sample` e `test`. |
 | 04 | [04_pegasus.ipynb](04_pegasus.ipynb) | PEGASUS (`google/pegasus-multi_news`, abstractive). Ambiti `sample` e `test`. |
 | 05a | [05a_confronto_full.ipynb](05a_confronto_full.ipynb) | Confronto sull'ambito `full`: TextRank vs LexRank sull'intero dataset (56.101 esempi), medie per split e distribuzione del ROUGE-1 F1. Non genera nulla. |
-| 05b | [05b_confronto_test.ipynb](05b_confronto_test.ipynb) | **Il confronto principale del benchmark**: i 18 metodi sulla split test (ROUGE/BLEU/METEOR, BERTScore, G-Eval), con le avvertenze metodologiche e la sezione sulla metodologia G-Eval. Non genera nulla. |
-| 05c | [05c_confronto_test_budgetref.ipynb](05c_confronto_test_budgetref.ipynb) | Gli stessi 18 metodi sull'ambito `test_budgetref` (lunghezza del riferimento, issue #16), **stessa presentazione di 05b**. Non genera nulla. |
+| 05b | [05b_confronto_test.ipynb](05b_confronto_test.ipynb) | **Il confronto principale del benchmark**: i 19 metodi sulla split test (ROUGE/BLEU/METEOR, BERTScore, G-Eval), con le avvertenze metodologiche e la sezione sulla metodologia G-Eval. Non genera nulla. |
+| 05c | [05c_confronto_test_budgetref.ipynb](05c_confronto_test_budgetref.ipynb) | Gli stessi 19 metodi sull'ambito `test_budgetref` (lunghezza del riferimento, issue #16), **stessa presentazione di 05b**. Non genera nulla. |
 | 05d | [05d_confronto_prima_dopo.ipynb](05d_confronto_prima_dopo.ipynb) | Prima/dopo il riallineamento: tabella e grafici `test` → `test_budgetref`, dispersione per cluster, G-Eval a lunghezza pari. Non genera nulla. |
 | 06 | [06_primera.ipynb](06_primera.ipynb) | PRIMERA (`allenai/PRIMERA-multinews`, abstractive multi-documento, input 4096 token). Ambiti `sample` e `test`. |
 | 07 | [07_qwen.ipynb](07_qwen.ipynb) | Qwen2.5-7B-Instruct (LLM locale via ollama, prompt zero-shot). Ambiti `sample` e `test`. |
@@ -60,15 +60,16 @@ automaticamente e la usano se disponibile.
 | 10 | [10_firstk.ipynb](10_firstk.ipynb) | First-k / Lead (baseline posizionale, prime k frasi per articolo). Genera **due varianti** confrontabili — `firstk_psr` e `firstk_nltk` — che differiscono solo per il segmentatore di frasi. Ambiti `sample`, `test` e `full`. |
 | 11 | [11_centroid_mmr.ipynb](11_centroid_mmr.ipynb) | Centroid-based (MEAD) + MMR (estrattivo nativo MDS, implementazione *custom* scikit-learn: centroide + selezione greedy MMR con parametro `λ`). Genera **due varianti** — `centroid_mmr` (vettorizzazione TF-IDF) e `centroid_mmr_bert` (embeddings BERT `all-MiniLM-L6-v2`) — che differiscono solo per il vettorizzatore. Ambiti `sample`, `test` e `full`. |
 | 12 | [12_azure_gpt.ipynb](12_azure_gpt.ipynb) | GPT-5-mini (Azure OpenAI). Ambiti `sample`, `test` e `full` (56.101 righe, sequenziale). |
-| 13 | [13_bertscore.ipynb](13_bertscore.ipynb) | BERTScore (`roberta-large`, backfill separato). Aggiunge `bertscore_f1/p/r` alle metriche `test` già calcolate dai 18 metodi, senza rieseguire i notebook 01–04/06–12 e 15–17. |
+| 13 | [13_bertscore.ipynb](13_bertscore.ipynb) | BERTScore (`roberta-large`, backfill separato). Aggiunge `bertscore_f1/p/r` alle metriche `test` già calcolate dai 19 metodi, senza rieseguire i notebook 01–04/06–12, 15–17 e 21. |
 | 14 | [14_geval.ipynb](14_geval.ipynb) | G-Eval (LLM-as-a-Judge, giudice GPT-5.4-mini su Azure; backfill separato). Assegna a ogni riassunto della split `test` quattro punteggi 1–5 — coherence, consistency, fluency, relevance — scritti in **file dedicati** (`*_geval_*`), non uniti alle metriche standard. Guidato da [`scripts/run_geval.py`](../scripts/run_geval.py). |
 | 15 | [15_lsa.ipynb](15_lsa.ipynb) | LSA / SVD (estrattivo non supervisionato: TF-IDF + `TruncatedSVD`). Genera **due varianti** — `lsa` (top-k per norma latente, come `sumy`) e `lsa_steinberger` (greedy con deflazione, anti-ridondanza MDS) — che differiscono solo per la regola di selezione. Ambiti `sample`, `test` e `full`. |
 | 16 | [16_sbert_clustering.ipynb](16_sbert_clustering.ipynb) | Clustering su sentence embeddings SBERT (`all-MiniLM-L6-v2`) con selezione del **medoide** di ogni cluster. Genera **due varianti** — `sbert_kmeans` (KMeans, distanza euclidea su embedding L2-normalizzati) e `sbert_agglom` (Agglomerative, cosine + average linkage) — che differiscono solo per l'algoritmo di clustering. Ambiti `sample`, `test` e `full`. |
 | 17 | [17_lda.ipynb](17_lda.ipynb) | Topic modeling con LDA (`CountVectorizer` + `LatentDirichletAllocation`): le frasi vengono allocate ai topic in proporzione al peso di ciascuno. Slug `lda`. Ambiti `sample`, `test` e `full`. |
-| 18 | [18_analisi_lunghezze.ipynb](18_analisi_lunghezze.ipynb) | Analisi **per cluster** delle lunghezze dei riassunti generati dai 18 metodi, **prima e dopo** il contenimento (issue #15/#16): non genera nulla, legge le metriche `test` e `test_budgetref` già salvate e la mediana del riferimento per numero di articoli. |
+| 18 | [18_analisi_lunghezze.ipynb](18_analisi_lunghezze.ipynb) | Analisi **per cluster** delle lunghezze dei riassunti generati dai 19 metodi, **prima e dopo** il contenimento (issue #15/#16): non genera nulla, legge le metriche `test` e `test_budgetref` già salvate e la mediana del riferimento per numero di articoli. |
 | 19 | [19_confronto_giudici.ipynb](19_confronto_giudici.ipynb) | **Validazione del giudice** G-Eval: rigiudica un campione appaiato di riassunti gia' valutati con un secondo giudice di lignaggio diverso (DeepSeek-V3.2-Speciale) per verificare che il primato di `gpt5mini` non sia family bias. Non genera nulla e non spende nulla: legge le due cache di giudizi. |
 | 20 | [20_fewshot_pilota.ipynb](20_fewshot_pilota.ipynb) | **Pilota del few-shot**: su 100 righe di validation confronta k ∈ {2, 4} × due varianti di prompt con il controllo zero-shot (k=0) e con la baseline *retrieval-only*; fissa k e variante del notebook 21. |
-| 21 | [21_qwen_fewshot.ipynb](21_qwen_fewshot.ipynb) | Qwen2.5-7B-Instruct **few-shot** (slug `qwen_fewshot`): nel prompt i k esempi del train più simili (embedding `all-mpnet-base-v2`). Ambiti `sample` e `test`. |
+| 20b | [20b_fewshot_embedding.ipynb](20b_fewshot_embedding.ipynb) | **Confronto fra embedding** del few-shot, con lo stesso protocollo del 20 (100 righe val, k=4, prompt `new`): `all-mpnet-base-v2`, SBERT multilingue, TF-IDF, `nomic-embed-text`. Verifica la scelta di Federica, il cui pilota era falsato da contesto a 4k e righe del train nel campione. |
+| 21 | [21_qwen_fewshot.ipynb](21_qwen_fewshot.ipynb) | Qwen2.5-7B-Instruct **few-shot** (slug `qwen_fewshot`): nel prompt i k esempi del train più simili (embedding `all-mpnet-base-v2`). Ambiti `sample`, `test` e `test_budgetref`. |
 
 I notebook dei metodi (01–04, 06–12 e 15–17) sono indipendenti tra loro e condividono le routine di
 [summ_utils.py](summ_utils.py) (caricamento dati, ciclo con ripresa, metriche).
@@ -264,9 +265,27 @@ Il codice condiviso fra pilota e corsa è in `summ_utils` (sezione *Few-shot*).
 - **Riproducibilità del retrieval.** I vicini sono salvati in
   `results/fewshot/qwen_fewshot_vicini_{ambito}.tsv` (committato); gli embedding del train
   (~140 MB) restano in `results/embeddings_cache/`, fuori da git.
-- **Solo ambito `test`.** Il few-shot non ha l'ambito `test_budgetref` (servirebbe un pilota
-  di calibrazione a sé): `su.carica_scope` lo salta nel confronto a budget e il notebook 14 lo
-  esclude dal G-Eval di quell'ambito.
+- **Ambito `test_budgetref`.** Il prompt a budget è derivato da `new` (`su.prompt_fewshot_budget`:
+  cambia solo la riga sulla lunghezza) con `FATTORE_RICHIESTA = 1,4`, calibrato su 30 righe: con
+  l'1,2 di qwen zero-shot il few-shot restava sotto (mediana 0,91×, 23% sotto banda); gli esempi
+  lo rendono più conservativo. Una riga (54712) manca: il suo prompt di 31.348 token più i 1.500
+  di output supera il contesto, e la protezione la rifiuta invece di troncarla.
+
+**Esito.**
+
+- **Pilota (notebook 20):** k=4 con prompt `new`, l'unica configurazione sopra lo zero-shot su
+  ROUGE-1, ROUGE-2 e BERTScore insieme e la meno contaminata dagli esempi; nessun quasi-leakage.
+- **Embedding (notebook 20b):** nessuno batte `all-mpnet-base-v2` (differenze di ROUGE-1 F1 fra
+  −0,003 e −0,007, tutte dentro il rumore). Gli embedding trovano vicini molto diversi ma le
+  metriche quasi non cambiano: conta il formato degli esempi più dei vicini scelti.
+- **Ambito `test`, contro `qwen` zero-shot:** riassunti più corti (116 contro 140 parole), ROUGE-1
+  F1 −0,007 ma ROUGE-2 +0,010 e BERTScore +0,008; **G-Eval 4,81, 2° su 19** (+0,28, consistency
+  +0,35).
+- **A lunghezza del riferimento:** ROUGE-1 F1 **+0,016** (+0,013 anche sulle 1.161 righe a lunghezza
+  identica), ma G-Eval **4,59, −0,09**: costretto a raddoppiare la lunghezza (116 → 231 parole) il
+  giudice lo trova peggiore su tutte le dimensioni. Le due famiglie di metriche vanno in direzioni
+  opposte: il few-shot seleziona meglio i contenuti del riferimento, ma dà il meglio quando è
+  libero di essere conciso.
 
 ## Corsa completa sulla split test (notebook [03](03_bart.ipynb)-[04](04_pegasus.ipynb), [06](06_primera.ipynb)-[11](11_centroid_mmr.ipynb), [15](15_lsa.ipynb)-[17](17_lda.ipynb))
 
@@ -670,8 +689,9 @@ fonte e non la sovrapposizione col riferimento, è servito proprio a verificarlo
 analizza i due ambiti uno accanto all'altro.
 
 **Esito finale (corse 2026-09-13/17: 15 slug su 18 rigenerati, tetto su tutti e 18).** I 15
-rigenerati cadono in banda nel **71–100%** dei cluster (gli 11 estrattivi 93–99%, `gpt5mini` 100%,
-`gemma` 99%, `qwen` 79%, `mistral` 71%), con lunghezza mediana pari al riferimento (~215 parole).
+rigenerati cadono in banda nell'**88–100%** dei cluster (gli 11 estrattivi 98–99%, `gpt5mini` e
+`gemma` 100%, `mistral` 88%, `qwen` 85%; quote in banda corrette il 2026-09-28 (issue #21): prima un riassunto troncato esattamente sul tetto arrotondato per eccesso risultava fuori banda per mezza parola, e le quote erano sottostimate (`mistral` 71% invece di 88%, `qwen` 79% invece di 85%); le metriche non cambiano), con lunghezza mediana pari al riferimento
+(~215 parole).
 Il rapporto max/min dentro il cluster passa da 8,5× a 4,7× sui 18 — ma quel 4,7 è quasi tutto
 `bart`, che a 0,26× è il minimo in quasi ogni cluster mentre il tetto tiene il massimo a 1,25×:
 **senza `bart` si passa da 3,8× a 1,6×, e sui soli 15 rigenerati da 3,7× a 1,4×**. Fra i metodi
@@ -686,7 +706,8 @@ confondente tagliava in entrambe le direzioni, non solo a favore dei lunghi; `pr
 `pegasus` (0,424), già a lunghezza di riferimento e non rigenerati, restano in testa: il loro
 vantaggio non era di lunghezza. Il fattore del prompt è calibrato **per modello** (`qwen` 1,2,
 `gemma` 0,9, `mistral` 1,0, `gpt5mini` 0,9): i modelli sbagliano in direzioni opposte, e `mistral`
-resta molto disperso (p10 0,76×, p90 1,98×) contro il 99–100% in banda di `gemma` e `gpt5mini`.
+resta molto disperso prima del tetto (p10 0,76×, p90 1,98×), mentre `gemma` e `gpt5mini` stanno
+in banda quasi sempre anche senza tetto.
 
 ⚠️ **Content filter di Azure e filtro custom.** La corsa `test` di `gpt5mini` (vecchio account,
 policy di default) copriva 5.471 righe su 5.610; la prima corsa `test_budgetref` sul nuovo
@@ -832,10 +853,11 @@ results/
   metrics/confronto_giudici_test.json        # esito del confronto fra i due giudici (19_confronto_giudici.ipynb)
   summaries/{metodo}_test_budgetref.tsv      # riassunti rigenerati a lunghezza del riferimento (issue #16):
                                               # gli 11 estrattivi via driver --scope, gli LLM col budget nel prompt
-  metrics/{metodo}_test_budgetref_*          # metriche post-troncamento per tutti e 18 (scripts/applica_budget.py)
+  metrics/{metodo}_test_budgetref_*          # metriche post-troncamento per tutti e 19 (scripts/applica_budget.py)
   notebook_runs/{ambito}/*.ipynb             # notebook eseguiti dal driver negli ambiti a budget (in .gitignore)
   fewshot/qwen_fewshot_vicini_{ambito}.tsv   # vicini del train per ogni riga (21_qwen_fewshot.ipynb): il retrieval riproducibile
   fewshot/pilota_val100/                     # TSV per configurazione, vicini e riepilogo JSON del pilota (20_fewshot_pilota.ipynb)
+  fewshot/pilota_val100/embedding/           # vicini, riassunti e riepilogo del confronto fra embedding (20b_fewshot_embedding.ipynb)
   embeddings_cache/*.npy                     # embedding SBERT del few-shot (in .gitignore, rigenerabili)
 scripts/
   budget_lunghezza.json                      # T(n_articoli): budget per-cluster (18_analisi_lunghezze.ipynb)
@@ -867,7 +889,10 @@ dalla corsa `test` completa, non sono più committati — restano generabili loc
 | Mistral, `test` (5.610) | — | ~17 h |
 | Gemma, `test` (5.610) | — | ~22 h |
 | Pilota few-shot (20), 100 righe val × 5 configurazioni | — | ~1 h (misurato 2026-09-26 su 3 righe: 6 s/riga a k=0, 7–8 a k=2, 8–9 a k=4; + ~14 min una tantum per gli embedding del train) |
-| Qwen few-shot (21), `test` (5.610, k=4) | — | ~15 h stimate (~9,5 s/riga misurati nel pilota) |
+| Qwen few-shot (21), `test` (5.610, k=4) | — | 14,5 h (misurate 2026-09-27, ~9,3 s/riga) |
+| Qwen few-shot (21), `test_budgetref` (5.610) | — | ~20,5 h (misurate 2026-09-28, ~13,5 s/riga: riassunti circa doppi) |
+| Confronto fra embedding (20b), 3 × 100 righe val | — | ~1,1 h (generazione 16–32 min per embedding + pochi minuti per gli embedding del train) |
+| G-Eval (14) di un solo metodo, 5.610 righe | ~48 min e ~€10 per ambito (niente cache: un giudizio per riga) | — |
 | PRIMERA, `test` (5.610) | sconsigliata | ~28-56 h — **richiede la GPU** |
 | First-k, `test` (5.610, **entrambe le varianti**) | ~3 min | ~3 min (nessun modello) |
 | Centroid+MMR, `test` (5.610, **entrambe le varianti**) | non misurata (TF-IDF rapida, BERT lenta senza GPU) | ~8 min (corsa reale 2026-07-25, encoding BERT su GPU) |

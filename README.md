@@ -21,7 +21,7 @@ Il progetto esplora Multi-News come corpus di text mining e summarization:
   Data Mining, con un passo di pulizia che rimuove le righe con problemi noti di qualità della
   sorgente (scraping fallito, duplicati esatti, disallineamenti sorgente/riassunto) individuati
   dall'analisi esplorativa.
-- **Esperimenti di summarization** — un benchmark di **18 metodi** sul corpus curato, valutati
+- **Esperimenti di summarization** — un benchmark di **19 metodi** sul corpus curato, valutati
   sull'intera split test pulita (5.610 esempi):
   - due baseline posizionali First-k / Lead (notebook [10](notebooks/10_firstk.ipynb));
   - nove estrattivi non supervisionati — TextRank e LexRank, Centroid-based (MEAD) + MMR in due
@@ -30,7 +30,11 @@ Il progetto esplora Multi-News come corpus di text mining e summarization:
   - tre abstractive specializzati — BART, PEGASUS, PRIMERA (notebook [03](notebooks/03_bart.ipynb)/[04](notebooks/04_pegasus.ipynb)/[06](notebooks/06_primera.ipynb));
   - tre LLM generalisti eseguiti in locale via [ollama](https://ollama.com) — Qwen2.5-7B,
     Gemma 4 E4B, Mistral-7B (notebook [07](notebooks/07_qwen.ipynb)–[09](notebooks/09_mistral.ipynb));
-  - un LLM cloud su Azure AI Foundry — GPT-5-mini (notebook [12](notebooks/12_azure_gpt.ipynb)).
+  - un LLM cloud su Azure AI Foundry — GPT-5-mini (notebook [12](notebooks/12_azure_gpt.ipynb));
+  - la variante **few-shot** di Qwen2.5-7B, con nel prompt i 4 cluster del train più simili a
+    quello da riassumere, ciascuno con il suo riassunto umano (notebook [21](notebooks/21_qwen_fewshot.ipynb);
+    configurazione ed embedding scelti nei piloti [20](notebooks/20_fewshot_pilota.ipynb) e
+    [20b](notebooks/20b_fewshot_embedding.ipynb)).
 
   Un notebook per metodo in [notebooks/](notebooks/) (documentati in italiano), con i riassunti
   generati e le metriche salvati sotto [results/](results/), così che la valutazione possa essere
@@ -62,7 +66,7 @@ metodologiche sono in [notebooks/05b_confronto_test.ipynb](notebooks/05b_confron
 | [data/tab/](data/) | Copie Orange `.tab` **pulite**: una per split più `complete.tab` (tutte le split unite, con una colonna `split`) ed `excluded_rows.tsv` (elenco delle 115 righe scartate) |
 | [scripts/convert_to_tab.py](scripts/convert_to_tab.py) | Rigenera `data/tab/` a partire da `data/text/` applicando i criteri di pulizia — documentato in [scripts/README.md](scripts/README.md) |
 | [multi_news_dashboard.html](multi_news_dashboard.html) | Dashboard EDA autoconsistente — si apre direttamente nel browser (testo del report in italiano) |
-| [notebooks/](notebooks/) | Notebook del benchmark di summarization: uno per metodo (18 slug), più i quattro di confronto (05a–05d) e i due backfill di metrica (13 BERTScore, 14 G-Eval), in italiano — vedi [notebooks/README.md](notebooks/README.md) |
+| [notebooks/](notebooks/) | Notebook del benchmark di summarization: uno per metodo (19 slug), più i quattro di confronto (05a–05d), i due piloti del few-shot (20, 20b) e i due backfill di metrica (13 BERTScore, 14 G-Eval), in italiano — vedi [notebooks/README.md](notebooks/README.md) |
 | [scripts/run_benchmark_test.py](scripts/run_benchmark_test.py) | Driver non presidiato della corsa `test`: esegue in sequenza i notebook dei metodi, dal più veloce al più lento — documentato in [scripts/README.md](scripts/README.md) |
 | [scripts/run_geval.py](scripts/run_geval.py) | Driver non presidiato del backfill G-Eval (pilota, corsa completa con limite di spesa, riderivazione delle metriche dalla cache) — documentato in [scripts/README.md](scripts/README.md) |
 | [results/](results/) | Output del benchmark: campione di valutazione condiviso, riassunti generati, metriche per esempio e aggregate (comprese quelle G-Eval, in file dedicati, e la cache dei giudizi) |
