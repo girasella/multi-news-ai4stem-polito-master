@@ -67,7 +67,7 @@ automaticamente e la usano se disponibile.
 | 17 | [17_lda.ipynb](17_lda.ipynb) | Topic modeling con LDA (`CountVectorizer` + `LatentDirichletAllocation`): le frasi vengono allocate ai topic in proporzione al peso di ciascuno. Slug `lda`. Ambiti `sample`, `test` e `full`. |
 | 18 | [18_analisi_lunghezze.ipynb](18_analisi_lunghezze.ipynb) | Analisi **per cluster** delle lunghezze dei riassunti generati dai 19 metodi, **prima e dopo** il contenimento (issue #15/#16): non genera nulla, legge le metriche `test` e `test_budgetref` già salvate e la mediana del riferimento per numero di articoli. |
 | 19 | [19_confronto_giudici.ipynb](19_confronto_giudici.ipynb) | **Validazione del giudice** G-Eval: rigiudica un campione appaiato di riassunti gia' valutati con un secondo giudice di lignaggio diverso (DeepSeek-V3.2-Speciale) per verificare che il primato di `gpt5mini` non sia family bias. Non genera nulla e non spende nulla: legge le due cache di giudizi. |
-| 20 | [20_fewshot_pilota.ipynb](20_fewshot_pilota.ipynb) | **Pilota del few-shot**: su 100 righe di validation confronta k ∈ {2, 4} × due varianti di prompt con il controllo zero-shot (k=0) e con la baseline *retrieval-only*; fissa k e variante del notebook 21. |
+| 20 | [20_fewshot_pilota.ipynb](20_fewshot_pilota.ipynb) | **Pilota del few-shot**: su 100 righe di validation confronta k ∈ {2, 4} × due varianti di prompt, più k=6, con il controllo zero-shot (k=0) e con la baseline *retrieval-only*; fissa k e variante del notebook 21. |
 | 20b | [20b_fewshot_embedding.ipynb](20b_fewshot_embedding.ipynb) | **Confronto fra embedding** del few-shot, con lo stesso protocollo del 20 (100 righe val, k=4, prompt `new`): `all-mpnet-base-v2`, SBERT multilingue, TF-IDF, `nomic-embed-text`. Verifica la scelta di Federica, il cui pilota era falsato da contesto a 4k e righe del train nel campione. |
 | 21 | [21_qwen_fewshot.ipynb](21_qwen_fewshot.ipynb) | Qwen2.5-7B-Instruct **few-shot** (slug `qwen_fewshot`): nel prompt i k esempi del train più simili (embedding `all-mpnet-base-v2`). Ambiti `sample`, `test` e `test_budgetref`. |
 
@@ -275,6 +275,8 @@ Il codice condiviso fra pilota e corsa è in `summ_utils` (sezione *Few-shot*).
 
 - **Pilota (notebook 20):** k=4 con prompt `new`, l'unica configurazione sopra lo zero-shot su
   ROUGE-1, ROUGE-2 e BERTScore insieme e la meno contaminata dagli esempi; nessun quasi-leakage.
+  k=6 sta leggermente sotto k=4 su tutte le metriche (ROUGE-1 F1 −0,003 ±0,011): il beneficio
+  cresce fino a 4 esempi e poi si appiattisce.
 - **Embedding (notebook 20b):** nessuno batte `all-mpnet-base-v2` (differenze di ROUGE-1 F1 fra
   −0,003 e −0,007, tutte dentro il rumore). Gli embedding trovano vicini molto diversi ma le
   metriche quasi non cambiano: conta il formato degli esempi più dei vicini scelti.
