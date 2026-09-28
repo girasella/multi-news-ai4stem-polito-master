@@ -1,0 +1,284 @@
+{
+  "righe": "val",
+  "n": 100,
+  "seed": 42,
+  "k": 4,
+  "variante": "new",
+  "modello": "qwen2.5:7b-instruct",
+  "num_ctx": 32768,
+  "media": {
+    "sbert_mpnet_en": {
+      "rouge1_f1": 0.35366,
+      "rouge2_f1": 0.11947,
+      "rougeL_f1": 0.20049,
+      "meteor": 0.3154,
+      "bertscore_f1": 0.86857,
+      "parole_generate": 113.62
+    },
+    "sbert_multilingual": {
+      "rouge1_f1": 0.351,
+      "rouge2_f1": 0.11537,
+      "rougeL_f1": 0.19269,
+      "meteor": 0.31305,
+      "bertscore_f1": 0.86796,
+      "parole_generate": 113.86
+    },
+    "tfidf": {
+      "rouge1_f1": 0.34679,
+      "rouge2_f1": 0.113,
+      "rougeL_f1": 0.19701,
+      "meteor": 0.3197,
+      "bertscore_f1": 0.86742,
+      "parole_generate": 119.34
+    },
+    "ollama_nomic": {
+      "rouge1_f1": 0.34945,
+      "rouge2_f1": 0.11714,
+      "rougeL_f1": 0.19439,
+      "meteor": 0.31285,
+      "bertscore_f1": 0.86712,
+      "parole_generate": 115.92
+    },
+    "k0": {
+      "rouge1_f1": 0.33931,
+      "rouge2_f1": 0.10706,
+      "rougeL_f1": 0.19094,
+      "meteor": 0.32571,
+      "bertscore_f1": 0.86361,
+      "parole_generate": 128.9
+    },
+    "retrieval_sbert_mpnet_en": {
+      "rouge1_f1": 0.25418,
+      "rouge2_f1": 0.04252,
+      "rougeL_f1": 0.13632,
+      "meteor": 0.32257,
+      "bertscore_f1": 0.8335,
+      "parole_generate": 223.07
+    },
+    "retrieval_sbert_multilingual": {
+      "rouge1_f1": 0.22748,
+      "rouge2_f1": 0.03464,
+      "rougeL_f1": 0.12891,
+      "meteor": 0.29378,
+      "bertscore_f1": 0.82709,
+      "parole_generate": 219.55
+    },
+    "retrieval_tfidf": {
+      "rouge1_f1": 0.25087,
+      "rouge2_f1": 0.04653,
+      "rougeL_f1": 0.14026,
+      "meteor": 0.32356,
+      "bertscore_f1": 0.83188,
+      "parole_generate": 226.92
+    },
+    "retrieval_ollama_nomic": {
+      "rouge1_f1": 0.25602,
+      "rouge2_f1": 0.04597,
+      "rougeL_f1": 0.13629,
+      "meteor": 0.31846,
+      "bertscore_f1": 0.83499,
+      "parole_generate": 216.32
+    }
+  },
+  "confronti": {
+    "sbert_mpnet_en-k0": {
+      "rouge1_f1": {
+        "media": 0.01434,
+        "ic95": 0.01106
+      },
+      "rouge2_f1": {
+        "media": 0.01241,
+        "ic95": 0.00873
+      },
+      "rougeL_f1": {
+        "media": 0.00955,
+        "ic95": 0.00823
+      },
+      "meteor": {
+        "media": -0.01031,
+        "ic95": 0.01175
+      },
+      "bertscore_f1": {
+        "media": 0.00496,
+        "ic95": 0.00233
+      },
+      "parole_generate": {
+        "media": -15.28,
+        "ic95": 5.12183
+      }
+    },
+    "sbert_multilingual-sbert_mpnet_en": {
+      "rouge1_f1": {
+        "media": -0.00265,
+        "ic95": 0.0104
+      },
+      "rouge2_f1": {
+        "media": -0.0041,
+        "ic95": 0.00844
+      },
+      "rougeL_f1": {
+        "media": -0.0078,
+        "ic95": 0.00722
+      },
+      "meteor": {
+        "media": -0.00234,
+        "ic95": 0.01219
+      },
+      "bertscore_f1": {
+        "media": -0.00061,
+        "ic95": 0.00192
+      },
+      "parole_generate": {
+        "media": 0.24,
+        "ic95": 4.53029
+      }
+    },
+    "sbert_multilingual-k0": {
+      "rouge1_f1": {
+        "media": 0.01169,
+        "ic95": 0.01049
+      },
+      "rouge2_f1": {
+        "media": 0.00831,
+        "ic95": 0.00748
+      },
+      "rougeL_f1": {
+        "media": 0.00175,
+        "ic95": 0.00759
+      },
+      "meteor": {
+        "media": -0.01266,
+        "ic95": 0.01161
+      },
+      "bertscore_f1": {
+        "media": 0.00435,
+        "ic95": 0.00221
+      },
+      "parole_generate": {
+        "media": -15.04,
+        "ic95": 5.25583
+      }
+    },
+    "tfidf-sbert_mpnet_en": {
+      "rouge1_f1": {
+        "media": -0.00687,
+        "ic95": 0.01018
+      },
+      "rouge2_f1": {
+        "media": -0.00647,
+        "ic95": 0.00758
+      },
+      "rougeL_f1": {
+        "media": -0.00348,
+        "ic95": 0.00686
+      },
+      "meteor": {
+        "media": 0.00431,
+        "ic95": 0.01168
+      },
+      "bertscore_f1": {
+        "media": -0.00115,
+        "ic95": 0.00169
+      },
+      "parole_generate": {
+        "media": 5.72,
+        "ic95": 4.90337
+      }
+    },
+    "tfidf-k0": {
+      "rouge1_f1": {
+        "media": 0.00748,
+        "ic95": 0.01004
+      },
+      "rouge2_f1": {
+        "media": 0.00594,
+        "ic95": 0.00816
+      },
+      "rougeL_f1": {
+        "media": 0.00607,
+        "ic95": 0.00818
+      },
+      "meteor": {
+        "media": -0.00601,
+        "ic95": 0.01143
+      },
+      "bertscore_f1": {
+        "media": 0.00381,
+        "ic95": 0.00224
+      },
+      "parole_generate": {
+        "media": -9.56,
+        "ic95": 5.11358
+      }
+    },
+    "ollama_nomic-sbert_mpnet_en": {
+      "rouge1_f1": {
+        "media": -0.0042,
+        "ic95": 0.01102
+      },
+      "rouge2_f1": {
+        "media": -0.00233,
+        "ic95": 0.0083
+      },
+      "rougeL_f1": {
+        "media": -0.0061,
+        "ic95": 0.0078
+      },
+      "meteor": {
+        "media": -0.00255,
+        "ic95": 0.01165
+      },
+      "bertscore_f1": {
+        "media": -0.00145,
+        "ic95": 0.00185
+      },
+      "parole_generate": {
+        "media": 2.3,
+        "ic95": 4.47144
+      }
+    },
+    "ollama_nomic-k0": {
+      "rouge1_f1": {
+        "media": 0.01014,
+        "ic95": 0.0099
+      },
+      "rouge2_f1": {
+        "media": 0.01007,
+        "ic95": 0.00811
+      },
+      "rougeL_f1": {
+        "media": 0.00345,
+        "ic95": 0.00781
+      },
+      "meteor": {
+        "media": -0.01286,
+        "ic95": 0.01081
+      },
+      "bertscore_f1": {
+        "media": 0.00351,
+        "ic95": 0.00202
+      },
+      "parole_generate": {
+        "media": -12.98,
+        "ic95": 5.2627
+      }
+    }
+  },
+  "contaminazione_esempi": {
+    "sbert_mpnet_en": 0.18,
+    "sbert_multilingual": 0.16,
+    "tfidf": 0.26,
+    "ollama_nomic": 0.31
+  },
+  "sim1_mediana": {
+    "sbert_mpnet_en": 0.760735,
+    "sbert_multilingual": 0.6658999999999999,
+    "tfidf": 0.6663129999999999,
+    "ollama_nomic": 0.839593
+  },
+  "esito_rispetto_a_sbert_mpnet_en": {
+    "sbert_multilingual": "non distinguibile",
+    "tfidf": "non distinguibile",
+    "ollama_nomic": "non distinguibile"
+  }
+}
