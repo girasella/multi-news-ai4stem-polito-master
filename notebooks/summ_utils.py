@@ -279,9 +279,19 @@ def budget_riferimento(esempio):
 FATTORE_TETTO_BUDGET = 1.25
 
 
+def tetto_parole(parole_riferimento):
+    """Tetto in parole per un riferimento lungo `parole_riferimento`: round(1,25 x riferimento).
+
+    E' anche il bordo superiore della banda: chi verifica "in banda" deve confrontare con
+    questo intero, non con 1,25 x riferimento esatto, altrimenti una riga troncata proprio
+    sul tetto arrotondato per eccesso (es. 388 contro 387,5) risulta fuori banda (issue #21).
+    """
+    return int(round(FATTORE_TETTO_BUDGET * parole_riferimento))
+
+
 def tetto_riferimento(esempio):
     """Tetto in parole di un esempio negli ambiti a budget: 1,25 x budget."""
-    return int(round(FATTORE_TETTO_BUDGET * budget_riferimento(esempio)))
+    return tetto_parole(budget_riferimento(esempio))
 
 
 def seleziona_per_budget(frasi, ordine, budget_parole):
@@ -1098,6 +1108,237 @@ def mostra_esempi(riferimenti, riassunti, quanti=2, larghezza=500):
 
 
 # ---------------------------------------------------------------------------
+# Few-shot con esempi recuperati dal train — notebook 20 (pilota) e 21 (qwen)
+# ---------------------------------------------------------------------------
+#
+# Per ogni cluster da riassumere si recuperano i k cluster del TRAIN piu' simili
+# (coseno fra embedding SBERT) e le loro coppie (articolo, riassunto umano) entrano
+# nel prompt come esempi. Nasce dai notebook di Federica in notebooks/llm/ (20/21),
+# da cui vengono le due varianti di prompt, copiate alla lettera.
+#
+# Il prompt few-shot e' lungo (k=4: mediana ~12k token): la generazione passa per
+# l'API NATIVA di ollama (/api/chat), non per l'endpoint OpenAI-compatibile dei
+# notebook 07-09, perche' e' l'unico canale che accetta `num_ctx` per richiesta e
+# che restituisce `prompt_eval_count`, con cui il troncamento silenzioso del
+# prompt da parte di ollama diventa un errore esplicito.
+
+URL_OLLAMA_NATIVO = 'http://localhost:11434'
+MODELLO_EMBEDDING_FEWSHOT = 'all-mpnet-base-v2'  # vincitore del pilota di Federica (nb llm/20)
+# Contesto nativo di Qwen2.5-7B: il massimo che il modello regge senza RoPE scaling.
+NUM_CTX_FEWSHOT = 32768
+# Troncamenti che tengono il prompt dentro NUM_CTX_FEWSHOT anche nel caso peggiore.
+# Gli esempi servono per lo stile: l'articolo dell'esempio viene troncato, il suo
+# riassunto resta intero. Il documento da riassumere e' troncato solo oltre 16.000
+# parole (~21k token): 7 cluster su 5.610 nel test.
+PAROLE_ESEMPIO_FEWSHOT = 1000
+MAX_PAROLE_DOCUMENTO_FEWSHOT = 16000
+
+
+def embedding_fewshot(testi, cache_dir, etichetta, modello=MODELLO_EMBEDDING_FEWSHOT,
+                      batch_size=32):
+    """Embedding SBERT normalizzati di `testi`, con cache .npy su disco.
+
+    La chiave della cache e' l'hash di modello + testi: qualunque cambiamento la
+    invalida. `etichetta` serve solo a dare un nome leggibile al file. NB:
+    all-mpnet-base-v2 tronca a 384 token, quindi l'embedding rappresenta circa
+    l'inizio del cluster (il primo articolo), non tutto il documento.
+    """
+    import hashlib
+    import numpy as np
+
+    # `modello` puo' essere anche una cartella locale (modello scaricato a mano): la cache
+    # usa solo il nome della cartella, cosi' non dipende dal percorso
+    nome = Path(modello).name
+    h = hashlib.sha256(nome.encode('utf-8'))
+    for t in testi:
+        h.update(b'\x00')
+        h.update(t.encode('utf-8'))
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path = cache_dir / f'{etichetta}_{nome}_{h.hexdigest()[:16]}.npy'
+    if path.exists():
+        print(f'[{etichetta}] embedding dalla cache ({path.name})')
+        return np.load(path)
+
+    from sentence_transformers import SentenceTransformer
+    print(f'[{etichetta}] calcolo embedding di {len(testi)} testi...')
+    emb = SentenceTransformer(modello, device=rileva_device()).encode(
+        testi, batch_size=batch_size, show_progress_bar=False,
+        convert_to_numpy=True, normalize_embeddings=True)
+    np.save(path, emb)
+    return emb
+
+
+def vicini_fewshot(emb_train, emb_query, k):
+    """(indici, similarita') dei k vicini nel train per ogni riga di `emb_query`.
+
+    Coseno esatto (ricerca brute force di sklearn), ordinati dal piu' simile.
+    """
+    from sklearn.neighbors import NearestNeighbors
+    nn = NearestNeighbors(n_neighbors=k, metric='cosine').fit(emb_train)
+    distanze, indici = nn.kneighbors(emb_query)
+    return indici, 1.0 - distanze
+
+
+def salva_vicini(path, row_ids_query, row_ids_train, indici, similarita):
+    """TSV (row_id, rango, row_id_vicino, similarita'): l'artefatto che rende il
+    retrieval riproducibile senza ricalcolare gli embedding."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, 'w', encoding='utf-8', newline='') as f:
+        w = csv.writer(f, delimiter='\t')
+        w.writerow(['row_id', 'rango', 'row_id_vicino', 'similarita'])
+        for rid, idx, sim in zip(row_ids_query, indici, similarita):
+            for rango, (j, s) in enumerate(zip(idx, sim), 1):
+                w.writerow([rid, rango, row_ids_train[j], f'{s:.6f}'])
+
+
+def carica_vicini(path, k=None):
+    """{row_id: [(row_id_vicino, similarita'), ...]} in ordine di rango (primi k)."""
+    vicini = defaultdict(list)
+    with open(path, encoding='utf-8', newline='') as f:
+        reader = csv.reader(f, delimiter='\t')
+        next(reader)
+        for rid, rango, vic, sim in reader:
+            if k is None or int(rango) <= k:
+                vicini[int(rid)].append((int(vic), float(sim)))
+    return dict(vicini)
+
+
+def testo_per_embedding(documento, parole=512):
+    """Testo passato all'encoder: documento preparato e tagliato a `parole` parole.
+
+    all-mpnet-base-v2 legge comunque solo i primi 384 token, quindi il taglio non
+    cambia l'embedding ma evita di tenere in memoria ~400 MB di testo del train.
+    """
+    return tronca_parole(prepara_documento(documento), parole)
+
+
+def calcola_vicini(complete_tab, righe_query, k, cache_dir, etichetta, path_vicini):
+    """Retrieval completo: embedding di train e query, k vicini, TSV dei vicini.
+
+    - `righe_query`: lista di dict row_id/document (mai righe del train: il pool e'
+      l'intero train, una riga del train ritroverebbe se stessa)
+    Ritorna il dict di `carica_vicini(path_vicini)`.
+    """
+    assert all(r.get('split', 'test') != 'train' for r in righe_query), \
+        'righe del train fra le query: ritroverebbero se stesse come vicino'
+    train_ids, train_testi = [], []
+    for es in itera_split(complete_tab, 'train'):
+        train_ids.append(es['row_id'])
+        train_testi.append(testo_per_embedding(es['document']))
+    emb_train = embedding_fewshot(train_testi, cache_dir, 'train')
+    del train_testi
+    emb_query = embedding_fewshot([testo_per_embedding(r['document']) for r in righe_query],
+                                  cache_dir, etichetta)
+    indici, similarita = vicini_fewshot(emb_train, emb_query, k)
+    salva_vicini(path_vicini, [r['row_id'] for r in righe_query], train_ids, indici, similarita)
+    print(f'Vicini: {path_vicini} ({len(righe_query)} righe x {k})')
+    return carica_vicini(path_vicini)
+
+
+def carica_esempi_train(complete_tab, row_ids, parole=PAROLE_ESEMPIO_FEWSHOT):
+    """{row_id: esempio_fewshot} per i soli row_id del train richiesti (streaming)."""
+    row_ids = set(row_ids)
+    return {es['row_id']: esempio_fewshot(es, parole)
+            for es in itera_split(complete_tab, 'train') if es['row_id'] in row_ids}
+
+
+def prompt_fewshot(esempi, documento, variante):
+    """Prompt few-shot (un solo messaggio `user`), varianti di Federica alla lettera.
+
+    - `esempi`: lista di dict {'document', 'summary'}, gia' preparati e troncati
+    - `variante`: 'old' (prima versione) o 'new' (con istruzioni esplicite)
+    Il testo e' copiato da notebooks/llm/20_preliminary_fs_test.ipynb (inclusi i
+    refusi di 'old'): cambiarlo significa cambiare il metodo.
+    """
+    if variante == 'old':
+        blocks = [f"Document:\n{ex['document']}\n\nSummary:\n{ex['summary']}\n" for ex in esempi]
+        examples_text = "\n---\n".join(blocks)
+        return (
+            "You are an helpful assistant that summarizes newsarticles from different sources.\n\n"
+            "You will be shown k examples with documents and summaries human generated. You will have then create a summary resembling the style of the ones human generated without mixing the example sources with your own document.\n\n"
+            f"{examples_text}\n---\n"
+            f"The document you need to summarise is the following:\n{documento}\n\nSummary:"
+        )
+    if variante == 'new':
+        n = len(esempi)
+        blocks = [f"--- Example {i} ---\nArticle:\n{ex['document']}\n\nSummary:\n{ex['summary']}"
+                  for i, ex in enumerate(esempi, 1)]
+        examples_text = "\n\n".join(blocks)
+        return (
+            "You are a professional news editor who writes concise, accurate summaries.\n\n"
+            f"Below are {n} example pairs of (article -> human-written summary). "
+            "Study their length, tone, and level of detail closely — your summary must match this style.\n\n"
+            f"{examples_text}\n\n"
+            "=== New article to summarize ===\n"
+            f"{documento}\n\n"
+            "Instructions:\n"
+            f"- Write a summary of ONLY the article above, matching the style and approximate length of the {n} example summaries.\n"
+            "- Do not include any facts, names, or details from the example articles — only from the new article.\n"
+            "- Do not add a title, preamble, or explanation — output ONLY the summary text itself.\n\n"
+            "Summary:"
+        )
+    raise ValueError(f'variante di prompt sconosciuta: {variante!r}')
+
+
+def prompt_fewshot_budget(esempi, documento, richiesto, variante='new'):
+    """Prompt few-shot per l'ambito `*_budgetref` (issue #16): DERIVATO da `prompt_fewshot`.
+
+    Come per lo zero-shot (PROMPT_USER_BUDGET dei notebook 07-09/12) cambia solo la
+    lunghezza: la riga che chiede di imitare "the style and approximate length" degli
+    esempi diventa una richiesta di `richiesto` parole, con lo stesso vincolo "at least"
+    dei notebook zero-shot. Lo stile resta quello degli esempi. Solo la variante `new`
+    (quella del notebook 21): `old` non ha una riga di istruzioni da sostituire.
+    """
+    if variante != 'new':
+        raise ValueError(f'budget supportato solo per la variante new, non {variante!r}')
+    n = len(esempi)
+    base = prompt_fewshot(esempi, documento, 'new')
+    riga = (f"- Write a summary of ONLY the article above, matching the style and approximate "
+            f"length of the {n} example summaries.\n")
+    nuova = (f"- Write a summary of ONLY the article above, of about {richiesto} words, matching "
+             f"the style of the {n} example summaries. "
+             f"The summary must be at least {richiesto} words long.\n")
+    assert base.count(riga) == 1, 'prompt_fewshot cambiato: aggiornare la derivazione budget'
+    return base.replace(riga, nuova)
+
+
+def esempio_fewshot(esempio_train, parole=PAROLE_ESEMPIO_FEWSHOT):
+    """Un esempio del train pronto per il prompt: separatore -> newline, articolo
+    troncato a `parole`, riassunto di riferimento ripulito dal trattino iniziale."""
+    return {'document': tronca_parole(prepara_documento(esempio_train['document']), parole),
+            'summary': pulisci_riferimento(esempio_train['summary'])}
+
+
+def genera_ollama_nativo(messaggi, modello, max_tokens, temperature,
+                         num_ctx=NUM_CTX_FEWSHOT, url=URL_OLLAMA_NATIVO, timeout=900):
+    """Una chiamata a /api/chat di ollama -> (testo, prompt_eval_count).
+
+    Solleva (quindi `ciclo_summarization` registra l'errore e non scrive la riga) se
+    la risposta e' vuota o se il prompt ha riempito il contesto: ollama troncherebbe
+    in silenzio, e un riassunto fatto su un prompt mutilato non deve entrare nei
+    risultati. NB: con la cache dei prefissi di ollama `prompt_eval_count` conta
+    solo i token rivalutati, quindi puo' sottostimare ma mai sovrastimare.
+    """
+    import requests
+    r = requests.post(f'{url}/api/chat', timeout=timeout, json={
+        'model': modello, 'messages': messaggi, 'stream': False,
+        'options': {'num_ctx': num_ctx, 'num_predict': max_tokens,
+                    'temperature': temperature}})
+    r.raise_for_status()
+    dati = r.json()
+    n_prompt = dati.get('prompt_eval_count', 0)
+    if n_prompt + max_tokens >= num_ctx:
+        raise RuntimeError(f'prompt da {n_prompt} token: contesto {num_ctx} saturo, '
+                           'possibile troncamento')
+    testo = (dati.get('message') or {}).get('content', '').strip()
+    if not testo:
+        raise RuntimeError(f"risposta vuota (done_reason={dati.get('done_reason')})")
+    return testo, n_prompt
+
+
+# ---------------------------------------------------------------------------
 # Confronto fra metodi — helper condivisi dai notebook 05a/05b/05c/05d
 # ---------------------------------------------------------------------------
 # Il notebook 05 e' stato diviso in quattro (2026-09-19: un ambito per notebook,
@@ -1105,7 +1346,8 @@ def mostra_esempi(riferimenti, riassunti, quanti=2, larghezza=500):
 # palette, il caricamento con intersezione dei row_id, la tabella delle medie e i
 # grafici a barre — vive qui, una volta sola. Nessun notebook di generazione li usa.
 
-# I 18 slug del benchmark nell'ordine canonico delle tabelle di confronto.
+# I 19 slug del benchmark nell'ordine canonico delle tabelle di confronto
+# (`qwen_fewshot` solo nell'ambito test: nel budget e' saltato da `carica_scope`).
 METODI_BENCHMARK = ['firstk_psr', 'firstk_nltk',            # notebook 10 (First-k)
                     'centroid_mmr', 'centroid_mmr_bert',    # notebook 11 (Centroid+MMR)
                     'textrank', 'lexrank',                  # notebook 01/02
@@ -1114,7 +1356,8 @@ METODI_BENCHMARK = ['firstk_psr', 'firstk_nltk',            # notebook 10 (First
                     'gpt5mini',                             # notebook 12 (Azure)
                     'lsa', 'lsa_steinberger',               # notebook 15
                     'sbert_kmeans', 'sbert_agglom',         # notebook 16
-                    'lda']                                  # notebook 17
+                    'lda',                                  # notebook 17
+                    'qwen_fewshot']                         # notebook 21 (ollama, few-shot)
 
 # Colori fissi per metodo: il colore segue il metodo in tutti i grafici, mai la
 # posizione. I cinque colori dei notebook 15-17 sono stati scelti massimizzando la
@@ -1130,7 +1373,8 @@ COLORI_METODI = {'firstk_psr': '#5f6b7a', 'firstk_nltk': '#c2410c',
                  'gpt5mini': '#e8590c',
                  'lsa': '#900090', 'lsa_steinberger': '#b840b0',
                  'sbert_kmeans': '#8088f8', 'sbert_agglom': '#803860',
-                 'lda': '#a01018'}
+                 'lda': '#a01018',
+                 'qwen_fewshot': '#f783ac'}   # rosa chiaro: variante di qwen
 INK, INK2, MUTED, GRID, SURFACE = '#0b0b0b', '#52514e', '#898781', '#e1e0d9', '#fcfcfb'
 
 METRICHE_CHIAVE = ['rouge1_f1', 'rouge2_f1', 'rougeL_f1', 'bleu', 'meteor',

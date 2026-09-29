@@ -28,7 +28,7 @@ scripts/
   convert_to_tab.py    # Regenerates data/tab/ from data/text/ (Orange format), dropping dirty rows
   import_llm_results.py  # One-off importer of the archived LM Studio LLM runs (notebooks/llm/*.csv) into results/ — superseded by the ollama re-runs, kept for provenance
   run_benchmark_test.py  # Unattended driver: runs notebooks 03-04/06-11/15-17 with SCOPE='test' back-to-back (--only N,N to select a subset), derives textrank/lexrank test metrics from their full run, re-runs 05b/05d; --scope test_budgetref runs the 7 extractive notebooks at reference-length budget (issue #16)
-  applica_budget.py    # Ceiling (1.25x reference length) + re-scoring of all 18 methods into the test_budgetref scope (issue #16)
+  applica_budget.py    # Ceiling (1.25x reference length) + re-scoring of all 19 methods into the test_budgetref scope (issue #16)
   budget_lunghezza.json  # T(n_articoli) table from notebook 18 — an analysis artifact, NOT the containment budget (which is the reference length)
   pilota_giudice_deepseek.py  # Paired second-judge pilot (DeepSeek vs gpt-5.4-mini) — tests the family-bias
                        # hypothesis on 7 methods; separate cache/JSON, touches nothing committed
@@ -42,9 +42,13 @@ notebooks/             # Summarization benchmark — see "Summarization benchmar
                        # (full / test / test_budgetref / before-after), helpers in summ_utils
   1X_*.ipynb           # 10 First-k baseline, 11 Centroid+MMR, 12 Azure AI Foundry GPT-5-mini (scopes sample/test/full), 13 BERTScore backfill, 14 G-Eval backfill, 15 LSA (2 variants), 16 SBERT clustering (2 variants), 17 LDA, 18 per-cluster length analysis, both scopes test/test_budgetref side by side — budgetref lengths are POST-ceiling (from the CSVs applica_budget.py rewrites); Vista 3a reads the pre-ceiling `*_test_budgetref.tsv` of the 15 regenerated methods (issue #15/#16, generates nothing, writes `analisi_lunghezze_{scope}.json` per scope), 19 second-judge
                        # validation of the G-Eval judge (generates nothing, spends nothing); ex Azure 11-12 (Claude Haiku, DeepSeek) removed — recoverable from git history
+  2X_*.ipynb           # 20 few-shot pilot (100 VALIDATION rows: k x prompt variant vs a k=0 control
+                       # and a retrieval-only baseline), 20b embedding comparison (same protocol, 4 embeddings),
+                       # 21 Qwen few-shot (slug `qwen_fewshot`, scopes sample/test/test_budgetref)
   llm/                 # ARCHIVE (do not run/edit): Federica's original LM Studio notebooks,
                        # result CSVs (source of the originally imported qwen/gemma/mistral
-                       # results, since replaced by local ollama runs) and docx report —
+                       # results, since replaced by local ollama runs) and docx report, plus
+                       # her few-shot notebooks 20/21 (NOT imported: wrong row_ids, no num_ctx) —
                        # see notebooks/llm/README.md
 results/
   sample/              # Shared evaluation sample TSV (committed)
@@ -129,7 +133,9 @@ unsupervised extractives built on scikit-learn — LSA/TruncatedSVD in two selec
 (notebook 15, slugs `lsa` top-k by latent norm / `lsa_steinberger` greedy with deflation),
 clustering over MiniLM sentence embeddings with medoid selection in two variants (notebook 16,
 slugs `sbert_kmeans` / `sbert_agglom`), and LDA topic modeling with topic-proportional sentence
-allocation (notebook 17, slug `lda`). TextRank/LexRank
+allocation (notebook 17, slug `lda`). A nineteenth slug, `qwen_fewshot` (notebook 21), is
+the same Qwen with k=4 retrieved train examples in the prompt (see the few-shot bullet below),
+in both `test` and `test_budgetref`. TextRank/LexRank
 and BART/PEGASUS
 run via pyAutoSummarizer, PRIMERA directly via `transformers` (notebook 06), the local LLMs via
 the `openai` client against ollama's OpenAI-compatible endpoint (`http://localhost:11434/v1`),
@@ -220,7 +226,7 @@ respect:
   don't "fix" it into an `all(...)` gate.
 - **Notebook 05 was split into 05a/05b/05c/05d on 2026-09-19** (full / test / test_budgetref /
   before-after) because it had grown past 13 cells and 1 MB of outputs. Everything they share
-  lives in `summ_utils` (section *Confronto fra metodi*): `METODI_BENCHMARK` (the 18 slugs in
+  lives in `summ_utils` (section *Confronto fra metodi*): `METODI_BENCHMARK` (the 19 slugs in
   canonical order), `COLORI_METODI` + `INK/INK2/MUTED/GRID/SURFACE`, `METRICHE_CHIAVE`,
   `carica_scope(metrics_dir, scope, metodi)` (LEFT-merges the G-Eval files, intersects row_ids
   over methods with >= `COPERTURA_MINIMA`), `tabella_medie`, `con_metrica`, `barre_metriche`,
@@ -229,7 +235,7 @@ respect:
   budget scope", 05d holds the before/after (the old Vista 3). Drivers re-run 05b+05d after a
   `test` run and 05c+05d after a `test_budgetref` run (`run_geval.py --no-05` skips both). Keep
   new comparison views in the notebook of their scope, not in a fifth file.
-- **Notebook 13 is incremental**: it lists all 18 slugs and skips any method whose per-example
+- **Notebook 13 is incremental**: it lists all 19 slugs and skips any method whose per-example
   CSV already has the `bertscore_*` columns, because `valuta_e_salva` rewrites that method's CSV
   and JSON wholesale. `BERTSCORE_FORZA=1` forces a full recompute. This is what let the five new
   slugs be backfilled without regenerating the 13 published files.
@@ -264,7 +270,12 @@ respect:
   (0.97x) already sit at or inside the band unaided. bart (0.26x, 0% in band) is the declared
   exception of the comparison — do not "fix" it by regenerating; G-Eval IS recomputed (see below). Notebook 05d is the before/after view, 05c the budget scope on its own. Outcome of
   the 2026-09-13/17 runs (15 of 18 regenerated, ceiling on all 18): the 15 are in band in
-  71-100% of clusters (11 extractives 93-99%, gpt5mini 100%, gemma 99%, qwen 79%, mistral 71%).
+  88-100% of clusters (11 extractives 98-99%, gpt5mini/gemma 100%, mistral 88%, qwen 85%).
+  **These shares were corrected on 2026-09-28 (issue #21)**: they used to read 71-100% (mistral
+  71%, qwen 79%, lda 93%) because notebook 18 compared lengths with the exact 1.25 x R while
+  the ceiling truncates to `round(1.25 x R)`, so a row cut exactly at a rounded-up ceiling
+  counted as above band. Notebook 18 now uses `entro_tetto` / `su.tetto_parole`, the same
+  integer the ceiling uses — keep any new band check on that function, never on 1.25 x R.
   Per-cluster max/min goes 8.5x → 4.7x across all 18, but that 4.7 is almost entirely `bart`
   (0.26x = the minimum in nearly every cluster, while the ceiling caps the max at 1.25x):
   **without bart it is 3.8x → 1.6x, and over the 15 regenerated 3.7x → 1.4x** — quote those, the
@@ -471,6 +482,38 @@ respect:
     reports the *useful* spend, not the bill. Judgments are not bitwise reproducible, so the two
     runs' duplicates could differ — the kept one is the first written, which is arbitrary but
     deterministic.
+
+- **Few-shot (`qwen_fewshot`, notebooks 20/21, helpers in `summ_utils` section *Few-shot*)**:
+  derived from Federica's notebooks archived in `notebooks/llm/` (20/21), whose prompt text is
+  copied verbatim into `su.prompt_fewshot` (variants `old`/`new`, typos included — changing it
+  changes the method). Her full test run was deliberately NOT imported: it read `test.tab` with
+  pandas, so the two Orange header lines became data rows (5,612 = 5,610 + 2) and row_ids were
+  local indices 0..5611 — which are *train* rows in this project (test = 50491..56100) — and it
+  never set ollama's context. Rules: the example pool is the whole **train** split, so query rows
+  must never come from train (`su.calcola_vicini` asserts it; the shared sample contains train
+  rows, which is why the pilot uses 100 **validation** rows and notebook 21's `sample` scope drops
+  its train rows). Generation uses ollama's **native** `/api/chat` via `su.genera_ollama_nativo`
+  with `num_ctx=32768`, not the OpenAI-compatible endpoint of 07-09, because only the native
+  API takes `num_ctx` per request; it raises when `prompt_eval_count` fills the context, so a
+  silently truncated prompt can never be written. Measured 2026-09-26 on this machine
+  (ollama 0.34.0): the default context is already 32,768, and an 8,349-word document arrives
+  whole (10,856 tokens) with or without explicit `num_ctx` — so the committed zero-shot 07-09
+  runs were most likely not truncated here, but Federica's Mac run is unknown. Example articles
+  are cut to 1,000 words (their summaries stay whole), the target document to 16,000 words
+  (7/5,610 test rows). The retrieval is committed as `results/fewshot/qwen_fewshot_vicini_{scope}.tsv`;
+  the SBERT embeddings (`results/embeddings_cache/`, ~140 MB) are gitignored. Notebook 21 maps
+  examples by **row_id** (it builds each prompt in the row iterator and passes
+  `prepara=identity` to `ciclo_summarization`), never by document text. Budget scope: the prompt
+  is derived from `new` (`su.prompt_fewshot_budget`, only the length line changes) with
+  `FATTORE_RICHIESTA = 1.4` — the zero-shot 1.2 left it at 0.91x (23% below band); row 54712 is
+  missing (31,348-token prompt + 1,500 output tokens exceed the context, the guard refused it).
+  Outcome (2026-09-26/28): pilot → k=4, prompt `new`; notebook 20b → no embedding beats
+  all-mpnet-base-v2 (all within noise, neighbours differ a lot but metrics barely move). vs
+  zero-shot `qwen`: in `test` shorter (116 vs 140 words), R1 F1 −0.007, R2 +0.010, BERTScore
+  +0.008, **G-Eval 4.81 = 2nd of 19** (+0.28); at matched length R1 F1 **+0.016** (+0.013 on
+  equal-length rows) but G-Eval **−0.09** (4.59) — forced to double its length the judge likes
+  it less. The two metric families disagree; quote both. `run_geval.py --budget` is a cap on the
+  scope cache's CUMULATIVE spend (the `test` cache already holds ~€107), not on the new run.
 
 ## Working with the data files
 

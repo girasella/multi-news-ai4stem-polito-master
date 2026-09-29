@@ -1,0 +1,66 @@
+{
+  "metodo": "qwen_fewshot",
+  "scope": "test_budgetref",
+  "config": {
+    "modello": "qwen2.5:7b-instruct",
+    "backend": "ollama (API nativa /api/chat)",
+    "max_tokens": 1500,
+    "temperature": 0.3,
+    "num_ctx": 32768,
+    "budget_parole": "lunghezza del riferimento nel prompt x 1.4 (issue #16)",
+    "k": 4,
+    "variante_prompt": "new",
+    "embedding": "all-mpnet-base-v2",
+    "pool_esempi": "split train di complete.tab",
+    "parole_esempio": 1000,
+    "max_parole_documento": 16000,
+    "vicini": "qwen_fewshot_vicini_test.tsv",
+    "note": "few-shot con esempi recuperati (nearest neighbour coseno), prompt di Federica (notebooks/llm/20); k e variante dal pilota del notebook 20",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "tetto": "1.25 x budget, su.tronca_parole",
+      "sorgente_riassunti": "qwen_fewshot_test_budgetref.tsv",
+      "rigenerato_a_budget": true,
+      "righe_troncate_dal_tetto": 1870
+    }
+  },
+  "timestamp": "2026-09-28T13:30:45+00:00",
+  "n_esempi": 5609,
+  "overall": {
+    "rouge1_f1": 0.36722619951531027,
+    "rouge1_p": 0.3640417977469719,
+    "rouge1_r": 0.3749759307226715,
+    "rouge2_f1": 0.12690087802822606,
+    "rouge2_p": 0.12440213713278249,
+    "rouge2_r": 0.1313615639230395,
+    "rougeL_f1": 0.20232770283282125,
+    "rougeL_p": 0.19748798472446588,
+    "rougeL_r": 0.2107049009635101,
+    "bleu": 0.09258827532337617,
+    "meteor": 0.43248696981381124,
+    "parole_generate": 231.29613121768585,
+    "bertscore_f1": 0.863941063428652,
+    "bertscore_p": 0.8660355921436874,
+    "bertscore_r": 0.8619404315820967
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5609,
+      "rouge1_f1": 0.36722619951531027,
+      "rouge1_p": 0.3640417977469719,
+      "rouge1_r": 0.3749759307226715,
+      "rouge2_f1": 0.12690087802822606,
+      "rouge2_p": 0.12440213713278249,
+      "rouge2_r": 0.1313615639230395,
+      "rougeL_f1": 0.20232770283282125,
+      "rougeL_p": 0.19748798472446588,
+      "rougeL_r": 0.2107049009635101,
+      "bleu": 0.09258827532337617,
+      "meteor": 0.43248696981381124,
+      "parole_generate": 231.29613121768585,
+      "bertscore_f1": 0.863941063428652,
+      "bertscore_p": 0.8660355921436874,
+      "bertscore_r": 0.8619404315820967
+    }
+  }
+}

@@ -79,14 +79,14 @@ macchina resterà occupata per diversi giorni: lo script non limita l'uso di GPU
 ## `applica_budget.py`
 
 Tetto e rivalutazione per l'ambito **`test_budgetref`** (issue #16, protocollo
-*length-matched* / *oracle-length*): per ciascuno dei 18 metodi tronca ogni riassunto a
+*length-matched* / *oracle-length*): per ciascuno dei 19 metodi tronca ogni riassunto a
 `1,25 × B_i` parole, dove `B_i` è la lunghezza del riassunto di riferimento di quel cluster
 (`su.budget_riferimento`), e ricalcola le metriche sul testo troncato.
 
 ### Uso
 
 ```
-python scripts/applica_budget.py                      # 18 metodi, con BERTScore (GPU, ~1,5 h)
+python scripts/applica_budget.py                      # 19 metodi, con BERTScore (GPU, ~1,5 h)
 python scripts/applica_budget.py --senza-bertscore    # solo metriche lessicali (minuti)
 python scripts/applica_budget.py --solo lda,lexrank   # sottoinsieme
 python scripts/applica_budget.py --forza              # ricalcola anche i metodi già fatti
@@ -181,6 +181,13 @@ python scripts/run_geval.py --no-05          # non rieseguire i notebook di conf
 
 Vanno eseguiti in quest'ordine: `--righe 1`, poi `--pilota 20`, poi la corsa completa. È il pilota
 a trasformare la stima di consumo e durata in un numero misurato.
+
+⚠️ **`--budget` è un tetto sulla spesa complessiva della cache dell'ambito, non su quella della
+corsa.** La cache `test` contiene già ~€107 di giudizi: `--budget 12` ferma subito la corsa
+(senza spendere nulla). Per aggiungere un metodo si passa la spesa attuale (`--costo`) più il
+margine voluto. Quando si giudica **un solo metodo** per riga (es. `qwen_fewshot`, 2026-09-28) il
+prefisso con la sorgente non si ammortizza sulla cache: ~€10 per 5.610 giudizi, circa il doppio
+del costo medio per giudizio della corsa completa.
 
 #### Ambito `test_budgetref` (issue #16)
 

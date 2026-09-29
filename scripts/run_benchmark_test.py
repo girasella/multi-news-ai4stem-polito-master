@@ -1,8 +1,8 @@
 """Unattended driver for the SCOPE='test' benchmark stint.
 
 Executes notebooks 10 (First-k), 17 (LDA), 15 (LSA), 16 (SBERT clustering),
-11 (Centroid+MMR), 03 (BART), 04 (PEGASUS), 07 (Qwen), 09 (Mistral), 08 (Gemma) and
-06 (PRIMERA) — in that fastest-to-slowest order — with
+11 (Centroid+MMR), 03 (BART), 04 (PEGASUS), 07 (Qwen), 09 (Mistral), 08 (Gemma),
+06 (PRIMERA) and 21 (Qwen few-shot) — in that fastest-to-slowest order — with
 SUMM_SCOPE=test, so each generates summaries and metrics for the full clean test split
 (5,610 rows) without any manual babysitting between notebooks. TextRank/LexRank test-split
 metrics are derived by filtering their already-committed SCOPE='full' per-example CSVs (no
@@ -28,7 +28,7 @@ The LLM notebooks join this list once they support the budget in the prompt (iss
 
 --only takes comma-separated notebook number prefixes and skips the others (useful when the
 rest already completed: re-executing them would reload models and recompute metrics for
-nothing). Preflight checks shrink accordingly (ollama only for 07-09, GPU for 03/04/06/11).
+nothing). Preflight checks shrink accordingly (ollama only for 07-09/21, GPU for 03/04/06/11).
 The comparison notebooks are always re-executed at the end.
 
 A failed notebook is logged and does NOT stop the run — thanks to the shared resumable
@@ -73,6 +73,7 @@ NOTEBOOKS = [
     '09_mistral.ipynb',
     '08_gemma.ipynb',
     '06_primera.ipynb',
+    '21_qwen_fewshot.ipynb',   # few-shot: prompt ~5x piu' lunghi dello zero-shot
 ]
 
 # Notebooks that generate more than one method slug (two variants each); for the others
@@ -89,7 +90,8 @@ METODI_PER_NOTEBOOK = {
 # 16 also encodes with MiniLM but stays out of NOTEBOOKS_GPU on purpose: it detects the
 # device via su.rileva_device() and the committed test-split run was done on CPU, so
 # requiring CUDA would block a run that demonstrably works without it.
-NOTEBOOKS_OLLAMA = {'07_qwen.ipynb', '08_gemma.ipynb', '09_mistral.ipynb'}
+NOTEBOOKS_OLLAMA = {'07_qwen.ipynb', '08_gemma.ipynb', '09_mistral.ipynb',
+                    '21_qwen_fewshot.ipynb'}
 NOTEBOOKS_GPU = {'03_bart.ipynb', '04_pegasus.ipynb', '06_primera.ipynb',
                  '11_centroid_mmr.ipynb'}
 

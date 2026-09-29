@@ -1,0 +1,58 @@
+{
+  "metodo": "qwen_fewshot",
+  "scope": "test",
+  "config": {
+    "modello": "qwen2.5:7b-instruct",
+    "backend": "ollama (API nativa /api/chat)",
+    "max_tokens": 200,
+    "temperature": 0.3,
+    "num_ctx": 32768,
+    "k": 4,
+    "variante_prompt": "new",
+    "embedding": "all-mpnet-base-v2",
+    "pool_esempi": "split train di complete.tab",
+    "parole_esempio": 1000,
+    "max_parole_documento": 16000,
+    "vicini": "qwen_fewshot_vicini_test.tsv",
+    "note": "few-shot con esempi recuperati (nearest neighbour coseno), prompt di Federica (notebooks/llm/20); k e variante dal pilota del notebook 20"
+  },
+  "timestamp": "2026-09-27T12:20:32+00:00",
+  "n_esempi": 5610,
+  "overall": {
+    "rouge1_f1": 0.33743391178277155,
+    "rouge1_p": 0.4499197586151571,
+    "rouge1_r": 0.2785396905049044,
+    "rouge2_f1": 0.1075359614499925,
+    "rouge2_p": 0.1517936874069521,
+    "rouge2_r": 0.086734166341443,
+    "rougeL_f1": 0.18773373193967557,
+    "rougeL_p": 0.26843256616613853,
+    "rougeL_r": 0.15085113722657517,
+    "bleu": 0.05509305578467182,
+    "meteor": 0.29755306079972266,
+    "parole_generate": 115.88663101604278,
+    "bertscore_f1": 0.864689794400584,
+    "bertscore_p": 0.8808811487998555,
+    "bertscore_r": 0.849258800793884
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5610,
+      "rouge1_f1": 0.33743391178277155,
+      "rouge1_p": 0.4499197586151571,
+      "rouge1_r": 0.2785396905049044,
+      "rouge2_f1": 0.1075359614499925,
+      "rouge2_p": 0.1517936874069521,
+      "rouge2_r": 0.086734166341443,
+      "rougeL_f1": 0.18773373193967557,
+      "rougeL_p": 0.26843256616613853,
+      "rougeL_r": 0.15085113722657517,
+      "bleu": 0.05509305578467182,
+      "meteor": 0.29755306079972266,
+      "parole_generate": 115.88663101604278,
+      "bertscore_f1": 0.864689794400584,
+      "bertscore_p": 0.8808811487998555,
+      "bertscore_r": 0.849258800793884
+    }
+  }
+}
