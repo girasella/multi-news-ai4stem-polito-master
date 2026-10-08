@@ -23,3 +23,8 @@ results/metrics/*.corrotto-*
 # Cache degli embedding SBERT del few-shot (notebook 20/21): ~140 MB, rigenerabile;
 # il retrieval riproducibile e' nei TSV dei vicini in results/fewshot/
 results/embeddings_cache/
+
+# Studio di sensibilita' degli estrattivi: riassunti rigenerabili (le metriche e le
+# selezioni in risultati/ sono committate) e log del driver
+sensibilita_estrattivi/riassunti/
+sensibilita_estrattivi/*.log

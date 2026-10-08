@@ -1,0 +1,50 @@
+{
+  "metodo": "centroid_mmr_bert__lambda-0.8",
+  "scope": "test_budgetref",
+  "config": {
+    "lambda_mmr": 0.8,
+    "k_ordine_budget": 50,
+    "segmentazione": "psr.summarization",
+    "vettorizzazione": "sentence-BERT (all-MiniLM-L6-v2)",
+    "rilevanza": "cosine vs centroide (MEAD)",
+    "selezione": "MMR greedy",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "tetto": "1.25 x budget, su.tronca_parole",
+      "righe_troncate_dal_tetto": 37
+    }
+  },
+  "timestamp": "2026-10-07T08:38:52+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.3628381005888915,
+    "rouge1_p": 0.37734258503292856,
+    "rouge1_r": 0.3521096603407592,
+    "rouge2_f1": 0.12640843573868213,
+    "rouge2_p": 0.13011813716329798,
+    "rouge2_r": 0.12363545454080717,
+    "rougeL_f1": 0.19171043425349307,
+    "rougeL_p": 0.193550402656581,
+    "rougeL_r": 0.19082248431993,
+    "bleu": 0.10966787206697641,
+    "meteor": 0.41044493890309436,
+    "parole_generate": 214.72011453113817
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.3628381005888915,
+      "rouge1_p": 0.37734258503292856,
+      "rouge1_r": 0.3521096603407592,
+      "rouge2_f1": 0.12640843573868213,
+      "rouge2_p": 0.13011813716329798,
+      "rouge2_r": 0.12363545454080717,
+      "rougeL_f1": 0.19171043425349307,
+      "rougeL_p": 0.193550402656581,
+      "rougeL_r": 0.19082248431993,
+      "bleu": 0.10966787206697641,
+      "meteor": 0.41044493890309436,
+      "parole_generate": 214.72011453113817
+    }
+  }
+}

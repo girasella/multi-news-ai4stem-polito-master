@@ -1,0 +1,49 @@
+{
+  "metodo": "sbert_agglom__linkage-complete",
+  "scope": "test_budgetref",
+  "config": {
+    "n_cluster": 11,
+    "segmentazione": "psr.summarization",
+    "encoder": "all-MiniLM-L6-v2",
+    "clustering": "AgglomerativeClustering(metric=cosine, linkage=complete)",
+    "selezione": "medoidi a giri, cluster piu grandi prima, tagliati al budget",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "tetto": "1.25 x budget, su.tronca_parole",
+      "righe_troncate_dal_tetto": 25
+    }
+  },
+  "timestamp": "2026-10-07T11:29:47+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.3526949959591667,
+    "rouge1_p": 0.3545822456052054,
+    "rouge1_r": 0.3527690568692374,
+    "rouge2_f1": 0.1183988965995344,
+    "rouge2_p": 0.11995557173488318,
+    "rouge2_r": 0.11733917307672177,
+    "rougeL_f1": 0.18462959758087757,
+    "rougeL_p": 0.18604712961982164,
+    "rougeL_r": 0.18388713604097856,
+    "bleu": 0.10618238205117747,
+    "meteor": 0.40149002896760483,
+    "parole_generate": 214.98299928418038
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.3526949959591667,
+      "rouge1_p": 0.3545822456052054,
+      "rouge1_r": 0.3527690568692374,
+      "rouge2_f1": 0.1183988965995344,
+      "rouge2_p": 0.11995557173488318,
+      "rouge2_r": 0.11733917307672177,
+      "rougeL_f1": 0.18462959758087757,
+      "rougeL_p": 0.18604712961982164,
+      "rougeL_r": 0.18388713604097856,
+      "bleu": 0.10618238205117747,
+      "meteor": 0.40149002896760483,
+      "parole_generate": 214.98299928418038
+    }
+  }
+}

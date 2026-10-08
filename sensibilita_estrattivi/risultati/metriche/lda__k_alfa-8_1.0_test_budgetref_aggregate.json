@@ -1,0 +1,51 @@
+{
+  "metodo": "lda__k_alfa-8_1.0",
+  "scope": "test_budgetref",
+  "config": {
+    "n_topics": 8,
+    "doc_topic_prior": 1.0,
+    "topic_word_prior": 0.2,
+    "random_state": 42,
+    "segmentazione": "psr.summarization",
+    "vettorizzazione": "sklearn CountVectorizer (stop_words=english)",
+    "selezione": "quote di parole proporzionali al peso dei topic",
+    "ambito_budget": {
+      "budget": "lunghezza del riassunto di riferimento (oracle-length, issue #16)",
+      "tetto": "1.25 x budget, su.tronca_parole",
+      "righe_troncate_dal_tetto": 919
+    }
+  },
+  "timestamp": "2026-10-08T16:30:00+00:00",
+  "n_esempi": 5588,
+  "overall": {
+    "rouge1_f1": 0.3320390112469746,
+    "rouge1_p": 0.3206224459983818,
+    "rouge1_r": 0.34764797828334654,
+    "rouge2_f1": 0.10930832105182985,
+    "rouge2_p": 0.10666887155204682,
+    "rouge2_r": 0.11316394073031741,
+    "rougeL_f1": 0.17686677317052182,
+    "rougeL_p": 0.1723973024895034,
+    "rougeL_r": 0.1833194286193148,
+    "bleu": 0.09677740849369676,
+    "meteor": 0.3894387350755689,
+    "parole_generate": 230.91499642090193
+  },
+  "per_split": {
+    "test": {
+      "n_esempi": 5588,
+      "rouge1_f1": 0.3320390112469746,
+      "rouge1_p": 0.3206224459983818,
+      "rouge1_r": 0.34764797828334654,
+      "rouge2_f1": 0.10930832105182985,
+      "rouge2_p": 0.10666887155204682,
+      "rouge2_r": 0.11316394073031741,
+      "rougeL_f1": 0.17686677317052182,
+      "rougeL_p": 0.1723973024895034,
+      "rougeL_r": 0.1833194286193148,
+      "bleu": 0.09677740849369676,
+      "meteor": 0.3894387350755689,
+      "parole_generate": 230.91499642090193
+    }
+  }
+}
