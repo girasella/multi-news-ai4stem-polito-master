@@ -15,8 +15,9 @@ di Torino*
 6. [Risultati principali](#6-risultati-principali)
 7. [Il confondente della lunghezza: il confronto a lunghezza pari](#7-il-confondente-della-lunghezza-il-confronto-a-lunghezza-pari)
 8. [Quanto ci si può fidare del giudice](#8-quanto-ci-si-può-fidare-del-giudice)
-9. [Limiti e avvertenze di lettura](#9-limiti-e-avvertenze-di-lettura)
-10. [Bibliografia](#10-bibliografia)
+9. [Quanto contano gli iperparametri degli estrattivi](#9-quanto-contano-gli-iperparametri-degli-estrattivi)
+10. [Limiti e avvertenze di lettura](#10-limiti-e-avvertenze-di-lettura)
+11. [Bibliografia](#11-bibliografia)
 
 ---
 
@@ -28,7 +29,7 @@ stesso evento, generare un unico testo di sintesi che ne riporti le informazioni
 così come farebbe un redattore umano che deve produrre una rassegna stampa a partire da più
 fonti.
 
-Il lavoro si articola in tre parti:
+Il lavoro si articola in quattro parti:
 
 1. **Analisi esplorativa (EDA)** — un audit quantitativo della qualità e della struttura
    dell'intero corpus Multi-News (56.216 esempi), per capire che tipo di dati si stanno
@@ -40,13 +41,14 @@ Il lavoro si articola in tre parti:
    problematiche: sorgenti troppo corte, troppo lunghe, o duplicate) per ottenere una versione
    più affidabile del corpus da usare nelle fasi successive.
 3. **Benchmark di summarization** — il cuore del progetto: il confronto sistematico di
-   **18 metodi diversi** di riassunto automatico multi-documento, dalle tecniche classiche
+   **19 metodi diversi** di riassunto automatico multi-documento, dalle tecniche classiche
    basate su statistiche testuali fino ai grandi modelli linguistici (LLM), tutti valutati
    sullo stesso split di test con lo stesso insieme di metriche.
 4. **Controllo del confondente della lunghezza** — su richiesta del relatore, la verifica di
    quanto le differenze di lunghezza fra i riassunti dei diversi metodi influenzino le
    metriche, e il rifacimento del confronto *a lunghezza pari*, con una validazione
-   indipendente del giudice usato per la metrica reference-free.
+   indipendente del giudice usato per la metrica reference-free e uno studio di quanto i
+   risultati degli estrattivi dipendano dai loro iperparametri.
 
 Lo scopo non è proporre un nuovo metodo di summarization, ma **mappare lo stato dell'arte** —
 dalle tecniche pre-neurali degli anni 2000 ai modelli Transformer specializzati e ai moderni
@@ -56,7 +58,10 @@ per capire quali famiglie di metodi funzionano meglio, secondo quali metriche, e
 Questo documento è pensato come **guida di studio e di presentazione**: si concentra sul
 *perché* di ogni scelta metodologica (la teoria dietro ciascun metodo e ciascuna metrica, con
 riferimenti bibliografici per approfondire) e sui risultati, non sui dettagli implementativi
-del codice — quelli sono documentati separatamente nei notebook del progetto.
+del codice — quelli sono documentati separatamente nei notebook del progetto. Per sei
+estrattivi (TextRank, LexRank, Centroid+MMR, LSA, clustering SBERT, LDA) esistono anche versioni
+**didattiche** dei notebook (`notebooks_didattici/`), che seguono un solo cluster passo per passo,
+dal testo al riassunto e alle metriche, rifacendo «a mano» i calcoli principali.
 
 ---
 
@@ -122,9 +127,10 @@ giornalistico su questo dataset — un tema che ritorna anche nei risultati di q
 
 Il paper Multi-News fissa sia il **dataset** sia un primo **insieme di baseline e metriche**
 (ROUGE) contro cui confrontarsi. Questo progetto eredita il dataset e amplia enormemente
-l'insieme di metodi confrontati (da 8 sistemi nel paper originale a 18 in questo lavoro),
+l'insieme di metodi confrontati (da 8 sistemi nel paper originale a 19 in questo lavoro),
 aggiungendo famiglie di metodi che nel 2019 non erano ancora disponibili o non erano state
-provate su Multi-News (LLM general-purpose, modelli specializzati come PEGASUS e PRIMERA), e
+provate su Multi-News (LLM general-purpose, anche con esempi nel prompt, e modelli specializzati
+come PEGASUS e PRIMERA), e
 amplia anche l'insieme di metriche (BERTScore, valutazione con LLM-as-judge) per ottenere un
 quadro più ricco di quanto il solo ROUGE possa offrire.
 
@@ -147,7 +153,9 @@ A questi metodi "classici" (non neurali o pre-neurali) si affiancano:
   (uno dei quali, PRIMERA, nativamente per l'MDS);
 - tre **LLM general-purpose** eseguiti localmente via Ollama, usati *zero-shot* (senza alcun
   fine-tuning sul task di summarization);
-- un **LLM cloud** (GPT-5-mini su Azure AI Foundry), anch'esso zero-shot.
+- un **LLM cloud** (GPT-5-mini su Azure AI Foundry), anch'esso zero-shot;
+- una variante **few-shot** di Qwen2.5-7B, che riceve nel prompt quattro cluster del train
+  simili a quello da riassumere, ciascuno con il suo riassunto umano.
 
 Un vincolo metodologico importante: la libreria `pyAutoSummarizer`, pur offrendo anche
 implementazioni di alcuni algoritmi estrattivi, viene usata in questo progetto **solo come
@@ -155,7 +163,7 @@ motore di valutazione** (ROUGE, BLEU, METEOR), non come motore di generazione �
 ambiguità sull'esatta variante di algoritmo effettivamente eseguita (es. "TextRank" indica
 implementazioni algoritmicamente diverse in librerie diverse).
 
-Tutti i 18 metodi sono valutati sullo **stesso split di test pulito** (5.610 esempi su 5.622
+Tutti i 19 metodi sono valutati sullo **stesso split di test pulito** (5.610 esempi su 5.622
 originali, dopo l'esclusione delle righe con problemi di qualità), con lo stesso protocollo di
 valutazione, per garantire un confronto equo. I risultati aggregati di questo confronto sono
 presentati nella sezione 6.
@@ -373,7 +381,7 @@ encoder-decoder, ma differiscono per come sono stati pre-addestrati:
 **Idea**: usare un modello linguistico di grandi dimensioni, addestrato in modo general-purpose
 (non specializzato sulla summarization né su Multi-News), e chiedergli di produrre un
 riassunto tramite un **prompt zero-shot** — senza alcun fine-tuning aggiuntivo, senza esempi
-nel prompt (*few-shot*), solo un'istruzione in linguaggio naturale. È l'approccio oggi più
+nel prompt (*few-shot*, sezione 4.9), solo un'istruzione in linguaggio naturale. È l'approccio oggi più
 comune nella pratica industriale: si sfrutta la capacità generale del modello di seguire
 istruzioni, appresa durante l'**instruction tuning** in fase di addestramento, applicandola a
 un compito specifico senza addestramento dedicato.
@@ -395,6 +403,38 @@ capaci di seguire istruzioni in linguaggio naturale invece di limitarsi a comple
 - L. Ouyang et al., *"Training language models to follow instructions with human feedback"*
   (InstructGPT), NeurIPS 2022 — riferimento concettuale per il paradigma di instruction
   tuning/RLHF condiviso (in varie forme) da tutti i moderni LLM instruct, incluso GPT-5-mini.
+
+### 4.9 Few-shot con esempi recuperati: Qwen2.5 con quattro esempi
+
+**Idea**: lo stesso Qwen2.5-7B della sezione 4.8, ma con alcuni **esempi svolti** nel prompt
+prima del documento da riassumere: coppie (articoli → riassunto umano) prese dal dataset. È
+l'*in-context learning* reso popolare da GPT-3 (Brown et al., 2020): il modello non viene
+riaddestrato, ma ricava dagli esempi il formato, il registro e la lunghezza attesi. Gli esempi
+non sono fissi: per ogni cluster da riassumere si recuperano i **quattro cluster del train più
+simili**, confrontando gli embedding dei documenti (modello `all-mpnet-base-v2`). La scelta di
+esempi vicini al caso da risolvere, invece che casuali, è quella che in letteratura funziona
+meglio (Liu et al., 2022).
+
+Alcune scelte di protocollo:
+
+- gli esempi vengono **solo dal train**, così che nessun cluster di valutazione possa trovare
+  se stesso o il proprio riassunto nel prompt;
+- la configurazione (numero di esempi e formulazione del prompt) è stata scelta su **100 cluster
+  di validation**, non sul test. Il pilota ha confrontato 2, 4 e 6 esempi con il controllo senza
+  esempi e con una baseline che restituisce direttamente il riassunto del vicino più simile.
+  Quattro esempi sono risultati la scelta migliore; con sei il beneficio si appiattisce;
+- un secondo pilota ha confrontato quattro modelli di embedding per il recupero: nessuno batte
+  `all-mpnet-base-v2`. I vicini scelti cambiano molto, le metriche quasi per niente, il che fa
+  pensare che conti più il *formato* degli esempi che *quali* esempi;
+- con quattro esempi il prompt è lungo, nei casi estremi oltre 30.000 token. Il contesto del
+  modello è fissato a 32.768 token, e una richiesta che lo saturasse viene rifiutata invece di
+  essere troncata in silenzio.
+
+**Riferimenti**:
+- T. Brown et al., *"Language Models are Few-Shot Learners"*, NeurIPS 2020 — l'in-context
+  learning con esempi nel prompt.
+- J. Liu, D. Shen, Y. Zhang, B. Dolan, L. Carin, W. Chen, *"What Makes Good In-Context Examples
+  for GPT-3?"*, DeeLIO Workshop, ACL 2022 — il recupero di esempi simili al caso da risolvere.
 
 ---
 
@@ -422,7 +462,7 @@ sovrapposizione di parole/sequenze di superficie con il riferimento.
 **Nota di lettura**: nell'implementazione usata in questo progetto (libreria
 pyAutoSummarizer), ROUGE-N è calcolato su **insiemi di n-grammi unici**, non sul conteggio
 "clippato" (*clipped count*) previsto dalla definizione standard di Lin (2004). Questo rende i
-valori confrontabili *internamente* fra i 18 metodi del progetto, ma **non direttamente
+valori confrontabili *internamente* fra i 19 metodi del progetto, ma **non direttamente
 paragonabili** ai numeri ROUGE riportati in letteratura (compreso il paper Multi-News stesso).
 
 **Riferimento**: C.-Y. Lin, *"ROUGE: A Package for Automatic Evaluation of Summaries"*, ACL
@@ -500,7 +540,7 @@ preferenze sistematiche, ad esempio per output più lunghi o per uno stile simil
 non è perfettamente riproducibile bit-per-bit tra un'esecuzione e l'altra.
 
 In questo progetto il giudice è un modello (GPT-5.4-mini su Azure) scelto per essere
-indipendente da tutti i 18 metodi valutati (nessun metodo valutato è generato dallo stesso
+indipendente da tutti i 19 metodi valutati (nessun metodo valutato è generato dallo stesso
 modello) e più recente di ciascuno di essi. L'indipendenza a livello di *modello* non
 garantisce però quella a livello di *famiglia*: uno dei metodi valutati (GPT-5-mini) è della
 stessa famiglia del giudice, e la letteratura documenta che gli LLM tendono a preferire i
@@ -517,7 +557,12 @@ mostrando correlazione con i giudizi umani superiore alle metriche reference-bas
 ## 6. Risultati principali
 
 Tutti i valori seguenti sono calcolati sullo split di **test pulito** (5.610 esempi), lo
-stesso per tutti i 18 metodi, a garanzia di un confronto equo.
+stesso per tutti i 19 metodi, a garanzia di un confronto equo. Ogni media è calcolata sulle
+righe che quel metodo ha effettivamente prodotto e che sono state valutate. La copertura va da
+5.471 a 5.610 righe: mancano soprattutto le righe respinte dal filtro di contenuti di Azure per
+GPT-5-mini, e le poche su cui la segmentazione in frasi fallisce per gli estrattivi. Il
+notebook 05b ricalcola le stesse medie sulle sole 5.437 righe comuni a tutti i metodi, per cui
+alcune sue cifre differiscono di un millesimo da quelle qui riportate.
 
 ### 6.1 Metriche reference-based (ROUGE, BLEU, METEOR, BERTScore)
 
@@ -526,8 +571,8 @@ stesso per tutti i 18 metodi, a garanzia di un confronto equo.
 | First-k (PSR) | 0.355 | 0.121 | 0.180 | 0.082 | 0.389 | 0.840 |
 | First-k (NLTK) | 0.356 | 0.123 | 0.181 | 0.083 | 0.391 | 0.843 |
 | Centroid+MMR (TF-IDF) | 0.383 | 0.144 | 0.189 | 0.097 | 0.500 | 0.842 |
-| Centroid+MMR (BERT) | 0.373 | 0.138 | 0.185 | 0.094 | 0.498 | 0.841 |
-| TextRank | 0.370 | 0.135 | 0.176 | 0.088 | 0.487 | 0.841 |
+| Centroid+MMR (BERT) | 0.373 | 0.138 | 0.185 | 0.093 | 0.498 | 0.841 |
+| TextRank | 0.370 | 0.135 | 0.176 | 0.088 | 0.487 | 0.840 |
 | LexRank | 0.365 | 0.137 | 0.169 | 0.083 | 0.504 | 0.837 |
 | BART | 0.265 | 0.081 | 0.147 | 0.017 | 0.169 | 0.854 |
 | PEGASUS | 0.424 | 0.180 | 0.240 | 0.131 | 0.079* | 0.871 |
@@ -535,11 +580,12 @@ stesso per tutti i 18 metodi, a garanzia di un confronto equo.
 | Qwen2.5-7B | 0.344 | 0.097 | 0.177 | 0.057 | 0.321 | 0.857 |
 | Gemma 4 | 0.335 | 0.099 | 0.176 | 0.065 | 0.435 | 0.839 |
 | Mistral-7B | 0.354 | 0.111 | 0.190 | 0.067 | 0.361 | 0.860 |
-| GPT-5-mini | 0.348 | 0.103 | 0.179 | 0.066 | 0.402 | 0.852 |
+| GPT-5-mini | 0.348 | 0.102 | 0.179 | 0.066 | 0.402 | 0.852 |
+| Qwen2.5-7B few-shot | 0.337 | 0.108 | 0.188 | 0.055 | 0.298 | 0.865 |
 | LSA (Gong & Liu) | 0.351 | 0.127 | 0.183 | 0.091 | 0.400 | 0.833 |
 | LSA (Steinberger) | 0.376 | 0.137 | 0.188 | 0.103 | 0.452 | 0.842 |
 | SBERT + K-Means | 0.359 | 0.125 | 0.183 | 0.095 | 0.443 | 0.840 |
-| SBERT + Agglomerativo | 0.329 | 0.106 | 0.171 | 0.085 | 0.378 | 0.833 |
+| SBERT + Agglomerativo | 0.328 | 0.106 | 0.171 | 0.085 | 0.378 | 0.833 |
 | LDA | 0.351 | 0.130 | 0.171 | 0.081 | 0.511† | 0.835 |
 
 \* Valore deflazionato da due righe patologiche (sezione 5.3, nota METEOR); la media reale di
@@ -573,15 +619,16 @@ decrescente. Fonte: notebook 05b.*
 | Gemma 4 | 4.94 | 4.34 | 4.99 | 4.83 | 4.77 |
 | Mistral-7B | 4.82 | 4.49 | 4.90 | 4.68 | 4.72 |
 | GPT-5-mini | **4.98** | **4.65** | **5.00** | **4.93** | **4.89** |
+| Qwen2.5-7B few-shot | 4.93 | 4.59 | 4.97 | 4.76 | 4.81 |
 | LSA (Gong & Liu) | 2.34 | 2.54 | 2.07 | 3.11 | 2.52 |
 | LSA (Steinberger) | 2.50 | 2.70 | 2.17 | 3.44 | 2.70 |
 | SBERT + K-Means | 2.46 | 2.57 | 2.16 | 3.37 | 2.64 |
 | SBERT + Agglomerativo | 2.26 | 2.34 | 2.11 | 2.95 | 2.42 |
 | LDA | 2.37 | 2.36 | 2.06 | 3.54 | 2.58 |
 
-I giudizi coprono il 98,9 % delle coppie (metodo, esempio): il resto è stato respinto dal
+I giudizi coprono il 99 % delle coppie (metodo, esempio): il resto è stato respinto dal
 filtro di sicurezza dei contenuti del servizio cloud prima che il giudice potesse leggerlo
-(sezione 9).
+(sezione 10).
 
 ![G-Eval per dimensione](resources/test_geval_dimensioni.png)
 
@@ -596,9 +643,9 @@ Confrontando le due tabelle emerge il risultato più interessante del progetto: 
 
 - Su **ROUGE/BERTScore** (ancorate al riassunto umano di riferimento), vincono **PRIMERA** e
   **PEGASUS** — i due modelli specializzati pre-addestrati specificamente su Multi-News.
-- Su **G-Eval** (senza riferimento, giudicata da un LLM indipendente), vincono **GPT-5-mini**,
-  **Gemma** e **Mistral** — LLM general-purpose usati zero-shot, senza alcun addestramento
-  specifico sul task o sul dataset.
+- Su **G-Eval** (senza riferimento, giudicata da un LLM indipendente), vincono **GPT-5-mini**
+  (4,89), **Qwen few-shot** (4,81) e **Gemma** (4,77) — LLM general-purpose, senza alcun
+  addestramento specifico sul task o sul dataset.
 
 L'interpretazione più plausibile: PRIMERA e PEGASUS, essendo stati addestrati (o
 fine-tuned) proprio sul train split di Multi-News, hanno imparato a **riprodurre lo stile
@@ -610,6 +657,14 @@ invece che i riassunti degli LLM general-purpose moderni sono percepiti come pi�
 completi. Le due famiglie di metriche, in altre parole, **non misurano la stessa cosa**: una
 misura l'aderenza a un particolare stile di riferimento, l'altra la qualità percepita in
 assoluto.
+
+La variante few-shot di Qwen mostra la stessa divergenza in piccolo. Rispetto a Qwen zero-shot
+produce riassunti più corti (116 parole contro 140) e perde un poco di ROUGE-1 F1 (−0,007).
+Guadagna invece su ROUGE-2 (+0,010) e su BERTScore (+0,008), e soprattutto sul G-Eval: +0,28,
+in tutte e quattro le dimensioni e di più in consistenza (+0,35) e coerenza (+0,32). In
+classifica sale così dal quinto posto di Qwen zero-shot al secondo. Gli esempi migliorano la
+qualità percepita del riassunto molto più della sua sovrapposizione lessicale con il
+riferimento.
 
 Questa lettura lascia aperte due obiezioni, entrambe affrontate nelle sezioni seguenti: che
 parte delle differenze fra metodi sia dovuta alla **lunghezza** dei riassunti e non alla loro
@@ -632,9 +687,9 @@ ambigue, e buona parte dei confronti pubblicati ne è affetta.
 
 Nel benchmark il problema è concreto. Le medie per metodo vanno da 55 parole (BART) a 477
 (LDA), ma il dato rilevante è quello **dentro il singolo cluster**: per lo stesso insieme di
-articoli, il più lungo dei 18 riassunti è in mediana **8,5 volte** il più corto, e la
+articoli, il più lungo dei 19 riassunti è in mediana **8,5 volte** il più corto, e la
 distanza fra i due è il doppio del riassunto di riferimento. La lunghezza media spiega da sola
-gran parte del recall ROUGE fra metodi (correlazione 0,89) e assai meno della F1 (0,26): il
+gran parte del recall ROUGE fra metodi (correlazione 0,90) e assai meno della F1 (0,28): il
 sospetto che alcune posizioni in classifica fossero «comprate» con la lunghezza era fondato.
 Nessun metodo, inoltre, adatta la propria lunghezza al cluster: gli estrattivi a budget di
 frasi producono la stessa quantità di testo qualunque sia la dimensione dell'input, e la
@@ -642,14 +697,14 @@ correlazione fra lunghezza generata e lunghezza del riferimento non supera 0,51.
 
 ![Rapporto max/min delle lunghezze dentro il cluster](resources/lunghezze_dispersione_cluster.png)
 
-*Figura 7 — Per ogni cluster, rapporto fra il più lungo e il più corto dei 18 riassunti: a
+*Figura 7 — Per ogni cluster, rapporto fra il più lungo e il più corto dei 19 riassunti: a
 sinistra così come sono (mediana 8,5×), a destra dopo il contenimento descritto nella
 sezione 7.3. Fonte: notebook 18.*
 
 ![Lunghezza media contro ROUGE-1 recall, prima e dopo](resources/lunghezza_vs_recall.png)
 
 *Figura 8 — Lunghezza media dei riassunti contro ROUGE-1 recall, un punto per metodo. A
-sinistra la correlazione di 0,89 citata sopra; a destra, dopo il contenimento, i metodi si
+sinistra la correlazione di 0,90 citata sopra; a destra, dopo il contenimento, i metodi si
 raccolgono attorno alla stessa lunghezza, e la correlazione residua (0,76) si deve
 soprattutto ai metodi a solo tetto — BART isolato in basso, PEGASUS e PRIMERA — discussi
 nella sezione 7.3. Fonte: notebook 05d.*
@@ -690,7 +745,7 @@ sono il controllo.
 
 Servono due interventi distinti, perché il vincolo va imposto in entrambe le direzioni:
 
-- un **tetto** per tutti e 18 i metodi: ogni riassunto viene troncato a 1,25 volte la
+- un **tetto** per tutti e 19 i metodi: ogni riassunto viene troncato a 1,25 volte la
   lunghezza del riferimento del suo cluster;
 - una **rigenerazione a budget** per i metodi che producono meno del riferimento. Per gli
   undici estrattivi significa sostituire il budget in *frasi* («le prime 11») con un budget in
@@ -713,14 +768,14 @@ notebook 18):
 
 | Insieme di metodi | Rapporto max/min dentro il cluster, prima → dopo |
 |---|---|
-| Tutti e 18 | 8,5× → 4,7× |
-| Senza BART | 3,8× → 1,6× |
-| Solo i 15 rigenerati a budget | **3,7× → 1,4×** |
+| Tutti e 19 | 8,5× → 4,7× |
+| Senza BART | 4,4× → 1,7× |
+| Solo i 16 rigenerati a budget | **4,3× → 1,45×** |
 
-Il 4,7 sui 18 è quasi interamente BART: a 0,26× il riferimento resta il minimo di quasi ogni
-cluster mentre il tetto tiene il massimo a 1,25× (1,25/0,26 ≈ 4,8), per cui il numero sui 18
-sottostima il contenimento ed è quello sui 15 rigenerati a descriverlo. Lo spread assoluto fra
-il riassunto più lungo e il più corto dello stesso cluster si dimezza (mediana 409 → 206
+Il 4,7 sui 19 è quasi interamente BART: a 0,26× il riferimento resta il minimo di quasi ogni
+cluster mentre il tetto tiene il massimo a 1,25× (1,25/0,26 ≈ 4,8), per cui il numero sui 19
+sottostima il contenimento ed è quello sui 16 rigenerati a descriverlo. Lo spread assoluto fra
+il riassunto più lungo e il più corto dello stesso cluster si dimezza (mediana 409 → 209
 parole) e, rapportato al riferimento, scende da circa il doppio a circa una volta.
 
 Per metodo, la banda [0,8; 1,25] × il riferimento è centrata in modo diverso a seconda di come
@@ -733,13 +788,14 @@ il budget viene imposto:
   1,25× nel 16 % dei cluster, contro l'1–2 % degli altri estrattivi), ma il tetto lo riporta in
   banda (99 %);
 - gli **LLM**, dove il budget è un'istruzione nel prompt, la seguono in modo diverso: GPT-5-mini
-  (100 %) e Gemma (100 %) quasi sempre, Mistral (88 %) e Qwen (85 %) meno. Queste quote sono
-  misurate *dopo* il tetto, che nasconde gli eccessi: guardando i testi prima del taglio, Mistral
-  supera 1,25× nel 46 % dei cluster (novantesimo percentile a 2×) ed è sotto 0,8× nel 12 %; Qwen
-  è sotto nel 15 % e sopra nel 16 %; Gemma e GPT-5-mini stanno entro l'1 % in entrambe le
-  direzioni. Il tetto corregge solo gli eccessi: ciò che resta fuori banda dopo è tutto per
-  difetto;
-- i tre a **solo tetto** restano dove erano: PEGASUS (52 %) e PRIMERA (66 %) alla loro
+  (100 %) e Gemma (100 %) quasi sempre, Qwen few-shot (92 %), Mistral (88 %) e Qwen (85 %)
+  meno. Queste quote sono misurate *dopo* il tetto, che nasconde gli eccessi: guardando i testi
+  prima del taglio, Mistral supera 1,25× nel 46 % dei cluster (novantesimo percentile a 2×) ed è
+  sotto 0,8× nel 12 %; Qwen è sotto nel 15 % e sopra nel 16 %; Qwen few-shot, a cui va chiesto
+  di più perché gli esempi lo rendono prudente, sopra nel 33 % e sotto solo nell'8 %; Gemma e
+  GPT-5-mini stanno entro l'1 % in entrambe le direzioni. Il tetto corregge solo gli eccessi:
+  ciò che resta fuori banda dopo è tutto per difetto;
+- i tre a **solo tetto** restano dove erano: PEGASUS (56 %) e PRIMERA (74 %) alla loro
   lunghezza naturale, con il tetto come unico intervento; BART, che non arriva mai al tetto,
   allo 0,3 %.
 
@@ -750,9 +806,9 @@ cluster, prima (sopra) e dopo (sotto) il contenimento; la fascia verde è la ban
 l'asse è logaritmico. Fonte: notebook 18.*
 
 Un effetto collaterale utile per la lettura: prima del contenimento la lunghezza generata non
-seguiva quella del riferimento (correlazione al massimo 0,51, sezione 7.1); dopo, per i 15
-rigenerati, la correlazione è 0,92–0,98 per gli estrattivi, Gemma e GPT-5-mini (0,79–0,82 per
-Mistral e Qwen, che seguono il prompt meno fedelmente) — per costruzione, ed è proprio ciò che rende il
+seguiva quella del riferimento (correlazione al massimo 0,51, sezione 7.1); dopo, per i 16
+rigenerati, la correlazione è 0,92–0,98 per gli estrattivi, Gemma e GPT-5-mini (0,79–0,83 per
+Mistral e le due varianti di Qwen, che seguono il prompt meno fedelmente) — per costruzione, ed è proprio ciò che rende il
 confronto della sezione 7.4 un confronto a parità di lunghezza cluster per cluster e non solo
 in media.
 
@@ -772,6 +828,7 @@ correlazione. BART, che riceve il solo tetto, resta piatto. Fonte: notebook 18.*
 | LSA (Steinberger) | 257 → 215 | 0.419 → 0.366 | 0.376 → 0.369 | 2.70 → 2.61 |
 | First-k (PSR) | 217 → 215 | 0.347 → 0.354 | 0.355 → 0.368 | 2.86 → 2.86 |
 | First-k (NLTK) | 219 → 215 | 0.348 → 0.352 | 0.356 → 0.368 | 3.37 → 3.38 |
+| Qwen2.5-7B few-shot | 116 → 231 | 0.279 → 0.375 | 0.337 → 0.367 | 4.81 → 4.59 |
 | Mistral-7B | 161 → 233 | 0.325 → 0.367 | 0.354 → 0.365 | 4.72 → 4.59 |
 | TextRank | 368 → 215 | 0.448 → 0.343 | 0.370 → 0.359 | 2.30 → 2.57 |
 | LexRank | 450 → 216 | 0.482 → 0.338 | 0.365 → 0.352 | 2.12 → 2.46 |
@@ -781,8 +838,8 @@ correlazione. BART, che riceve il solo tetto, resta piatto. Fonte: notebook 18.*
 | Gemma 4 | 292 → 219 | 0.390 → 0.337 | 0.335 → 0.328 | 4.77 → 4.83 |
 | BART (solo tetto) | 55 → 55 | 0.181 → 0.181 | 0.265 → 0.265 | 4.46 → 4.46 |
 
-(Le righe omesse — Centroid+MMR BERT, LSA, le due varianti SBERT — si muovono di meno di
-0,01 in F1.)
+(Le righe omesse — Centroid+MMR BERT, LSA, le due varianti SBERT — si muovono di circa 0,01
+in F1 o meno: la più mossa è SBERT agglomerativo, da 0,328 a 0,339.)
 
 Sulle metriche reference-based la graduatoria si riassesta in quattro modi:
 
@@ -794,7 +851,9 @@ Sulle metriche reference-based la graduatoria si riassesta in quattro modi:
   confronto con metodi di selezione molto più elaborati. È il *lead bias* del paper originale
   (sezione 4.1), che il confondente della lunghezza aveva nascosto.
 - **I metodi corti guadagnano** — Qwen, Mistral, le First-k — perché la rigenerazione dà loro
-  lo spazio che non usavano: il confondente tagliava in entrambe le direzioni.
+  lo spazio che non usavano: il confondente tagliava in entrambe le direzioni. Il guadagno più
+  grande è di Qwen few-shot (+0,030 in F1, da 116 a 231 parole), che a parità di lunghezza
+  supera Qwen zero-shot di 0,016 e sale al 7° posto, subito dietro le First-k.
 - **PRIMERA e PEGASUS restano in testa**, appena toccati dal tetto: il loro vantaggio non era
   di lunghezza.
 
@@ -806,9 +865,10 @@ rigenerati. Fonte: notebook 05d.*
 
 Il G-Eval racconta una storia diversa, ed è il risultato più istruttivo. Dove il
 riallineamento ha rimescolato il ROUGE, **le prime undici posizioni del G-Eval restano
-identiche** e il massimo spostamento è di 0,34 punti su 5. La lunghezza non era il suo
+occupate dagli stessi metodi**, l'ordine cambia solo fra gli LLM e il massimo spostamento è
+di 0,34 punti su 5. La lunghezza non era il suo
 confondente — coerentemente con ciò che misura: qualità della prosa rispetto alla fonte, non
-sovrapposizione con il riferimento. Tre osservazioni:
+sovrapposizione con il riferimento. Quattro osservazioni:
 
 - i due estrattivi più lunghi **guadagnano tagliando** (LexRank +0,34, TextRank +0,27): per
   il giudice un riassunto estrattivo da 450 parole è un testo *meno* coerente, non più
@@ -817,7 +877,11 @@ sovrapposizione con il riferimento. Tre osservazioni:
   più la perde (LDA −0,50) mentre coerenza, consistenza e fluenza salgono. È la controparte
   del recall: i due effetti che la F1 di ROUGE somma in un numero solo, qui separati;
 - fra gli LLM allungati, Qwen aggiunge contenuto pertinente e supera Mistral, che perde tutto
-  sulla *consistenza*: costretto a scrivere di più, aggiunge cose che nella fonte non ci sono.
+  sulla *consistenza*: costretto a scrivere di più, aggiunge cose che nella fonte non ci sono;
+- Qwen few-shot, che deve raddoppiare la propria lunghezza, perde 0,23 e scende dal secondo al
+  quinto posto: è il caso in cui le due famiglie di metriche vanno più nettamente in direzioni
+  opposte. Seleziona meglio i contenuti del riferimento, ma il giudice lo preferisce quando è
+  libero di essere conciso.
 
 ![G-Eval prima e dopo il riallineamento](resources/prima_dopo_geval.png)
 
@@ -840,7 +904,7 @@ assegnare punteggi più alti ai testi che riconoscono come simili al proprio sti
 al., 2023; Panickssery et al., 2024), e la somiglianza è massima per i modelli della stessa
 famiglia. In questo benchmark il giudice (GPT-5.4-mini) e uno dei metodi valutati (GPT-5-mini)
 sono entrambi modelli OpenAI della stessa generazione. E i numeri sollevano il dubbio da soli:
-fra i quattro LLM, l'ordine G-Eval è esattamente **invertito** rispetto a quello di BERTScore
+fra i quattro LLM zero-shot, l'ordine G-Eval è esattamente **invertito** rispetto a quello di BERTScore
 e ROUGE, e GPT-5-mini — terzo su quattro sulle metriche ancorate al riferimento — è primo
 assoluto sul G-Eval.
 
@@ -856,8 +920,10 @@ campione casuale di circa mille cluster. È un confronto **appaiato sullo stesso
 sola variabile che cambia è il giudice, e qualunque differenza sistematica è attribuibile a
 lui.
 
-Il campione comprende i quattro LLM e **tre metodi di controllo non-LLM** (PRIMERA, First-k,
-LexRank), presi a quote diverse della graduatoria. I controlli sono ciò che rende il disegno
+Il campione comprende i quattro LLM zero-shot e **tre metodi di controllo non-LLM** (PRIMERA,
+First-k, LexRank), presi a quote diverse della graduatoria. Qwen few-shot è stato aggiunto al
+benchmark dopo questa verifica e non fa parte del campione; non appartiene comunque alla
+famiglia del giudice. I controlli sono ciò che rende il disegno
 conclusivo: permettono di distinguere un effetto generico «al giudice piace la prosa degli
 LLM» — reale, ma condiviso e non distorsivo per il confronto — da un effetto **specifico
 della famiglia** OpenAI. Il test è direzionale: se il giudice di famiglia gonfiasse
@@ -898,7 +964,47 @@ risultato *non* va descritto come «compatibile con zero». Ciò che lo rende co
 
 ---
 
-## 9. Limiti e avvertenze di lettura
+## 9. Quanto contano gli iperparametri degli estrattivi
+
+Gli estrattivi del benchmark girano con valori degli iperparametri che sono convenzioni o
+default di libreria, mai tarati: λ = 0,7 per Centroid+MMR, 11 dimensioni latenti per LSA,
+11 gruppi e legame *average* per il clustering SBERT, 5 topic per LDA. Uno studio a parte
+(`sensibilita_estrattivi/`) ha misurato quanto le conclusioni dipendano da queste scelte.
+
+**Protocollo.** Si rigenerano i riassunti per una griglia di valori di ciascun parametro, a
+**lunghezza bloccata** (budget e tetto della sezione 7), perché senza budget molti parametri
+cambierebbero soprattutto la lunghezza, e ROUGE premierebbe quella. Ogni valore è confrontato
+con il default **riga per riga** sugli stessi 5.588 cluster del test, con un intervallo di
+confidenza bootstrap al 95 %. Si usano le sole metriche lessicali (ROUGE, BLEU, METEOR). Una
+avvertenza da ripetere sempre: è un'esplorazione condotta **sul test**, quindi un valore
+«migliore» trovato qui non è una prestazione del metodo, e i numeri pubblicati del benchmark
+restano quelli della sezione 6.
+
+**Esito** (Centroid+MMR, LSA, clustering SBERT; l'analisi di LDA è in corso):
+
+- **Centroid+MMR**: λ = 0,7 è già l'ottimo per entrambe le varianti. L'MMR vale +0,012 di
+  ROUGE-1 rispetto al Centroid puro (λ = 1) con TF-IDF e +0,005 con BERT. Troppa diversità
+  (λ = 0,3) costa quanto nessuna diversità: vengono scelte frasi brevi e periferiche. La
+  variante TF-IDF batte quella BERT a ogni valore di λ.
+- **LSA**: il numero di dimensioni latenti conta, ma meno della regola di selezione. Il
+  default è vicino all'ottimo per la variante di Steinberger e troppo alto per quella di Gong
+  e Liu. Correggerlo riduce il divario fra le due varianti di circa un quinto, senza
+  invertirlo.
+- **Clustering SBERT**: il numero di gruppi sposta le metriche di pochi millesimi; conta il
+  **tipo di legame** dell'agglomerativo. Passare da *average* a *complete* vale +0,013 di
+  ROUGE-1 e dimezza il divario con K-Means, senza superarlo. È lo spostamento di classifica
+  più grande trovato: fra gli undici estrattivi a lunghezza pari, l'agglomerativo salirebbe dal
+  penultimo all'ottavo posto.
+
+Il quadro generale: valori vicini di un iperparametro producono selezioni di frasi molto
+diverse (cambia da un terzo a metà delle frasi) con metriche quasi uguali. Gli spostamenti di
+ROUGE-1 restano entro ±0,005 dal default salvo ai bordi delle griglie o cambiando la regola
+(il legame). Nessun ordinamento fra varianti dello stesso metodo si inverte, e le conclusioni
+della sezione 7 non cambiano.
+
+---
+
+## 10. Limiti e avvertenze di lettura
 
 Alcuni aspetti da tenere presenti quando si presentano questi risultati, per evitare
 conclusioni affrettate:
@@ -911,7 +1017,7 @@ conclusioni affrettate:
   generiche superiori. Il confronto a lunghezza pari (sezione 7) mostra che quel vantaggio
   non è comunque di lunghezza.
 - **ROUGE non standard**: come indicato nella sezione 5.1, i valori ROUGE di questo progetto
-  usano una variante a n-grammi unici, confrontabile solo *internamente* tra i 18 metodi, non
+  usano una variante a n-grammi unici, confrontabile solo *internamente* tra i 19 metodi, non
   con valori ROUGE pubblicati altrove (incluso il paper Multi-News originale).
 - **Outlier METEOR**: la formula usata non è limitata inferiormente per input degeneri. La
   media METEOR di PEGASUS è artificialmente bassa a causa di due righe patologiche su 5.610
@@ -923,7 +1029,8 @@ conclusioni affrettate:
   e lo fa in modo non stabile nel tempo. Le prime sessioni avevano lasciato una copertura fra
   il 93,5 % e il 96,7 % a seconda del metodo; un ritentativo successivo dei soli giudizi
   respinti l'ha portata al 96,8–99,0 %, senza toccare i giudizi esistenti e senza spostare
-  nessuna media di più di 0,01 punti né l'ordinamento. Le righe che il filtro blocca non sono
+  nessuna media di più di 0,01 punti né l'ordinamento. Qwen few-shot, giudicato più tardi, ha
+  una copertura del 99,4 %. Le righe che il filtro blocca non sono
   quindi sistematicamente diverse dalle altre; resta il fatto che i metodi non sono giudicati
   esattamente sullo stesso insieme di esempi.
 - **Riassunti LDA più lunghi**: la lunghezza sistematicamente maggiore dei riassunti LDA
@@ -940,7 +1047,7 @@ conclusioni affrettate:
 
 ---
 
-## 10. Bibliografia
+## 11. Bibliografia
 
 **Dataset e modello di origine**
 - A. Fabbri, I. Li, T. She, S. Li, D. Radev, *"Multi-News: A Large-Scale Multi-Document
@@ -982,6 +1089,9 @@ conclusioni affrettate:
 - Gemma Team, Google DeepMind, *"Gemma: Open Models Based on Gemini Research and
   Technology"*, 2024.
 - A. Jiang et al. (Mistral AI), *"Mistral 7B"*, arXiv 2023.
+- T. Brown et al., *"Language Models are Few-Shot Learners"*, NeurIPS 2020.
+- J. Liu, D. Shen, Y. Zhang, B. Dolan, L. Carin, W. Chen, *"What Makes Good In-Context Examples
+  for GPT-3?"*, DeeLIO Workshop, ACL 2022.
 - L. Ouyang et al., *"Training language models to follow instructions with human feedback"*,
   NeurIPS 2022.
 
