@@ -158,11 +158,21 @@ A questi metodi "classici" (non neurali o pre-neurali) si affiancano:
 - una variante **few-shot** di Qwen2.5-7B, che riceve nel prompt quattro cluster del train
   simili a quello da riassumere, ciascuno con il suo riassunto umano.
 
-Un vincolo metodologico importante: la libreria `pyAutoSummarizer`, pur offrendo anche
-implementazioni di alcuni algoritmi estrattivi, viene usata in questo progetto **solo come
-motore di valutazione** (ROUGE, BLEU, METEOR), non come motore di generazione — per evitare
-ambiguità sull'esatta variante di algoritmo effettivamente eseguita (es. "TextRank" indica
-implementazioni algoritmicamente diverse in librerie diverse).
+La libreria `pyAutoSummarizer` ha tre ruoli distinti, che conviene tenere separati:
+
+- **valutazione** di tutti i metodi: ROUGE, BLEU e METEOR sono calcolati con le sue funzioni,
+  così ogni metodo è misurato con la stessa implementazione;
+- **segmentazione in frasi** di tutti gli estrattivi: tutti scelgono dallo stesso insieme di
+  frasi candidate, e le differenze fra loro dipendono solo dal criterio di selezione;
+- **generazione** dei soli TextRank e LexRank, presi dalla libreria così come sono.
+
+Tutti gli altri estrattivi (First-k, Centroid+MMR, LSA, clustering, LDA) sono implementati
+direttamente nei notebook con scikit-learn, per controllare esattamente la variante eseguita
+e adattarla al caso multi-documento (per esempio, la selezione con deflazione di LSA non
+esiste nelle librerie usate). Va ricordato leggendo i nomi: «TextRank» indica
+algoritmi diversi in librerie diverse, e quello di `pyAutoSummarizer` confronta le frasi con
+embedding neurali (`all-MiniLM-L6-v2`) invece che con la sovrapposizione di parole del
+paper originale.
 
 Tutti i 19 metodi sono valutati sullo **stesso split di test pulito** (5.610 esempi su 5.622
 originali, dopo l'esclusione delle righe con problemi di qualità), con lo stesso protocollo di
