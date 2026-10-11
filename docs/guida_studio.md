@@ -58,7 +58,8 @@ per capire quali famiglie di metodi funzionano meglio, secondo quali metriche, e
 Questo documento è pensato come **guida di studio e di presentazione**: si concentra sul
 *perché* di ogni scelta metodologica (la teoria dietro ciascun metodo e ciascuna metrica, con
 riferimenti bibliografici per approfondire) e sui risultati, non sui dettagli implementativi
-del codice — quelli sono documentati separatamente nei notebook del progetto. Per sei
+del codice — quelli sono documentati nella [guida tecnica](guida_tecnica.md), che segue la
+stessa struttura di questa, e nei notebook del progetto. Per sei
 estrattivi (TextRank, LexRank, Centroid+MMR, LSA, clustering SBERT, LDA) esistono anche versioni
 **didattiche** dei notebook (`notebooks_didattici/`), che seguono un solo cluster passo per passo,
 dal testo al riassunto e alle metriche, rifacendo «a mano» i calcoli principali.
