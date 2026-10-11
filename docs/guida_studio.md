@@ -58,7 +58,8 @@ per capire quali famiglie di metodi funzionano meglio, secondo quali metriche, e
 Questo documento è pensato come **guida di studio e di presentazione**: si concentra sul
 *perché* di ogni scelta metodologica (la teoria dietro ciascun metodo e ciascuna metrica, con
 riferimenti bibliografici per approfondire) e sui risultati, non sui dettagli implementativi
-del codice — quelli sono documentati separatamente nei notebook del progetto. Per sei
+del codice — quelli sono documentati nella [guida tecnica](guida_tecnica.md), che segue la
+stessa struttura di questa, e nei notebook del progetto. Per sei
 estrattivi (TextRank, LexRank, Centroid+MMR, LSA, clustering SBERT, LDA) esistono anche versioni
 **didattiche** dei notebook (`notebooks_didattici/`), che seguono un solo cluster passo per passo,
 dal testo al riassunto e alle metriche, rifacendo «a mano» i calcoli principali.
@@ -157,11 +158,21 @@ A questi metodi "classici" (non neurali o pre-neurali) si affiancano:
 - una variante **few-shot** di Qwen2.5-7B, che riceve nel prompt quattro cluster del train
   simili a quello da riassumere, ciascuno con il suo riassunto umano.
 
-Un vincolo metodologico importante: la libreria `pyAutoSummarizer`, pur offrendo anche
-implementazioni di alcuni algoritmi estrattivi, viene usata in questo progetto **solo come
-motore di valutazione** (ROUGE, BLEU, METEOR), non come motore di generazione — per evitare
-ambiguità sull'esatta variante di algoritmo effettivamente eseguita (es. "TextRank" indica
-implementazioni algoritmicamente diverse in librerie diverse).
+La libreria `pyAutoSummarizer` ha tre ruoli distinti, che conviene tenere separati:
+
+- **valutazione** di tutti i metodi: ROUGE, BLEU e METEOR sono calcolati con le sue funzioni,
+  così ogni metodo è misurato con la stessa implementazione;
+- **segmentazione in frasi** di tutti gli estrattivi: tutti scelgono dallo stesso insieme di
+  frasi candidate, e le differenze fra loro dipendono solo dal criterio di selezione;
+- **generazione** dei soli TextRank e LexRank, presi dalla libreria così come sono.
+
+Tutti gli altri estrattivi (First-k, Centroid+MMR, LSA, clustering, LDA) sono implementati
+direttamente nei notebook con scikit-learn, per controllare esattamente la variante eseguita
+e adattarla al caso multi-documento (per esempio, la selezione con deflazione di LSA non
+esiste nelle librerie usate). Va ricordato leggendo i nomi: «TextRank» indica
+algoritmi diversi in librerie diverse, e quello di `pyAutoSummarizer` confronta le frasi con
+embedding neurali (`all-MiniLM-L6-v2`) invece che con la sovrapposizione di parole del
+paper originale.
 
 Tutti i 19 metodi sono valutati sullo **stesso split di test pulito** (5.610 esempi su 5.622
 originali, dopo l'esclusione delle righe con problemi di qualità), con lo stesso protocollo di

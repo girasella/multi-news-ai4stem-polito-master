@@ -78,7 +78,9 @@ Due verifiche reggono questa lettura:
   campione. Il contrasto che misurerebbe il bias ha il segno opposto a quello atteso.
 
 La [guida di studio](docs/guida_studio.md) racconta il progetto per intero: metodi, metriche,
-risultati, confronto a lunghezza pari e validazione del giudice.
+risultati, confronto a lunghezza pari e validazione del giudice. La
+[guida tecnica](docs/guida_tecnica.md) spiega invece come sono costruiti codice, notebook e
+script.
 
 ## Contenuto del repository
 
@@ -100,6 +102,7 @@ risultati, confronto a lunghezza pari e validazione del giudice.
 | [scripts/estrai_figure_guida.py](scripts/estrai_figure_guida.py) | Copia in `docs/resources/` le figure usate dalla guida di studio, estraendole dai notebook |
 | [results/](results/) | Output del benchmark: campione di valutazione condiviso, riassunti generati, metriche per esempio e aggregate (comprese quelle G-Eval, in file dedicati, e la cache dei giudizi) per gli ambiti `test` e `test_budgetref` |
 | [docs/guida_studio.md](docs/guida_studio.md) | Guida di studio e di presentazione: metodi, metriche, risultati, confronto a lunghezza pari, validazione del giudice; le figure sono in `docs/resources/` |
+| [docs/guida_tecnica.md](docs/guida_tecnica.md) | Guida tecnica, parallela alla precedente: com'è organizzato il codice, come sono costruiti i notebook e gli script, riproducibilità e insidie note |
 | [requirements-notebooks.txt](requirements-notebooks.txt) | Dipendenze Python dei notebook del benchmark |
 | [Multi-News_paper.md](Multi-News_paper.md) | Il paper originale (Fabbri et al., 2019), come riferimento — lasciato in inglese perché copia verbatim della pubblicazione |
 | [Tecniche_MDS_non_LLM_MultiNews.md](Tecniche_MDS_non_LLM_MultiNews.md) | Rassegna ragionata delle tecniche di summarization multi-documento non-LLM rispetto alla lezione del PoliTO — il «documento-guida» citato dai notebook [11](notebooks/11_centroid_mmr.ipynb) e [15](notebooks/15_lsa.ipynb)–[17](notebooks/17_lda.ipynb) |
