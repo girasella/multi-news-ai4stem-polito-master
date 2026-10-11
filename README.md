@@ -48,14 +48,37 @@ Il progetto esplora Multi-News come corpus di text mining e summarization:
 
 Le due famiglie di metriche danno classifiche **opposte**, ed è il risultato più interessante del
 benchmark. Sulle metriche ancorate al riferimento umano vincono gli abstractive specializzati,
-addestrati proprio su Multi-News: PRIMERA ha il ROUGE-1 F1 più alto (0,444) e il BERTScore più
-alto (0,874), seguito da PEGASUS (0,423 / 0,871). Sul G-Eval, che valuta coerenza, fedeltà
+addestrati proprio su Multi-News: PRIMERA ha il ROUGE-1 F1 più alto (0,445) e il BERTScore più
+alto (0,874), seguito da PEGASUS (0,424 / 0,871). Sul G-Eval, che valuta coerenza, fedeltà
 fattuale, fluidità e pertinenza **senza** guardare il riferimento, l'ordine si ribalta e passano
-davanti gli LLM generalisti: GPT-5-mini 4,89 su 5, Gemma 4,78, Mistral 4,72, contro 4,28 di
-PRIMERA e 4,04 di PEGASUS. In altre parole i modelli addestrati sul dataset riproducono bene lo
-*stile* dei riassunti di riferimento, che è ciò che ROUGE misura, mentre un giudice indipendente
-trova più leggibili e fedeli i riassunti degli LLM generalisti. Tabelle, grafici e avvertenze
-metodologiche sono in [notebooks/05b_confronto_test.ipynb](notebooks/05b_confronto_test.ipynb).
+davanti gli LLM generalisti: GPT-5-mini 4,89 su 5, Qwen few-shot 4,81, Gemma 4,77, Mistral 4,72,
+contro 4,28 di PRIMERA e 4,05 di PEGASUS. In altre parole i modelli addestrati sul dataset
+riproducono bene lo *stile* dei riassunti di riferimento, che è ciò che ROUGE misura, mentre un
+giudice indipendente trova più leggibili e fedeli i riassunti degli LLM generalisti. Tabelle,
+grafici e avvertenze metodologiche sono in
+[notebooks/05b_confronto_test.ipynb](notebooks/05b_confronto_test.ipynb).
+
+Due verifiche reggono questa lettura:
+
+- **La lunghezza non spiega la divergenza.** Dentro lo stesso cluster il più lungo dei
+  riassunti è in mediana 8,5 volte il più corto, e il recall ROUGE premia chi scrive di più. Il
+  confronto è stato quindi rifatto *a lunghezza pari*: ogni metodo riceve come budget, cluster
+  per cluster, la lunghezza del riassunto di riferimento, con un tetto a 1,25× per tutti. È
+  l'ambito `test_budgetref` dei notebook [05c](notebooks/05c_confronto_test_budgetref.ipynb),
+  [05d](notebooks/05d_confronto_prima_dopo.ipynb) e [18](notebooks/18_analisi_lunghezze.ipynb).
+  Il confronto usa la sola lunghezza del riferimento, mai il suo contenuto, e misura la
+  selezione dei contenuti a parità di lunghezza, non le prestazioni in uso reale. Sul ROUGE la
+  classifica cambia: LDA perde tutto il suo vantaggio e le baseline First-k salgono dal
+  9°–10° al 5°–6° posto. PRIMERA e PEGASUS restano in testa. Le prime undici posizioni del
+  G-Eval invece non cambiano.
+- **Il giudice non favorisce la propria famiglia.** Il giudice (GPT-5.4-mini) e GPT-5-mini
+  appartengono alla stessa famiglia, il che faceva sospettare un bias. Un secondo giudice di
+  lignaggio diverso (DeepSeek-V3.2, notebook [19](notebooks/19_confronto_giudici.ipynb)) ha
+  rigiudicato circa mille cluster e ha dato lo stesso ordinamento dei sette metodi del
+  campione. Il contrasto che misurerebbe il bias ha il segno opposto a quello atteso.
+
+La [guida di studio](docs/guida_studio.md) racconta il progetto per intero: metodi, metriche,
+risultati, confronto a lunghezza pari e validazione del giudice.
 
 ## Contenuto del repository
 
@@ -66,14 +89,23 @@ metodologiche sono in [notebooks/05b_confronto_test.ipynb](notebooks/05b_confron
 | [data/tab/](data/) | Copie Orange `.tab` **pulite**: una per split più `complete.tab` (tutte le split unite, con una colonna `split`) ed `excluded_rows.tsv` (elenco delle 115 righe scartate) |
 | [scripts/convert_to_tab.py](scripts/convert_to_tab.py) | Rigenera `data/tab/` a partire da `data/text/` applicando i criteri di pulizia — documentato in [scripts/README.md](scripts/README.md) |
 | [multi_news_dashboard.html](multi_news_dashboard.html) | Dashboard EDA autoconsistente — si apre direttamente nel browser (testo del report in italiano) |
-| [notebooks/](notebooks/) | Notebook del benchmark di summarization: uno per metodo (19 slug), più i quattro di confronto (05a–05d), i due piloti del few-shot (20, 20b) e i due backfill di metrica (13 BERTScore, 14 G-Eval), in italiano — vedi [notebooks/README.md](notebooks/README.md) |
-| [scripts/run_benchmark_test.py](scripts/run_benchmark_test.py) | Driver non presidiato della corsa `test`: esegue in sequenza i notebook dei metodi, dal più veloce al più lento — documentato in [scripts/README.md](scripts/README.md) |
-| [scripts/run_geval.py](scripts/run_geval.py) | Driver non presidiato del backfill G-Eval (pilota, corsa completa con limite di spesa, riderivazione delle metriche dalla cache) — documentato in [scripts/README.md](scripts/README.md) |
-| [results/](results/) | Output del benchmark: campione di valutazione condiviso, riassunti generati, metriche per esempio e aggregate (comprese quelle G-Eval, in file dedicati, e la cache dei giudizi) |
+| [notebooks/](notebooks/) | Notebook del benchmark di summarization: la preparazione del campione (00), uno per metodo (19 slug), i quattro di confronto (05a–05d), i due backfill di metrica (13 BERTScore, 14 G-Eval), l'analisi delle lunghezze per cluster (18), la validazione del giudice G-Eval (19) e i due piloti del few-shot (20, 20b), in italiano — vedi [notebooks/README.md](notebooks/README.md) |
+| [notebooks_didattici/](notebooks_didattici/) | Versioni passo per passo dei notebook 01/02/11/15/16/17: seguono una sola riga dal testo al riassunto e alle metriche, con le parti «a mano» verificate contro il codice del benchmark — vedi [notebooks_didattici/README.md](notebooks_didattici/README.md) |
+| [sensibilita_estrattivi/](sensibilita_estrattivi/) | Studio di sensibilità degli iperparametri degli estrattivi (λ di Centroid+MMR, `K_LATENTE` di LSA, `N_CLUSTER` e linkage del clustering SBERT, topic e α di LDA) a lunghezza bloccata; non modifica `results/` — vedi [RIEPILOGO_sensibilita.md](sensibilita_estrattivi/RIEPILOGO_sensibilita.md) |
+| [scripts/run_benchmark_test.py](scripts/run_benchmark_test.py) | Driver non presidiato della corsa `test` (e, con `--scope test_budgetref`, di quella a lunghezza del riferimento): esegue in sequenza i notebook dei metodi, dal più veloce al più lento |
+| [scripts/applica_budget.py](scripts/applica_budget.py) | Applica il tetto a 1,25× la lunghezza del riferimento a tutti i metodi e ricalcola le metriche dell'ambito `test_budgetref` |
+| [scripts/run_geval.py](scripts/run_geval.py) | Driver non presidiato del backfill G-Eval (pilota, corsa completa con limite di spesa, riderivazione delle metriche dalla cache) |
+| [scripts/pilota_giudice_deepseek.py](scripts/pilota_giudice_deepseek.py) | Rigiudica un campione con un secondo giudice (DeepSeek-V3.2) per verificare il bias di famiglia del giudice G-Eval; letto dal notebook 19 |
+| [scripts/analyze_dataset.py](scripts/analyze_dataset.py) | Ricalcola in streaming le statistiche EDA dell'intero corpus (`scripts/dataset_stats.json`, da cui è costruita la dashboard) |
+| [scripts/estrai_figure_guida.py](scripts/estrai_figure_guida.py) | Copia in `docs/resources/` le figure usate dalla guida di studio, estraendole dai notebook |
+| [results/](results/) | Output del benchmark: campione di valutazione condiviso, riassunti generati, metriche per esempio e aggregate (comprese quelle G-Eval, in file dedicati, e la cache dei giudizi) per gli ambiti `test` e `test_budgetref` |
+| [docs/guida_studio.md](docs/guida_studio.md) | Guida di studio e di presentazione: metodi, metriche, risultati, confronto a lunghezza pari, validazione del giudice; le figure sono in `docs/resources/` |
 | [requirements-notebooks.txt](requirements-notebooks.txt) | Dipendenze Python dei notebook del benchmark |
 | [Multi-News_paper.md](Multi-News_paper.md) | Il paper originale (Fabbri et al., 2019), come riferimento — lasciato in inglese perché copia verbatim della pubblicazione |
 | [Tecniche_MDS_non_LLM_MultiNews.md](Tecniche_MDS_non_LLM_MultiNews.md) | Rassegna ragionata delle tecniche di summarization multi-documento non-LLM rispetto alla lezione del PoliTO — il «documento-guida» citato dai notebook [11](notebooks/11_centroid_mmr.ipynb) e [15](notebooks/15_lsa.ipynb)–[17](notebooks/17_lda.ipynb) |
 | [data/README.md](data/README.md) | Documentazione dettagliata di formati dei file, statistiche e criteri di pulizia |
+| [scripts/README.md](scripts/README.md) | Documentazione di tutti gli script: uso, ingressi e uscite |
+| [LICENSE](LICENSE) | Testo integrale del Dataset Usage Agreement di Multi-News, in inglese |
 
 ## Il dataset
 
