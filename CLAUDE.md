@@ -33,6 +33,7 @@ scripts/
   pilota_giudice_deepseek.py  # Paired second-judge pilot (DeepSeek vs gpt-5.4-mini) — tests the family-bias
                        # hypothesis on 7 methods; separate cache/JSON, touches nothing committed
   estrai_figure_guida.py  # Copies the guide's figures into docs/resources/ (results/figures/ PNGs + images decoded from 05b/05d/18/19 outputs, located by section heading)
+  figure_presentazione.py  # Draws the 3 slide-sized charts of the final presentation (5.2/5.3/5.6) into docs/resources/slides/ from results/metrics/ aggregates only; the Google Slides deck loads them by raw GitHub URL
   run_geval.py         # Unattended driver for the G-Eval backfill (notebook 14): staged --righe/--pilota/full run, --budget hard stop, --costo offline cost report, --solo-metriche re-derivation
 requirements-notebooks.txt  # Dependencies for the benchmark notebooks (pyAutoSummarizer, openai etc.)
 notebooks/             # Summarization benchmark — see "Summarization benchmark" section below
