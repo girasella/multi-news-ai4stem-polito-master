@@ -66,17 +66,26 @@ def legenda_famiglie(fig, y=0.995):
                fontsize=12, handlelength=1.2, columnspacing=1.6)
 
 # ---------- 5.2: ROUGE-1 F1 per metodo ----------
+# Alta quanto lo spazio fra titolo e piè di pagina (la slide non ha riga dei link): le 19
+# righe hanno ~14 pt di passo. Niente asse x: i valori sono scritti sulle barre, e metrica e
+# split stanno nel titolo della slide.
+H52 = 4.25
 v = {m: leggi(m, "test", "rouge1_f1") for m in NOMI}
 ordine = sorted(v, key=v.get)  # dal basso verso l'alto: il migliore in cima
-fig, ax = plt.subplots(figsize=(W, H), dpi=220)
+fig, ax = plt.subplots(figsize=(W, H52), dpi=220)
+fig.subplots_adjust(left=0.23, right=0.97, top=0.93, bottom=0.02)
 y = range(len(ordine))
-ax.barh(y, [v[m] for m in ordine], height=0.72, color=[COL[FAM[m]] for m in ordine], edgecolor="white", linewidth=1)
+ax.barh(y, [v[m] for m in ordine], height=0.62, color=[COL[FAM[m]] for m in ordine], edgecolor="white", linewidth=1)
 for i, m in enumerate(ordine):
     ax.text(v[m] + 0.004, i, fmt(v[m], 3), va="center", fontsize=11, color=INK2)
 ax.set_yticks(list(y), [NOMI[m] for m in ordine], fontsize=11)
-ax.set_xlim(0, 0.5); ax.set_xlabel("ROUGE-1 F1 medio (split di test, 5610 cluster)", fontsize=11)
-assi_puliti(ax); legenda_famiglie(fig)
-fig.tight_layout(rect=(0, 0, 1, 0.93)); fig.savefig(OUT / "slide_rouge1_f1.png", facecolor="white"); plt.close(fig)
+ax.set_xlim(0, 0.5); ax.set_ylim(-0.6, len(ordine) - 0.4)
+ax.set_xticks([]); ax.spines["bottom"].set_visible(False)
+assi_puliti(ax); ax.spines["bottom"].set_visible(False)
+h = [Patch(facecolor=COL[f], label=ETI[f]) for f in ("estr", "astr", "llm")]
+fig.legend(handles=h, loc="upper right", ncol=3, frameon=False, bbox_to_anchor=(0.97, 1.0),
+           fontsize=11, handlelength=1.2, columnspacing=1.4)
+fig.savefig(OUT / "slide_rouge1_f1.png", facecolor="white"); plt.close(fig)
 
 # ---------- 5.3: G-Eval per dimensione (heatmap) ----------
 DIM = [("geval_coherence", "Coherence"), ("geval_consistency", "Consistency"), ("geval_fluency", "Fluency"),
@@ -106,30 +115,33 @@ ax.grid(which="minor", color="white", lw=1.2); ax.tick_params(which="minor", len
 fig.legend(handles=[Patch(facecolor=COL[f], label=ETI[f]) for f in ("estr", "astr", "llm")], loc="lower center", ncol=3, frameon=False, bbox_to_anchor=(0.6, 0.0), fontsize=11.5, handlelength=1.2, columnspacing=1.6); fig.tight_layout(rect=(0, 0.075, 1, 1)); fig.savefig(OUT / "slide_geval_dimensioni.png", facecolor="white"); plt.close(fig)
 
 # ---------- 5.6: prima e dopo il budget (dumbbell, due pannelli) ----------
+# Stessa logica di 5.2: tutta l'altezza disponibile, legenda e nota in un'unica riga in alto.
+H56 = 4.15
 r0 = {m: leggi(m, "test", "rouge1_f1") for m in NOMI}
 r1 = {m: leggi(m, "test_budgetref", "rouge1_f1") for m in NOMI}
 g0 = {m: leggi(m, "test", "geval_media") for m in NOMI}
 g1 = {m: leggi(m, "test_budgetref", "geval_media") for m in NOMI}
 ordine = sorted(NOMI, key=lambda m: r1[m])
-fig, (a1, a2) = plt.subplots(1, 2, figsize=(W, H), dpi=220, sharey=True)
-fig.subplots_adjust(left=0.215, right=0.985, top=0.83, bottom=0.11, wspace=0.07)
+fig, (a1, a2) = plt.subplots(1, 2, figsize=(W, H56), dpi=220, sharey=True)
+fig.subplots_adjust(left=0.215, right=0.985, top=0.875, bottom=0.065, wspace=0.07)
 for ax, prima, dopo, lim, tit in ((a1, r0, r1, (0.25, 0.46), "ROUGE-1 F1"), (a2, g0, g1, (2.0, 5.0), "G-Eval medio (1-5)")):
+    for i in range(len(ordine)):
+        ax.axhline(i, color=GRID, lw=0.6, zorder=1)  # guida di riga: lega il nome ai suoi punti
     for i, m in enumerate(ordine):
         c = COL[FAM[m]]
         ax.plot([prima[m], dopo[m]], [i, i], color=c, lw=2.2, alpha=0.5, solid_capstyle="round", zorder=2)
-        ax.scatter(prima[m], i, s=40, facecolor="white", edgecolor=c, linewidth=1.8, zorder=3)
-        ax.scatter(dopo[m], i, s=44, color=c, edgecolor="white", linewidth=1, zorder=4)
-    ax.set_xlim(*lim); ax.set_ylim(-0.7, len(ordine) - 0.3)
-    ax.set_title(tit, fontsize=12.5, color=INK, pad=4, loc="left", fontweight="bold")
-    assi_puliti(ax); ax.tick_params(axis="x", labelsize=10.5)
+        ax.scatter(prima[m], i, s=38, facecolor="white", edgecolor=c, linewidth=1.8, zorder=3)
+        ax.scatter(dopo[m], i, s=42, color=c, edgecolor="white", linewidth=1, zorder=4)
+    ax.set_xlim(*lim); ax.set_ylim(-0.6, len(ordine) - 0.4)
+    ax.set_title(tit, fontsize=12, color=INK, pad=3, loc="left", fontweight="bold")
+    assi_puliti(ax); ax.xaxis.grid(False); ax.tick_params(axis="x", labelsize=10, pad=2)
 a1.set_yticks(range(len(ordine)), [NOMI[m] + ("*" if m in ("bart", "pegasus", "primera") else "") for m in ordine], fontsize=10.5)
 h = [Line2D([], [], marker="o", ls="", markerfacecolor="white", markeredgecolor=INK2, markeredgewidth=1.6, markersize=7, label="prima"),
      Line2D([], [], marker="o", ls="", color=INK2, markersize=7, label="a parità di lunghezza")]
 h += [Patch(facecolor=COL[f], label=ETI[f]) for f in ("estr", "astr", "llm")]
-fig.legend(handles=h, loc="upper center", ncol=5, frameon=False, bbox_to_anchor=(0.5, 1.0), fontsize=10.5,
-           handlelength=1.0, handletextpad=0.4, columnspacing=1.1)
-fig.text(0.215, 0.015, "* solo tetto a 1.25× il riferimento, non rigenerati. Ordine: ROUGE-1 F1 a parità di lunghezza.",
-         fontsize=9.5, color=INK2)
+h += [Line2D([], [], ls="", label="* solo tetto")]
+fig.legend(handles=h, loc="upper right", ncol=6, frameon=False, bbox_to_anchor=(0.995, 1.0), fontsize=10,
+           handlelength=0.9, handletextpad=0.35, columnspacing=0.9)
 fig.savefig(OUT / "slide_prima_dopo.png", facecolor="white"); plt.close(fig)
 
 print("figure scritte in", OUT)
