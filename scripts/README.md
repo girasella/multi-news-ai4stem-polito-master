@@ -538,3 +538,25 @@ script con un errore invece di copiare altro.
 
 Dopo aver rieseguito uno dei notebook da cui provengono le figure, perché le immagini in
 `docs/resources/` sono copie e non si aggiornano da sole. Poi va ristampato il PDF della guida.
+
+## `figure_presentazione.py`
+
+Disegna in [`docs/resources/slides/`](../docs/resources/slides/) i tre grafici della
+presentazione finale (slide 5.2, 5.3 e 5.6). Le figure dei notebook di confronto hanno più
+pannelli ed etichette piccole e, ridotte dentro una slide, non si leggono; queste portano un solo
+messaggio ciascuna, a caratteri grandi:
+
+- `slide_rouge1_f1.png`: ROUGE-1 F1 per metodo sulla split test;
+- `slide_geval_dimensioni.png`: G-Eval per dimensione e media sulla split test (heatmap);
+- `slide_prima_dopo.png`: ROUGE-1 F1 e G-Eval prima e dopo il contenimento della lunghezza
+  (`test` contro `test_budgetref`).
+
+### Uso
+
+```
+python scripts/figure_presentazione.py
+```
+
+Legge solo gli aggregati committati in `results/metrics/`: non rigenera nulla e non chiama
+servizi esterni. Le slide caricano le immagini dal branch su GitHub, quindi dopo averle
+rigenerate va fatto il push e reinserita l'immagine nella slide.

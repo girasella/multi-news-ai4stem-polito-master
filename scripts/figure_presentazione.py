@@ -1,0 +1,135 @@
+"""Grafici per la presentazione finale (slide 5.2, 5.3, 5.6), disegnati per la proiezione.
+
+Le figure di docs/resources/ vengono dai notebook di confronto e hanno piu' pannelli e
+etichette piccole: rimpicciolite in una slide diventano illeggibili. Qui ogni grafico porta un
+solo messaggio, a caratteri grandi, calcolato dagli aggregati committati in results/metrics/
+(nessuna rigenerazione, nessun costo):
+
+  slide_rouge1_f1.png        ROUGE-1 F1 per metodo, split test
+  slide_geval_dimensioni.png G-Eval per dimensione e media, split test (heatmap)
+  slide_prima_dopo.png       ROUGE-1 F1 e G-Eval, test contro test_budgetref
+
+Uso:  python scripts/figure_presentazione.py   (scrive in docs/resources/slides/)
+Colori: tre famiglie dai primi tre slot della palette categoriale di riferimento,
+validati anche a coppie arbitrarie (adatti a barre e punti mescolati).
+"""
+import json
+from pathlib import Path
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+
+REPO = Path(__file__).resolve().parents[1]
+OUT = REPO / "docs" / "resources" / "slides"
+OUT.mkdir(parents=True, exist_ok=True)
+M = REPO / "results" / "metrics"
+
+NOMI = {
+    "firstk_psr": "First-k (PSR)", "firstk_nltk": "First-k (NLTK)", "textrank": "TextRank", "lexrank": "LexRank",
+    "centroid_mmr": "Centroid+MMR (TF-IDF)", "centroid_mmr_bert": "Centroid+MMR (BERT)",
+    "lsa": "LSA (Gong & Liu)", "lsa_steinberger": "LSA (Steinberger)", "sbert_kmeans": "SBERT K-Means",
+    "sbert_agglom": "SBERT agglomerativo", "lda": "LDA",
+    "bart": "BART", "pegasus": "PEGASUS", "primera": "PRIMERA",
+    "qwen": "Qwen2.5-7B", "gemma": "Gemma 4", "mistral": "Mistral-7B", "gpt5mini": "GPT-5-mini",
+    "qwen_fewshot": "Qwen few-shot",
+}
+FAM = {**{k: "estr" for k in ["firstk_psr", "firstk_nltk", "textrank", "lexrank", "centroid_mmr", "centroid_mmr_bert",
+                              "lsa", "lsa_steinberger", "sbert_kmeans", "sbert_agglom", "lda"]},
+       **{k: "astr" for k in ["bart", "pegasus", "primera"]},
+       **{k: "llm" for k in ["qwen", "gemma", "mistral", "gpt5mini", "qwen_fewshot"]}}
+COL = {"estr": "#2a78d6", "astr": "#eb6834", "llm": "#1baf7a"}
+ETI = {"estr": "Estrattivi", "astr": "Astrattivi specializzati", "llm": "LLM"}
+INK, INK2, MUTED, GRID = "#0b0b0b", "#52514e", "#8a8984", "#e6e5e0"
+
+plt.rcParams.update({"font.family": "Arial", "font.size": 12, "text.color": INK, "axes.labelcolor": INK2,
+                     "xtick.color": INK2, "ytick.color": INK, "axes.edgecolor": GRID, "svg.fonttype": "none"})
+
+def leggi(m, scope, chiave):
+    suf = "_geval" if chiave.startswith("geval") else ""
+    return json.load(open(M / f"{m}_{scope}{suf}_aggregate.json", encoding="utf-8"))["overall"][chiave]
+
+def fmt(v, nd): return f"{v:.{nd}f}"
+W, H = 8.25, 3.75  # pollici: area utile della slide sotto il titolo
+
+def assi_puliti(ax):
+    for s in ("top", "right", "left"): ax.spines[s].set_visible(False)
+    ax.spines["bottom"].set_color(GRID)
+    ax.tick_params(axis="y", length=0)
+    ax.xaxis.grid(True, color=GRID, lw=0.8); ax.set_axisbelow(True)
+
+def legenda_famiglie(fig, y=0.995):
+    h = [Patch(facecolor=COL[f], label=ETI[f]) for f in ("estr", "astr", "llm")]
+    fig.legend(handles=h, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.6, y),
+               fontsize=12, handlelength=1.2, columnspacing=1.6)
+
+# ---------- 5.2: ROUGE-1 F1 per metodo ----------
+v = {m: leggi(m, "test", "rouge1_f1") for m in NOMI}
+ordine = sorted(v, key=v.get)  # dal basso verso l'alto: il migliore in cima
+fig, ax = plt.subplots(figsize=(W, H), dpi=220)
+y = range(len(ordine))
+ax.barh(y, [v[m] for m in ordine], height=0.72, color=[COL[FAM[m]] for m in ordine], edgecolor="white", linewidth=1)
+for i, m in enumerate(ordine):
+    ax.text(v[m] + 0.004, i, fmt(v[m], 3), va="center", fontsize=11, color=INK2)
+ax.set_yticks(list(y), [NOMI[m] for m in ordine], fontsize=11)
+ax.set_xlim(0, 0.5); ax.set_xlabel("ROUGE-1 F1 medio (split di test, 5610 cluster)", fontsize=11)
+assi_puliti(ax); legenda_famiglie(fig)
+fig.tight_layout(rect=(0, 0, 1, 0.93)); fig.savefig(OUT / "slide_rouge1_f1.png", facecolor="white"); plt.close(fig)
+
+# ---------- 5.3: G-Eval per dimensione (heatmap) ----------
+DIM = [("geval_coherence", "Coherence"), ("geval_consistency", "Consistency"), ("geval_fluency", "Fluency"),
+       ("geval_relevance", "Relevance"), ("geval_media", "Media")]
+g = {m: [leggi(m, "test", k) for k, _ in DIM] for m in NOMI}
+ordine = sorted(g, key=lambda m: g[m][-1], reverse=True)
+cmap = LinearSegmentedColormap.from_list("blu", ["#cde2fb", "#86b6ef", "#3987e5", "#1c5cab", "#0d366b"])
+fig, ax = plt.subplots(figsize=(W, H), dpi=220)
+dati = [g[m] for m in ordine]
+ax.imshow(dati, cmap=cmap, vmin=1.5, vmax=5, aspect="auto")
+for i, riga in enumerate(dati):
+    for j, val in enumerate(riga):
+        ax.text(j, i, fmt(val, 2), ha="center", va="center", fontsize=10.5,
+                color="white" if val >= 3.6 else INK, fontweight="bold" if j == 4 else "normal")
+ax.set_xticks(range(len(DIM)), [n for _, n in DIM], fontsize=11.5); ax.xaxis.tick_top()
+ax.set_yticks(range(len(ordine)), [NOMI[m] for m in ordine], fontsize=10.5)
+from matplotlib.patches import Rectangle
+for i, m in enumerate(ordine):
+    ax.add_patch(Rectangle((-0.62, i - 0.42), 0.09, 0.84, color=COL[FAM[m]], clip_on=False))
+ax.set_xlim(-0.65, len(DIM) - 0.5)
+ax.tick_params(axis="y", pad=4)
+ax.tick_params(length=0)
+for s in ax.spines.values(): s.set_visible(False)
+ax.axvline(3.5, color="white", lw=3)
+ax.set_xticks([x - 0.5 for x in range(1, 5)], minor=True); ax.set_yticks([y - 0.5 for y in range(1, 19)], minor=True)
+ax.grid(which="minor", color="white", lw=1.2); ax.tick_params(which="minor", length=0)
+fig.legend(handles=[Patch(facecolor=COL[f], label=ETI[f]) for f in ("estr", "astr", "llm")], loc="lower center", ncol=3, frameon=False, bbox_to_anchor=(0.6, 0.0), fontsize=11.5, handlelength=1.2, columnspacing=1.6); fig.tight_layout(rect=(0, 0.075, 1, 1)); fig.savefig(OUT / "slide_geval_dimensioni.png", facecolor="white"); plt.close(fig)
+
+# ---------- 5.6: prima e dopo il budget (dumbbell, due pannelli) ----------
+r0 = {m: leggi(m, "test", "rouge1_f1") for m in NOMI}
+r1 = {m: leggi(m, "test_budgetref", "rouge1_f1") for m in NOMI}
+g0 = {m: leggi(m, "test", "geval_media") for m in NOMI}
+g1 = {m: leggi(m, "test_budgetref", "geval_media") for m in NOMI}
+ordine = sorted(NOMI, key=lambda m: r1[m])
+fig, (a1, a2) = plt.subplots(1, 2, figsize=(W, H), dpi=220, sharey=True)
+fig.subplots_adjust(left=0.215, right=0.985, top=0.83, bottom=0.11, wspace=0.07)
+for ax, prima, dopo, lim, tit in ((a1, r0, r1, (0.25, 0.46), "ROUGE-1 F1"), (a2, g0, g1, (2.0, 5.0), "G-Eval medio (1-5)")):
+    for i, m in enumerate(ordine):
+        c = COL[FAM[m]]
+        ax.plot([prima[m], dopo[m]], [i, i], color=c, lw=2.2, alpha=0.5, solid_capstyle="round", zorder=2)
+        ax.scatter(prima[m], i, s=40, facecolor="white", edgecolor=c, linewidth=1.8, zorder=3)
+        ax.scatter(dopo[m], i, s=44, color=c, edgecolor="white", linewidth=1, zorder=4)
+    ax.set_xlim(*lim); ax.set_ylim(-0.7, len(ordine) - 0.3)
+    ax.set_title(tit, fontsize=12.5, color=INK, pad=4, loc="left", fontweight="bold")
+    assi_puliti(ax); ax.tick_params(axis="x", labelsize=10.5)
+a1.set_yticks(range(len(ordine)), [NOMI[m] + ("*" if m in ("bart", "pegasus", "primera") else "") for m in ordine], fontsize=10.5)
+h = [Line2D([], [], marker="o", ls="", markerfacecolor="white", markeredgecolor=INK2, markeredgewidth=1.6, markersize=7, label="prima"),
+     Line2D([], [], marker="o", ls="", color=INK2, markersize=7, label="a parità di lunghezza")]
+h += [Patch(facecolor=COL[f], label=ETI[f]) for f in ("estr", "astr", "llm")]
+fig.legend(handles=h, loc="upper center", ncol=5, frameon=False, bbox_to_anchor=(0.5, 1.0), fontsize=10.5,
+           handlelength=1.0, handletextpad=0.4, columnspacing=1.1)
+fig.text(0.215, 0.015, "* solo tetto a 1.25× il riferimento, non rigenerati. Ordine: ROUGE-1 F1 a parità di lunghezza.",
+         fontsize=9.5, color=INK2)
+fig.savefig(OUT / "slide_prima_dopo.png", facecolor="white"); plt.close(fig)
+
+print("figure scritte in", OUT)
