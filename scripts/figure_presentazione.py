@@ -101,6 +101,31 @@ def grafico_rouge(scope, nome):
                fontsize=11, handlelength=1.2, columnspacing=1.4)
     fig.savefig(OUT / nome, facecolor="white"); plt.close(fig)
 
+# ---------- BERTScore F1 per metodo (punti) ----------
+# I 19 valori stanno fra ~0.83 e ~0.88: con barre ancorate a zero sembrerebbero uguali, e un
+# asse tagliato su un grafico a barre esagera le differenze. Si usano punti su un asse ristretto,
+# dichiarato con tacche ed etichette, che è la forma corretta quando lo zero non è informativo.
+def grafico_bertscore(scope, nome):
+    budget = scope.endswith("budgetref")
+    v = {m: leggi(m, scope, "bertscore_f1") for m in NOMI}
+    ordine = sorted(v, key=v.get)
+    fig, ax = plt.subplots(figsize=(W, H52), dpi=220)
+    fig.subplots_adjust(left=0.23, right=0.97, top=0.93, bottom=0.075)
+    for i, m in enumerate(ordine):
+        ax.axhline(i, color=GRID, lw=0.6, zorder=1)
+        ax.scatter(v[m], i, s=70, color=COL[FAM[m]], edgecolor="white", linewidth=1, zorder=3)
+        ax.text(v[m] + 0.0012, i, fmt(v[m], 3), va="center", fontsize=11, color=INK2)
+    ax.set_yticks(range(len(ordine)), [etichetta(m, budget) for m in ordine], fontsize=11)
+    ax.set_xlim(0.83, 0.88); ax.set_ylim(-0.6, len(ordine) - 0.4)
+    ax.set_xticks([0.83, 0.84, 0.85, 0.86, 0.87, 0.88])
+    assi_puliti(ax); ax.xaxis.grid(False); ax.tick_params(axis="x", labelsize=10, pad=2)
+    h = [Patch(facecolor=COL[f], label=ETI[f]) for f in ("estr", "astr", "llm")]
+    if budget:
+        h.append(Line2D([], [], ls="", label="* solo tetto"))
+    fig.legend(handles=h, loc="upper right", ncol=len(h), frameon=False, bbox_to_anchor=(0.97, 1.0),
+               fontsize=11, handlelength=1.2, columnspacing=1.4)
+    fig.savefig(OUT / nome, facecolor="white"); plt.close(fig)
+
 # ---------- 5.3: G-Eval per dimensione (heatmap) ----------
 DIM = [("geval_coherence", "Coherence"), ("geval_consistency", "Consistency"), ("geval_fluency", "Fluency"),
        ("geval_relevance", "Relevance"), ("geval_media", "Media")]
@@ -138,6 +163,7 @@ def grafico_geval(scope, nome):
 
 grafico_rouge("test", "slide_rouge1_f1.png")
 grafico_rouge("test_budgetref", "slide_rouge1_f1_budgetref.png")
+grafico_bertscore("test_budgetref", "slide_bertscore_f1_budgetref.png")
 grafico_geval("test", "slide_geval_dimensioni.png")
 grafico_geval("test_budgetref", "slide_geval_dimensioni_budgetref.png")
 

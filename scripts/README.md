@@ -548,6 +548,9 @@ dentro una slide, non si leggono; queste portano un solo messaggio ciascuna, a c
 - `slide_rouge1_f1_budgetref.png` e `slide_geval_dimensioni_budgetref.png`: ROUGE-1 F1 per
   metodo e G-Eval per dimensione (heatmap) a lunghezza contenuta (`test_budgetref`), i risultati
   principali della presentazione; l'asterisco segna i tre metodi con il solo tetto;
+- `slide_bertscore_f1_budgetref.png`: BERTScore F1 per metodo a lunghezza contenuta, a punti
+  su un asse ristretto (0.83-0.88), perché con barre ancorate a zero i valori sembrerebbero
+  tutti uguali;
 - `slide_rouge1_f1.png` e `slide_geval_dimensioni.png`: gli stessi grafici sulla split test a
   lunghezza libera, per le slide di riserva;
 - `slide_prima_dopo.png`: ROUGE-1 F1 e G-Eval a lunghezza libera e a lunghezza contenuta
