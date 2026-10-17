@@ -541,14 +541,16 @@ Dopo aver rieseguito uno dei notebook da cui provengono le figure, perché le im
 
 ## `figure_presentazione.py`
 
-Disegna in [`docs/resources/slides/`](../docs/resources/slides/) i tre grafici della
-presentazione finale (slide 5.2, 5.3 e 5.6). Le figure dei notebook di confronto hanno più
-pannelli ed etichette piccole e, ridotte dentro una slide, non si leggono; queste portano un solo
-messaggio ciascuna, a caratteri grandi:
+Disegna in [`docs/resources/slides/`](../docs/resources/slides/) i grafici della presentazione
+finale. Le figure dei notebook di confronto hanno più pannelli ed etichette piccole e, ridotte
+dentro una slide, non si leggono; queste portano un solo messaggio ciascuna, a caratteri grandi:
 
-- `slide_rouge1_f1.png`: ROUGE-1 F1 per metodo sulla split test;
-- `slide_geval_dimensioni.png`: G-Eval per dimensione e media sulla split test (heatmap);
-- `slide_prima_dopo.png`: ROUGE-1 F1 e G-Eval prima e dopo il contenimento della lunghezza
+- `slide_rouge1_f1_budgetref.png` e `slide_geval_dimensioni_budgetref.png`: ROUGE-1 F1 per
+  metodo e G-Eval per dimensione (heatmap) a lunghezza contenuta (`test_budgetref`), i risultati
+  principali della presentazione; l'asterisco segna i tre metodi con il solo tetto;
+- `slide_rouge1_f1.png` e `slide_geval_dimensioni.png`: gli stessi grafici sulla split test a
+  lunghezza libera, per le slide di riserva;
+- `slide_prima_dopo.png`: ROUGE-1 F1 e G-Eval a lunghezza libera e a lunghezza contenuta
   (`test` contro `test_budgetref`).
 
 ### Uso
