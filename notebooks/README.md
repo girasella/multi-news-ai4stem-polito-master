@@ -726,8 +726,9 @@ ricade a ~93,6% di copertura.
 
 Avvertenza: sulla riga 50540 (sorgente degenere, un elenco di birrifici) il METEOR non limitato di
 pyAutoSummarizer esplode (−77.557 per `lda`, −3.074 per `lexrank`) e trascina le medie a −13,5 e
-−0,16 contro ~0,40 e ~0,39 reali — stesso fenomeno della riga 51178 di PEGASUS, stessa scelta:
-nessun file modificato.
+−0,16 contro ~0,40 e ~0,39 reali — stesso fenomeno della riga 51178 di PEGASUS. Nessun file è
+modificato; i notebook di confronto tolgono il METEOR a tutti i metodi sulle 22 righe in cui
+almeno uno esce da [0,1] (vedi l'avvertenza METEOR più sotto).
 
 ## Validazione del giudice G-Eval (notebook [19](19_confronto_giudici.ipynb))
 
@@ -990,5 +991,10 @@ PEGASUS ~2,3 GB; PRIMERA ~1,8 GB; roberta-large, per il BERTScore del notebook [
   (`meteor = fmean * (1 - penalty**3)`) non è limitata a [0,1]. Nella corsa `test`, PEGASUS
   produce due riassunti patologici (un loop di ripetizione del beam search e un probabile
   mismatch sorgente/riferimento) con METEOR rispettivamente -1959.12 e -2.10, che trascinano la
-  sua media riportata da ~0.42 a 0.079 — solo quella colonna va letta con questa avvertenza (vedi
-  il dettaglio nel notebook [05b](05b_confronto_test.ipynb)). LexRank ha un caso molto più lieve, con effetto trascurabile.
+  media salvata nei file da ~0.43 a 0.079. Le cause sono due difetti della formula: la
+  penalità viene elevata al cubo due volte e i chunk non sono limitati ai match. Per questo
+  `su.carica_scope` mette a NaN il METEOR, **per tutti i metodi**, sulle righe in cui almeno un
+  metodo è fuori da [0,1] (9 in `test`, 22 in `test_budgetref`, 31 in `full`); le medie dei
+  notebook 05a-05d sono su `n_meteor` righe e la classifica coincide con quella che si
+  otterrebbe tagliando i valori a [0,1]. CSV e JSON committati restano invariati (vedi il
+  dettaglio nel notebook [05b](05b_confronto_test.ipynb)).

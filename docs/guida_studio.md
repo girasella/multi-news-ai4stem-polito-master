@@ -502,11 +502,17 @@ storicamente nata per superare alcuni limiti di BLEU nella valutazione della tra
 automatica, mostrando correlazione più alta con i giudizi umani.
 
 **Nota di lettura**: la formula usata dalla libreria di questo progetto
-(`meteor = fmean * (1 - penalty³)`) non è limitata inferiormente in casi patologici. Su un
-numero molto ridotto di righe (2 su 5.610 per PEGASUS, dovute a un loop di ripetizione in fase
-di generazione e a un probabile mismatch sorgente/riassunto nel dataset), il punteggio METEOR
-calcolato può risultare fortemente negativo, distorcendo la media aggregata di quel metodo
-verso il basso in modo non rappresentativo della sua reale qualità media.
+(`meteor = fmean * (1 - penalty³)`) non è limitata all'intervallo [0,1]. Ha due difetti: la
+penalità, già calcolata come `0.5 · (chunk/match)³`, viene elevata al cubo una seconda volta, e
+il numero di blocchi (chunk) non è limitato al numero di parole in comune (match), come invece
+accade nella definizione originale. Su output degeneri il punteggio diventa quindi fortemente
+negativo. Nella split test succede su 9 righe su 5.437, la peggiore delle quali è un loop di
+ripetizione di PEGASUS (riga 51178, −1959), e una sola riga basta a spostare la media di un
+metodo. Per questo i confronti tolgono il METEOR a **tutti** i metodi sulle righe in cui almeno
+un metodo esce da [0,1]: le medie restano così calcolate sugli stessi cluster per tutti, e le
+altre metriche usano tutte le righe. È un filtro applicato in lettura (`su.carica_scope`): i
+file dei risultati conservano i valori calcolati dalla libreria. Tagliare i valori a [0,1]
+riga per riga darebbe la stessa classifica.
 
 **Riferimento**: S. Banerjee, A. Lavie, *"METEOR: An Automatic Metric for MT Evaluation with
 Improved Correlation with Human Judgments"*, ACL Workshop on Intrinsic and Extrinsic
@@ -581,26 +587,30 @@ alcune sue cifre differiscono di un millesimo da quelle qui riportate.
 |---|---|---|---|---|---|---|
 | First-k (PSR) | 0.355 | 0.121 | 0.180 | 0.082 | 0.389 | 0.840 |
 | First-k (NLTK) | 0.356 | 0.123 | 0.181 | 0.083 | 0.391 | 0.843 |
-| Centroid+MMR (TF-IDF) | 0.383 | 0.144 | 0.189 | 0.097 | 0.500 | 0.842 |
+| Centroid+MMR (TF-IDF) | 0.383 | 0.144 | 0.189 | 0.097 | 0.501 | 0.842 |
 | Centroid+MMR (BERT) | 0.373 | 0.138 | 0.185 | 0.093 | 0.498 | 0.841 |
-| TextRank | 0.370 | 0.135 | 0.176 | 0.088 | 0.487 | 0.840 |
+| TextRank | 0.370 | 0.135 | 0.176 | 0.088 | 0.488 | 0.840 |
 | LexRank | 0.365 | 0.137 | 0.169 | 0.083 | 0.504 | 0.837 |
 | BART | 0.265 | 0.081 | 0.147 | 0.017 | 0.169 | 0.854 |
-| PEGASUS | 0.424 | 0.180 | 0.240 | 0.131 | 0.079* | 0.871 |
+| PEGASUS | 0.424 | 0.180 | 0.240 | 0.131 | 0.429* | 0.871 |
 | PRIMERA | **0.445** | **0.197** | **0.248** | **0.147** | 0.475 | **0.874** |
 | Qwen2.5-7B | 0.344 | 0.097 | 0.177 | 0.057 | 0.321 | 0.857 |
 | Gemma 4 | 0.335 | 0.099 | 0.176 | 0.065 | 0.435 | 0.839 |
 | Mistral-7B | 0.354 | 0.111 | 0.190 | 0.067 | 0.361 | 0.860 |
 | GPT-5-mini | 0.348 | 0.102 | 0.179 | 0.066 | 0.402 | 0.852 |
 | Qwen2.5-7B few-shot | 0.337 | 0.108 | 0.188 | 0.055 | 0.298 | 0.865 |
-| LSA (Gong & Liu) | 0.351 | 0.127 | 0.183 | 0.091 | 0.400 | 0.833 |
+| LSA (Gong & Liu) | 0.351 | 0.127 | 0.183 | 0.091 | 0.403 | 0.833 |
 | LSA (Steinberger) | 0.376 | 0.137 | 0.188 | 0.103 | 0.452 | 0.842 |
 | SBERT + K-Means | 0.359 | 0.125 | 0.183 | 0.095 | 0.443 | 0.840 |
 | SBERT + Agglomerativo | 0.328 | 0.106 | 0.171 | 0.085 | 0.378 | 0.833 |
 | LDA | 0.351 | 0.130 | 0.171 | 0.081 | 0.511† | 0.835 |
 
-\* Valore deflazionato da due righe patologiche (sezione 5.3, nota METEOR); la media reale di
-PEGASUS sulle righe non degeneri è ≈0.42, in linea con gli altri metodi abstractive forti.
+La colonna METEOR esclude le 9 righe in cui almeno un metodo ha METEOR fuori da [0,1]
+(sezione 5.3); le altre colonne usano tutte le righe.
+
+\* Il valore salvato nei file dei risultati è 0.079: due righe patologiche (un loop di
+ripetizione e un probabile mismatch sorgente/riassunto) bastano a trascinare la media. Senza
+quelle righe PEGASUS è in linea con gli altri astrattivi specializzati.
 
 † Il valore di LDA è gonfiato dalla lunghezza dei riassunti prodotti (in media 477 parole,
 contro 216-264 degli altri metodi estrattivi non supervisionati): a parità di soglia di
@@ -1030,11 +1040,12 @@ conclusioni affrettate:
 - **ROUGE non standard**: come indicato nella sezione 5.1, i valori ROUGE di questo progetto
   usano una variante a n-grammi unici, confrontabile solo *internamente* tra i 19 metodi, non
   con valori ROUGE pubblicati altrove (incluso il paper Multi-News originale).
-- **Outlier METEOR**: la formula usata non è limitata inferiormente per input degeneri. La
-  media METEOR di PEGASUS è artificialmente bassa a causa di due righe patologiche su 5.610
-  (sezione 5.3); nel confronto a lunghezza pari lo stesso accade a LDA e LexRank su una riga
-  la cui sorgente è un elenco di nomi. In nessun caso i valori sono stati corretti: sono
-  segnalati.
+- **Outlier METEOR**: la formula usata non è limitata a [0,1] per input degeneri (sezione
+  5.3). Senza correzione, la media METEOR di PEGASUS scende a 0.079 per due righe patologiche;
+  nel confronto a lunghezza pari lo stesso accade a LDA (−13.5) e LexRank su una riga la cui
+  sorgente è un elenco di nomi. I confronti tolgono il METEOR a tutti i metodi sulle righe in
+  cui almeno un metodo esce da [0,1] (9 nel test, 22 a lunghezza pari). I file dei risultati
+  restano quelli calcolati dalla libreria.
 - **Copertura del G-Eval e filtro di sicurezza del servizio cloud**: il filtro di contenuti
   di Azure respinge alcuni esempi (cronaca violenta o d'odio) prima che il giudice li legga,
   e lo fa in modo non stabile nel tempo. Le prime sessioni avevano lasciato una copertura fra

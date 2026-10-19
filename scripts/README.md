@@ -538,3 +538,35 @@ script con un errore invece di copiare altro.
 
 Dopo aver rieseguito uno dei notebook da cui provengono le figure, perché le immagini in
 `docs/resources/` sono copie e non si aggiornano da sole. Poi va ristampato il PDF della guida.
+
+## `figure_presentazione.py`
+
+Disegna in [`docs/resources/slides/`](../docs/resources/slides/) i grafici della presentazione
+finale. Le figure dei notebook di confronto hanno più pannelli ed etichette piccole e, ridotte
+dentro una slide, non si leggono; queste portano un solo messaggio ciascuna, a caratteri grandi:
+
+- `slide_rouge1_f1_budgetref.png` e `slide_geval_dimensioni_budgetref.png`: ROUGE-1 F1 per
+  metodo e G-Eval per dimensione (heatmap) a lunghezza contenuta (`test_budgetref`), i risultati
+  principali della presentazione; l'asterisco segna i tre metodi con il solo tetto;
+- `slide_bertscore_f1_budgetref.png`: BERTScore F1 per metodo a lunghezza contenuta, a punti
+  su un asse ristretto (0.83-0.88), perché con barre ancorate a zero i valori sembrerebbero
+  tutti uguali;
+- `slide_rouge1_f1.png` e `slide_geval_dimensioni.png`: gli stessi grafici sulla split test a
+  lunghezza libera, per le slide di riserva;
+- `slide_prima_dopo.png`: ROUGE-1 F1 e G-Eval a lunghezza libera e a lunghezza contenuta
+  (`test` contro `test_budgetref`);
+- `slide_rouge2_f1_budgetref.png`, `slide_rougeL_f1_budgetref.png`, `slide_bleu_budgetref.png`
+  e `slide_meteor_budgetref.png`: le altre metriche col riferimento a lunghezza contenuta, per
+  le slide di riserva. METEOR è caricato con `su.carica_scope`, come nel notebook 05c: righe
+  comuni ai 19 metodi e METEOR tolto a tutti sulle 22 righe in cui almeno un metodo esce da
+  [0,1] (la formula di pyAutoSummarizer non è limitata), così slide e notebook coincidono.
+
+### Uso
+
+```
+python scripts/figure_presentazione.py
+```
+
+Legge solo i file committati in `results/metrics/` (gli aggregati, più i CSV per esempio per
+METEOR): non rigenera nulla e non chiama servizi esterni. Le slide caricano le immagini dal branch su GitHub, quindi dopo averle
+rigenerate va fatto il push e reinserita l'immagine nella slide.

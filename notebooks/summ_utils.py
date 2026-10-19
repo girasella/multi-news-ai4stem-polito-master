@@ -1434,14 +1434,44 @@ def carica_scope(metrics_dir, scope, metodi, copertura_minima=COPERTURA_MINIMA):
                       f'nell\'intersezione) — medie non confrontabili direttamente')
         print(f'{scope}: confronto su {len(comuni)} esempi comuni a {len(pieni)} metodi '
               f'con copertura piena')
+    escludi_meteor_degeneri(dati, scope)
     return dati
 
 
-def tabella_medie(dati, solo_split=None):
-    """Medie di METRICHE_CHIAVE per metodo, con n_esempi e n_geval espliciti.
+def escludi_meteor_degeneri(dati, scope=''):
+    """Mette a NaN il METEOR, per TUTTI i metodi, sulle righe in cui almeno un metodo
+    lo ha fuori da [0,1]; le medie di pandas le ignorano. Modifica `dati` in place.
 
-    `n_geval` e' il numero di righe su cui e' calcolata la media G-Eval: `.mean()`
-    ignora i NaN, quindi le righe non giudicate non falsano il valore, ma il
+    La `meteor()` di pyAutoSummarizer non e' limitata: eleva al cubo la penalita' due
+    volte (`0.5*(chunks/matches)**3`, poi `penalty**3`) e conta i chunk senza limitarli
+    ai match, quindi su output degeneri esplode (PEGASUS riga 51178: -1959; lda riga
+    50540 in test_budgetref: -77.557) e una sola riga trascina la media di un metodo.
+    Le righe si tolgono a tutti i metodi, cosi' le medie restano sugli stessi cluster.
+    Solo in memoria: CSV e JSON committati restano intatti, le altre metriche non
+    cambiano. Tagliare a [0,1] riga per riga darebbe la stessa classifica.
+    """
+    con_meteor = [d['df'] for d in dati.values() if 'meteor' in d['df'].columns]
+    if not con_meteor:
+        return set()
+    degeneri = set()
+    for df in con_meteor:
+        degeneri |= set(df.loc[(df['meteor'] < 0) | (df['meteor'] > 1), 'row_id'])
+    for d in dati.values():
+        if 'meteor' in d['df'].columns:
+            d['df'] = d['df'].copy()
+            d['df'].loc[d['df']['row_id'].isin(degeneri), 'meteor'] = float('nan')
+    if degeneri:
+        print(f'{scope}: METEOR escluso su {len(degeneri)} righe (fuori da [0,1] per almeno '
+              f'un metodo, formula non limitata di pyAutoSummarizer), per tutti i metodi')
+    return degeneri
+
+
+def tabella_medie(dati, solo_split=None):
+    """Medie di METRICHE_CHIAVE per metodo, con n_esempi, n_meteor e n_geval espliciti.
+
+    `n_geval` e `n_meteor` sono il numero di righe su cui sono calcolate le medie
+    G-Eval e METEOR: `.mean()` ignora i NaN (righe non giudicate; righe METEOR degeneri
+    tolte da `escludi_meteor_degeneri`), quindi il valore non e' falsato, ma il
     denominatore va dichiarato perche' e' diverso da n_esempi.
     """
     import pandas as pd
@@ -1452,8 +1482,9 @@ def tabella_medie(dati, solo_split=None):
             continue
         presenti = [c for c in METRICHE_CHIAVE if c in df.columns]
         n_geval = int(df['geval_media'].notna().sum()) if 'geval_media' in df.columns else 0
+        n_meteor = int(df['meteor'].notna().sum()) if 'meteor' in df.columns else 0
         righe[metodo] = {**df[presenti].mean().to_dict(),
-                         'n_esempi': len(df), 'n_geval': n_geval}
+                         'n_esempi': len(df), 'n_meteor': n_meteor, 'n_geval': n_geval}
     return pd.DataFrame(righe).T.round(4)
 
 
