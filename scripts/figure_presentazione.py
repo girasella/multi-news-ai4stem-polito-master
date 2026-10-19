@@ -10,7 +10,7 @@ solo messaggio, a caratteri grandi, calcolato dagli aggregati committati in resu
   slide_prima_dopo.png                   ROUGE-1 F1 e G-Eval, test contro test_budgetref
   slide_{rouge2_f1,rougeL_f1,bleu,meteor}_budgetref.png
                                          riserve: le altre metriche, a lunghezza contenuta;
-                                         METEOR senza le righe degeneri 50540 e 51178
+                                         METEOR senza le righe fuori da [0,1] (come 05c)
 
 I risultati principali della presentazione sono quelli a lunghezza contenuta (test_budgetref);
 le figure su test vanno nelle slide di riserva («a lunghezza libera»).
@@ -20,8 +20,8 @@ Colori: tre famiglie dai primi tre slot della palette categoriale di riferimento
 validati anche a coppie arbitrarie (adatti a barre e punti mescolati).
 """
 import json
+import sys
 from pathlib import Path
-import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -173,18 +173,15 @@ grafico_barre("test_budgetref", "slide_rouge2_f1_budgetref.png", "rouge2_f1", 0.
 grafico_barre("test_budgetref", "slide_rougeL_f1_budgetref.png", "rougeL_f1", 0.3)
 grafico_barre("test_budgetref", "slide_bleu_budgetref.png", "bleu", 0.18)
 
-# METEOR di pyAutoSummarizer non è limitato (penalità elevata due volte al cubo, chunk non
-# limitati ai match): su due righe esplode e trascina la media (lda -13.48, lexrank -0.157,
-# pegasus 0.077). Le si toglie a TUTTI i 19 metodi, così le medie restano sugli stessi
-# cluster; i file committati restano intatti. Tagliare a [0,1] dà la stessa classifica.
-RIGHE_METEOR_DEGENERI = (50540, 51178)  # 50540: lista di birrerie (lda, lexrank); 51178: loop PEGASUS
-
-def meteor_senza_degeneri(m, scope="test_budgetref"):
-    d = pd.read_csv(M / f"{m}_{scope}_per_example.csv", usecols=["row_id", "meteor"])
-    return d.loc[~d.row_id.isin(RIGHE_METEOR_DEGENERI), "meteor"].mean()
-
+# METEOR di pyAutoSummarizer non è limitato e su poche righe esplode (lda -77.557 sulla riga
+# 50540), trascinando la media. Si usa lo stesso caricamento del notebook 05c
+# (su.carica_scope: righe comuni ai 19 metodi, METEOR tolto a tutti sulle righe dove almeno
+# un metodo è fuori da [0,1]), così slide e notebook mostrano gli stessi numeri.
+sys.path.insert(0, str(REPO / "notebooks"))
+import summ_utils as su
+dati_budget = su.carica_scope(M, "test_budgetref", list(NOMI))
 grafico_barre("test_budgetref", "slide_meteor_budgetref.png", xmax=0.55,
-              valori={m: meteor_senza_degeneri(m) for m in NOMI})
+              valori={m: d["df"]["meteor"].mean() for m, d in dati_budget.items()})
 grafico_bertscore("test_budgetref", "slide_bertscore_f1_budgetref.png")
 grafico_geval("test", "slide_geval_dimensioni.png")
 grafico_geval("test_budgetref", "slide_geval_dimensioni_budgetref.png")
