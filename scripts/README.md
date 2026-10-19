@@ -554,7 +554,12 @@ dentro una slide, non si leggono; queste portano un solo messaggio ciascuna, a c
 - `slide_rouge1_f1.png` e `slide_geval_dimensioni.png`: gli stessi grafici sulla split test a
   lunghezza libera, per le slide di riserva;
 - `slide_prima_dopo.png`: ROUGE-1 F1 e G-Eval a lunghezza libera e a lunghezza contenuta
-  (`test` contro `test_budgetref`).
+  (`test` contro `test_budgetref`);
+- `slide_rouge2_f1_budgetref.png`, `slide_rougeL_f1_budgetref.png`, `slide_bleu_budgetref.png`
+  e `slide_meteor_budgetref.png`: le altre metriche col riferimento a lunghezza contenuta, per
+  le slide di riserva. METEOR è caricato con `su.carica_scope`, come nel notebook 05c: righe
+  comuni ai 19 metodi e METEOR tolto a tutti sulle 22 righe in cui almeno un metodo esce da
+  [0,1] (la formula di pyAutoSummarizer non è limitata), così slide e notebook coincidono.
 
 ### Uso
 
@@ -562,6 +567,6 @@ dentro una slide, non si leggono; queste portano un solo messaggio ciascuna, a c
 python scripts/figure_presentazione.py
 ```
 
-Legge solo gli aggregati committati in `results/metrics/`: non rigenera nulla e non chiama
-servizi esterni. Le slide caricano le immagini dal branch su GitHub, quindi dopo averle
+Legge solo i file committati in `results/metrics/` (gli aggregati, più i CSV per esempio per
+METEOR): non rigenera nulla e non chiama servizi esterni. Le slide caricano le immagini dal branch su GitHub, quindi dopo averle
 rigenerate va fatto il push e reinserita l'immagine nella slide.
