@@ -355,7 +355,17 @@ respect:
   reported mean METEOR from a true ≈0.42 down to 0.079; ROUGE/BLEU/row counts are unaffected.
   LexRank has one much milder case (row_id 55805, meteor -1.24 out of 5,588 rows), negligible
   effect on its mean. Documented as a caveat in notebook 05b and the README — no per-example CSV
-  or aggregate JSON was altered to compensate for it.
+  or aggregate JSON was altered to compensate for it. **Since 2026-10-19 the comparison
+  notebooks exclude these rows in memory**: `su.carica_scope` calls
+  `su.escludi_meteor_degeneri`, which sets METEOR to NaN for ALL methods on every row where
+  at least one method is outside [0,1] (9 rows in `test`, 22 in `test_budgetref`, 31 in
+  `full`), and `tabella_medie` reports the denominator as `n_meteor`. The root cause is two
+  bugs in the library formula: the penalty is cubed twice (`0.5*(chunks/matches)**3`, then
+  `penalty**3`), and chunks are not capped by the number of matches. Rankings are identical to
+  clipping at [0,1]. The committed files still hold the raw means (pegasus `test` 0.079,
+  `lda` `test_budgetref` −13.48); the notebooks and the slide R15 show the filtered ones
+  (pegasus 0.429, lda 0.400). Don't switch to a different exclusion rule without updating
+  both.
 
 - **G-Eval / LLM-as-a-Judge (notebook 14 + `scripts/run_geval.py`)**: adds coherence /
   consistency / fluency / relevance scores (1-5) for the test split — the only metric here not
