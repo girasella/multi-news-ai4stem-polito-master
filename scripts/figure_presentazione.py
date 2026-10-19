@@ -8,6 +8,9 @@ solo messaggio, a caratteri grandi, calcolato dagli aggregati committati in resu
   slide_rouge1_f1[_budgetref].png        ROUGE-1 F1 per metodo, test o a lunghezza contenuta
   slide_geval_dimensioni[_budgetref].png G-Eval per dimensione e media (heatmap), idem
   slide_prima_dopo.png                   ROUGE-1 F1 e G-Eval, test contro test_budgetref
+  slide_{rouge2_f1,rougeL_f1,bleu,meteor}_budgetref.png
+                                         riserve: le altre metriche, a lunghezza contenuta;
+                                         METEOR senza le righe degeneri 50540 e 51178
 
 I risultati principali della presentazione sono quelli a lunghezza contenuta (test_budgetref);
 le figure su test vanno nelle slide di riserva («a lunghezza libera»).
@@ -18,6 +21,7 @@ validati anche a coppie arbitrarie (adatti a barre e punti mescolati).
 """
 import json
 from pathlib import Path
+import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -80,18 +84,18 @@ def etichetta(m, budget):
 # `test_budgetref` (lunghezza contenuta, risultati principali).
 H52 = 4.25
 
-def grafico_rouge(scope, nome):
+def grafico_barre(scope, nome, chiave="rouge1_f1", xmax=0.5, valori=None):
     budget = scope.endswith("budgetref")
-    v = {m: leggi(m, scope, "rouge1_f1") for m in NOMI}
+    v = valori or {m: leggi(m, scope, chiave) for m in NOMI}
     ordine = sorted(v, key=v.get)  # dal basso verso l'alto: il migliore in cima
     fig, ax = plt.subplots(figsize=(W, H52), dpi=220)
     fig.subplots_adjust(left=0.23, right=0.97, top=0.93, bottom=0.02)
     y = range(len(ordine))
     ax.barh(y, [v[m] for m in ordine], height=0.62, color=[COL[FAM[m]] for m in ordine], edgecolor="white", linewidth=1)
     for i, m in enumerate(ordine):
-        ax.text(v[m] + 0.004, i, fmt(v[m], 3), va="center", fontsize=11, color=INK2)
+        ax.text(v[m] + 0.008 * xmax, i, fmt(v[m], 3), va="center", fontsize=11, color=INK2)
     ax.set_yticks(list(y), [etichetta(m, budget) for m in ordine], fontsize=11)
-    ax.set_xlim(0, 0.5); ax.set_ylim(-0.6, len(ordine) - 0.4)
+    ax.set_xlim(0, xmax); ax.set_ylim(-0.6, len(ordine) - 0.4)
     ax.set_xticks([])
     assi_puliti(ax); ax.spines["bottom"].set_visible(False)
     h = [Patch(facecolor=COL[f], label=ETI[f]) for f in ("estr", "astr", "llm")]
@@ -161,8 +165,26 @@ def grafico_geval(scope, nome):
                fontsize=11.5, handlelength=1.2, columnspacing=1.6)
     fig.tight_layout(rect=(0, 0.075, 1, 1)); fig.savefig(OUT / nome, facecolor="white"); plt.close(fig)
 
-grafico_rouge("test", "slide_rouge1_f1.png")
-grafico_rouge("test_budgetref", "slide_rouge1_f1_budgetref.png")
+grafico_barre("test", "slide_rouge1_f1.png")
+grafico_barre("test_budgetref", "slide_rouge1_f1_budgetref.png")
+
+# ---------- riserve: le altre metriche sul riferimento, a lunghezza contenuta ----------
+grafico_barre("test_budgetref", "slide_rouge2_f1_budgetref.png", "rouge2_f1", 0.25)
+grafico_barre("test_budgetref", "slide_rougeL_f1_budgetref.png", "rougeL_f1", 0.3)
+grafico_barre("test_budgetref", "slide_bleu_budgetref.png", "bleu", 0.18)
+
+# METEOR di pyAutoSummarizer non è limitato (penalità elevata due volte al cubo, chunk non
+# limitati ai match): su due righe esplode e trascina la media (lda -13.48, lexrank -0.157,
+# pegasus 0.077). Le si toglie a TUTTI i 19 metodi, così le medie restano sugli stessi
+# cluster; i file committati restano intatti. Tagliare a [0,1] dà la stessa classifica.
+RIGHE_METEOR_DEGENERI = (50540, 51178)  # 50540: lista di birrerie (lda, lexrank); 51178: loop PEGASUS
+
+def meteor_senza_degeneri(m, scope="test_budgetref"):
+    d = pd.read_csv(M / f"{m}_{scope}_per_example.csv", usecols=["row_id", "meteor"])
+    return d.loc[~d.row_id.isin(RIGHE_METEOR_DEGENERI), "meteor"].mean()
+
+grafico_barre("test_budgetref", "slide_meteor_budgetref.png", xmax=0.55,
+              valori={m: meteor_senza_degeneri(m) for m in NOMI})
 grafico_bertscore("test_budgetref", "slide_bertscore_f1_budgetref.png")
 grafico_geval("test", "slide_geval_dimensioni.png")
 grafico_geval("test_budgetref", "slide_geval_dimensioni_budgetref.png")
